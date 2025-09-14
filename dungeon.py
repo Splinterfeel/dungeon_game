@@ -1,14 +1,22 @@
 import random
-
+import colorama
 from chest import Chest
 from room import Room
 
 
 class Constants:
-    WALL = ' * '
+    WALL = ' # '
     FLOOR = '   '
     START = ' S '
     CHEST = ' C '
+
+Colors = {
+    Constants.WALL: colorama.Fore.BLUE,
+    Constants.FLOOR: colorama.Fore.BLACK,
+    Constants.CHEST: colorama.Fore.YELLOW,
+    Constants.START: colorama.Fore.GREEN,
+}
+
 
 
 class Dungeon:
@@ -156,7 +164,9 @@ class Dungeon:
         for y in range(self.height):
             line = ""
             for x in range(self.width):
-                line += self.tiles[x][y]
+                value = self.tiles[x][y]
+                line += Colors.get(value, colorama.Fore.BLACK)
+                line += value
             print(line)
         print('rooms:', len(self.rooms))
         for chest in self.chests:
@@ -170,12 +180,3 @@ class Dungeon:
     def make_v_tunnel(self, y1: int, y2: int, x: int):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self. tiles[x][y] = Constants.FLOOR
-
-
-dungeon = Dungeon(25, 25)
-dungeon.generate_dungeon(
-    min_rooms=4, max_rooms=4,
-    min_room_size=3, max_room_size=4,
-    max_chests=3,
-)
-dungeon.print_map()
