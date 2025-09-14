@@ -1,25 +1,9 @@
 import random
 import colorama
-from chest import Chest
-from room import Room
-from enemy import Enemy
-
-
-class Constants:
-    WALL = ' # '
-    FLOOR = '   '
-    START = ' S '
-    CHEST = ' C '
-    ENEMY = ' E '
-
-Colors = {
-    Constants.WALL: colorama.Fore.BLUE,
-    Constants.FLOOR: colorama.Fore.BLACK,
-    Constants.CHEST: colorama.Fore.YELLOW,
-    Constants.START: colorama.Fore.GREEN,
-    Constants.ENEMY: colorama.Fore.RED,
-}
-
+from dungeon.constants import Colors, Constants
+from dungeon.entities.chest import Chest
+from dungeon.entities.room import Room
+from dungeon.entities.enemy import Enemy
 
 
 class Dungeon:
