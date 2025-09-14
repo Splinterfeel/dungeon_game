@@ -2,6 +2,7 @@ import random
 import colorama
 from chest import Chest
 from room import Room
+from enemy import Enemy
 
 
 class Constants:
@@ -9,12 +10,14 @@ class Constants:
     FLOOR = '   '
     START = ' S '
     CHEST = ' C '
+    ENEMY = ' E '
 
 Colors = {
     Constants.WALL: colorama.Fore.BLUE,
     Constants.FLOOR: colorama.Fore.BLACK,
     Constants.CHEST: colorama.Fore.YELLOW,
     Constants.START: colorama.Fore.GREEN,
+    Constants.ENEMY: colorama.Fore.RED,
 }
 
 
@@ -31,11 +34,30 @@ class Dungeon:
         self.start_room: Room = None
         self.rooms: list[Room] = []
         self.chests: list[Chest] = []
+        self.enemies: list[Enemy] = []
 
-    def generate_dungeon(self, min_rooms: int, max_rooms: int, min_room_size: int, max_room_size: int, max_chests: int):
+    def generate_dungeon(self, min_rooms: int, max_rooms: int, min_room_size: int, max_room_size: int, max_chests: int, enemies_num: int):
         self._generate_rooms(min_rooms, max_rooms, min_room_size, max_room_size)
         self._generate_start_point()
         self._generate_chests(max_chests)
+        self._generate_enemies(enemies_num)
+
+    def _generate_enemies(self, enemies_num: int):
+        possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
+        num_enemies = min(enemies_num, len(possible_enemy_rooms))
+        for room in possible_enemy_rooms:
+            if len(self.enemies) >= num_enemies:
+                break
+            position = room.center()
+            enemy = Enemy(
+                x=position[0], y=position[1],
+                health=random.randint(10, 20),
+                damage=random.randint(3, 5),
+            )
+            self.enemies.append(enemy)
+            if self.tiles[enemy.x][enemy.y] != Constants.FLOOR:
+                raise ValueError('Enemy not in floor')
+            self.tiles[enemy.x][enemy.y] = Constants.ENEMY
 
     def _generate_rooms(self, min_rooms, max_rooms, min_room_size, max_room_size):
         num_rooms = random.randint(min_rooms, max_rooms)
@@ -172,6 +194,8 @@ class Dungeon:
         for chest in self.chests:
             print(chest)
         print('full dungeon gold:', sum(chest.gold for chest in self.chests))
+        for enemy in self.enemies:
+            print("Enemy: Health", enemy.health, 'Dmg', enemy.damage)
 
     def make_h_tunnel(self, x1: int, x2: int, y: int):
         for x in range(min(x1, x2), max(x1, x2) + 1):
