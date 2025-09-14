@@ -1,8 +1,10 @@
+from base import Point
+
+
 class Chest:
-    def __init__(self, x: int, y: int, gold: int):
-        self.x = x
-        self.y = y
+    def __init__(self, position: Point, gold: int):
+        self.position = position
         self.gold = gold
 
     def __str__(self):
-        return f"Chest [{self.x}, {self.y}], gold {self.gold}"
+        return f"Chest [{self.position.x}, {self.position.y}], gold {self.gold}"

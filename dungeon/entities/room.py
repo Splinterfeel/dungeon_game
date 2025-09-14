@@ -1,5 +1,7 @@
 from typing import Self
 
+from base import Point
+
 
 class Room:
     def __init__(self, x: int, y: int, width: int, height: int):
@@ -9,10 +11,10 @@ class Room:
         self.height = height
 
     # A helper method to get the center point of the room, useful for connecting rooms later.
-    def center(self) -> tuple[int, int]:
+    def center(self) -> Point:
         center_x = self.x + self.width // 2
         center_y = self.y + self.height // 2
-        return (center_x, center_y)
+        return Point(center_x, center_y)
 
     def intersects(self, other: Self) -> bool:
         # Check if they don't overlap first.

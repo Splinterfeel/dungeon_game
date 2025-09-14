@@ -1,6 +1,8 @@
+from base import Point
+
+
 class Enemy:
-    def __init__(self, x: int, y: int, health: int, damage: int):
-        self.x = x
-        self.y = y
+    def __init__(self, position: Point, health: int, damage: int):
+        self.position = position
         self.health = health
         self.damage = damage

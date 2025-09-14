@@ -1,5 +1,6 @@
 import random
 import colorama
+from base import Point
 from dungeon.constants import Colors, Constants
 from dungeon.entities.chest import Chest
 from dungeon.entities.room import Room
@@ -34,14 +35,14 @@ class Dungeon:
                 break
             position = room.center()
             enemy = Enemy(
-                x=position[0], y=position[1],
+                position=position,
                 health=random.randint(10, 20),
                 damage=random.randint(3, 5),
             )
             self.enemies.append(enemy)
-            if self.tiles[enemy.x][enemy.y] != Constants.FLOOR:
+            if self.tiles[enemy.position.x][enemy.position.y] != Constants.FLOOR:
                 raise ValueError('Enemy not in floor')
-            self.tiles[enemy.x][enemy.y] = Constants.ENEMY
+            self.tiles[enemy.position.x][enemy.position.y] = Constants.ENEMY
 
     def _generate_rooms(self, min_rooms, max_rooms, min_room_size, max_room_size):
         num_rooms = random.randint(min_rooms, max_rooms)
@@ -75,14 +76,14 @@ class Dungeon:
             for i in range(len(self.rooms) - 1):
                 room1 = self.rooms[i]
                 room2 = self.rooms[i + 1]
-                x1, y1 = room1.center()
-                x2, y2 = room2.center()
+                pos_1 = room1.center()
+                pos_2 = room2.center()
                 if random.random() < 0.5:
-                    self.make_h_tunnel(x1, x2, y1)
-                    self.make_v_tunnel(y1, y2, x2)
+                    self.make_h_tunnel(pos_1.x, pos_2.x, pos_1.y)
+                    self.make_v_tunnel(pos_1.y, pos_2.y, pos_2.x)
                 else:
-                    self.make_v_tunnel(y1, y2, x1)
-                    self.make_h_tunnel(x1, x2, y2)
+                    self.make_v_tunnel(pos_1.y, pos_2.y, pos_1.x)
+                    self.make_h_tunnel(pos_1.x, pos_2.x, pos_2.y)
 
     def _generate_start_point(self):
         distances = {room: 0 for room in self.rooms}
@@ -107,7 +108,7 @@ class Dungeon:
         self.start_room = farthest_room
         # 3. Размещаем стартовую точку в центре этой комнаты
         start_point = farthest_room.center()
-        self.tiles[start_point[0]][start_point[1]] = Constants.START
+        self.tiles[start_point.x][start_point.y] = Constants.START
 
     def _generate_chests(self, max_chests: int):
         # 1. Отфильтруем комнаты, чтобы исключить стартовую
@@ -120,16 +121,16 @@ class Dungeon:
         for room in rooms_with_chests:
             choices = self._get_chest_place_choices(room)
             # Выбираем случайную позицию внутри комнаты, избегая границ
-            position = random.choice(choices)
+            position = Point(*random.choice(choices))
             # Определяем количество золота
             # Чем дальше комната, тем больше золота.
             # Мы можем использовать индекс комнаты как простую меру удаленности
             distance_factor = self.rooms.index(room)
             gold_amount = random.randint(10 + distance_factor * 5, 50 + distance_factor * 10)
-            new_chest = Chest(position[0], position[1], gold_amount)
+            new_chest = Chest(position, gold_amount)
             self.chests.append(new_chest)
             # Помечаем тайл как сундук, чтобы его можно было нарисовать
-            self.tiles[position[0]][position[1]] = Constants.CHEST
+            self.tiles[new_chest.position.x][new_chest.position.y] = Constants.CHEST
 
     def _get_chest_place_choices(self, room) -> list[list[int, int]]:
         wall = random.randint(0, 3)
