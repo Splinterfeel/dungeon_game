@@ -1,6 +1,6 @@
 import random
 import colorama
-from base import Point
+from base import Point, get_distance
 from dungeon.constants import Colors, Constants
 from dungeon.entities.chest import Chest
 from dungeon.entities.room import Room
@@ -35,6 +35,7 @@ class Dungeon:
         self._generate_start_point()
         self._generate_chests()
         self._generate_enemies()
+        self._generate_exit()
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
@@ -88,11 +89,11 @@ class Dungeon:
                 pos_1 = room1.center()
                 pos_2 = room2.center()
                 if random.random() < 0.5:
-                    self.make_h_tunnel(pos_1.x, pos_2.x, pos_1.y)
-                    self.make_v_tunnel(pos_1.y, pos_2.y, pos_2.x)
+                    self._make_h_tunnel(pos_1.x, pos_2.x, pos_1.y)
+                    self._make_v_tunnel(pos_1.y, pos_2.y, pos_2.x)
                 else:
-                    self.make_v_tunnel(pos_1.y, pos_2.y, pos_1.x)
-                    self.make_h_tunnel(pos_1.x, pos_2.x, pos_2.y)
+                    self._make_v_tunnel(pos_1.y, pos_2.y, pos_1.x)
+                    self._make_h_tunnel(pos_1.x, pos_2.x, pos_2.y)
 
     def _generate_start_point(self):
         distances = {room: 0 for room in self.rooms}
@@ -116,8 +117,8 @@ class Dungeon:
 
         self.start_room = farthest_room
         # 3. Размещаем стартовую точку в центре этой комнаты
-        start_point = farthest_room.center()
-        self.tiles[start_point.x][start_point.y] = Constants.START
+        self.start_point = farthest_room.center()
+        self.tiles[self.start_point.x][self.start_point.y] = Constants.START
 
     def _generate_chests(self):
         # 1. Отфильтруем комнаты, чтобы исключить стартовую
@@ -128,7 +129,7 @@ class Dungeon:
         rooms_with_chests = random.sample(possible_chest_rooms, num_chests)
         # 3. Разместим сундуки в выбранных комнатах
         for room in rooms_with_chests:
-            choices = self._get_chest_place_choices(room)
+            choices = self._get_room_border_places(room)
             # Выбираем случайную позицию внутри комнаты, избегая границ
             position = Point(*random.choice(choices))
             # Определяем количество золота
@@ -141,7 +142,7 @@ class Dungeon:
             # Помечаем тайл как сундук, чтобы его можно было нарисовать
             self.tiles[new_chest.position.x][new_chest.position.y] = Constants.CHEST
 
-    def _get_chest_place_choices(self, room) -> list[list[int, int]]:
+    def _get_room_border_places(self, room: Room) -> list[list[int, int]]:
         wall = random.randint(0, 3)
         if wall == 0:
             # верхняя стена
@@ -184,6 +185,8 @@ class Dungeon:
                 line += Colors.get(value, colorama.Fore.BLACK)
                 line += value
             print(line)
+
+    def print_info(self):
         print('rooms:', len(self.rooms))
         for chest in self.chests:
             print(chest)
@@ -191,10 +194,25 @@ class Dungeon:
         for enemy in self.enemies:
             print("Enemy: Health", enemy.health, 'Dmg', enemy.damage)
 
-    def make_h_tunnel(self, x1: int, x2: int, y: int):
+    def _make_h_tunnel(self, x1: int, x2: int, y: int):
         for x in range(min(x1, x2), max(x1, x2) + 1):
             self.tiles[x][y] = Constants.FLOOR
 
-    def make_v_tunnel(self, y1: int, y2: int, x: int):
+    def _make_v_tunnel(self, y1: int, y2: int, x: int):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self. tiles[x][y] = Constants.FLOOR
+
+    def _generate_exit(self):
+        # найдем самую дальнюю комнату от старта
+        farthest_room = self.start_room
+        largest_distance = 0
+        for room in self.rooms:
+            distance = get_distance(self.start_room, room.center())
+            if distance > largest_distance:
+                largest_distance = distance
+                farthest_room = room
+        # генерим точку выхода
+        choices = self._get_room_border_places(farthest_room)
+        # Выбираем случайную позицию внутри комнаты, избегая границ
+        self.exit_point = Point(*random.choice(choices))
+        self.tiles[self.exit_point.x][self.exit_point.y] = Constants.EXIT
