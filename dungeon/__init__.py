@@ -1,1 +1,1 @@
-from .main import Dungeon
+from .main import Dungeon  # noqa

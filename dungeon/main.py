@@ -8,9 +8,17 @@ from dungeon.entities.enemy import Enemy
 
 
 class Dungeon:
-    def __init__(self, width: int, height: int):
+    def __init__(
+            self, width: int, height: int, min_rooms: int, max_rooms: int, min_room_size: int,
+            max_room_size: int, max_chests: int, enemies_num: int):
         self.width = width
         self.height = height
+        self.min_rooms = min_rooms
+        self.max_rooms = max_rooms
+        self.min_room_size = min_room_size
+        self.max_room_size = max_room_size
+        self.max_chests = max_chests
+        self.enemies_num = enemies_num
         self.tiles = [
             [
                 Constants.WALL for _ in range(height)
@@ -20,16 +28,17 @@ class Dungeon:
         self.rooms: list[Room] = []
         self.chests: list[Chest] = []
         self.enemies: list[Enemy] = []
+        self._generate_dungeon()
 
-    def generate_dungeon(self, min_rooms: int, max_rooms: int, min_room_size: int, max_room_size: int, max_chests: int, enemies_num: int):
-        self._generate_rooms(min_rooms, max_rooms, min_room_size, max_room_size)
+    def _generate_dungeon(self):
+        self._generate_rooms()
         self._generate_start_point()
-        self._generate_chests(max_chests)
-        self._generate_enemies(enemies_num)
+        self._generate_chests()
+        self._generate_enemies()
 
-    def _generate_enemies(self, enemies_num: int):
+    def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
-        num_enemies = min(enemies_num, len(possible_enemy_rooms))
+        num_enemies = min(self.enemies_num, len(possible_enemy_rooms))
         for room in possible_enemy_rooms:
             if len(self.enemies) >= num_enemies:
                 break
@@ -39,17 +48,17 @@ class Dungeon:
                 health=random.randint(10, 20),
                 damage=random.randint(3, 5),
             )
-            self.enemies.append(enemy)
             if self.tiles[enemy.position.x][enemy.position.y] != Constants.FLOOR:
                 raise ValueError('Enemy not in floor')
             self.tiles[enemy.position.x][enemy.position.y] = Constants.ENEMY
+            self.enemies.append(enemy)
 
-    def _generate_rooms(self, min_rooms, max_rooms, min_room_size, max_room_size):
-        num_rooms = random.randint(min_rooms, max_rooms)
+    def _generate_rooms(self):
+        num_rooms = random.randint(self.min_rooms, self.max_rooms)
         while len(self.rooms) < num_rooms:
             # 1. Randomly select room dimensions and position
-            room_width = random.randint(min_room_size, max_room_size)
-            room_height = random.randint(min_room_size, max_room_size)
+            room_width = random.randint(self.min_room_size, self.max_room_size)
+            room_height = random.randint(self.min_room_size, self.max_room_size)
             x = random.randint(1, self.width - room_width - 1)
             y = random.randint(1, self.height - room_height - 1)
 
@@ -61,10 +70,10 @@ class Dungeon:
                 if new_room.intersects(existing_room):
                     has_intersection = True
                     break  # Found an intersection, so we can stop checking
-            # 3. If no overlap, carve the room and add it to our list
             if has_intersection:
                 continue
 
+            # 3. If no overlap, carve the room and add it to our list
             self.rooms.append(new_room)
             # Carve the room into the tiles grid
             # We iterate over the room's area and set the tiles to 0 (floor).
@@ -110,12 +119,12 @@ class Dungeon:
         start_point = farthest_room.center()
         self.tiles[start_point.x][start_point.y] = Constants.START
 
-    def _generate_chests(self, max_chests: int):
+    def _generate_chests(self):
         # 1. Отфильтруем комнаты, чтобы исключить стартовую
         possible_chest_rooms = [room for room in self.rooms if room != self.start_room]
         # 2. Выберем случайные комнаты для размещения сундуков
         # Убедимся, что не пытаемся разместить больше сундуков, чем комнат
-        num_chests = min(max_chests, len(possible_chest_rooms))
+        num_chests = min(self.max_chests, len(possible_chest_rooms))
         rooms_with_chests = random.sample(possible_chest_rooms, num_chests)
         # 3. Разместим сундуки в выбранных комнатах
         for room in rooms_with_chests:

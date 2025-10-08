@@ -8,6 +8,7 @@ class Constants:
     CHEST = ' C '
     ENEMY = ' E '
 
+
 Colors = {
     Constants.WALL: colorama.Fore.BLUE,
     Constants.FLOOR: colorama.Fore.BLACK,
