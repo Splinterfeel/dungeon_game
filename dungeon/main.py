@@ -1,10 +1,10 @@
 import random
-import colorama
 from base import Point, get_distance
-from dungeon.constants import Colors, Constants
+from dungeon.constants import Constants
 from dungeon.entities.chest import Chest
 from dungeon.entities.room import Room
 from dungeon.entities.enemy import Enemy
+from dungeon.map import DungeonMap
 
 
 class Dungeon:
@@ -19,11 +19,7 @@ class Dungeon:
         self.max_room_size = max_room_size
         self.max_chests = max_chests
         self.enemies_num = enemies_num
-        self.tiles = [
-            [
-                Constants.WALL for _ in range(height)
-            ] for _ in range(width)
-        ]
+        self.map = DungeonMap(self.width, self.height)
         self.start_room: Room = None
         self.rooms: list[Room] = []
         self.chests: list[Chest] = []
@@ -49,9 +45,9 @@ class Dungeon:
                 health=random.randint(10, 20),
                 damage=random.randint(3, 5),
             )
-            if self.tiles[enemy.position.x][enemy.position.y] != Constants.FLOOR:
+            if self.map.get(enemy.position) != Constants.FLOOR:
                 raise ValueError('Enemy not in floor')
-            self.tiles[enemy.position.x][enemy.position.y] = Constants.ENEMY
+            self.map.set(enemy.position, Constants.ENEMY)
             self.enemies.append(enemy)
 
     def _generate_rooms(self):
@@ -80,7 +76,7 @@ class Dungeon:
             # We iterate over the room's area and set the tiles to 0 (floor).
             for i in range(new_room.x, new_room.x + new_room.width):
                 for j in range(new_room.y, new_room.y + new_room.height):
-                    self.tiles[i][j] = Constants.FLOOR
+                    self.map.set(Point(i, j), Constants.FLOOR)
 
             # make corridors
             for i in range(len(self.rooms) - 1):
@@ -118,7 +114,7 @@ class Dungeon:
         self.start_room = farthest_room
         # 3. Размещаем стартовую точку в центре этой комнаты
         self.start_point = farthest_room.center()
-        self.tiles[self.start_point.x][self.start_point.y] = Constants.START
+        self.map.set(self.start_point, Constants.FLOOR)
 
     def _generate_chests(self):
         # 1. Отфильтруем комнаты, чтобы исключить стартовую
@@ -140,7 +136,7 @@ class Dungeon:
             new_chest = Chest(position, gold_amount)
             self.chests.append(new_chest)
             # Помечаем тайл как сундук, чтобы его можно было нарисовать
-            self.tiles[new_chest.position.x][new_chest.position.y] = Constants.CHEST
+            self.map.set(new_chest.position, Constants.CHEST)
 
     def _get_room_border_places(self, room: Room) -> list[list[int, int]]:
         wall = random.randint(0, 3)
@@ -164,27 +160,18 @@ class Dungeon:
         # исключить тайлы, которые находятся на проходе
         tile_choices = []
         for tile in _tile_choices:
-            if self.tiles[tile[0]][tile[1]] != Constants.FLOOR:
+            if self.map.get(Point(tile[0], tile[1])) != Constants.FLOOR:
                 continue
-            tile_left = self.tiles[tile[0] - 1][tile[1]]
-            tile_right = self.tiles[tile[0] + 1][tile[1]]
-            tile_up = self.tiles[tile[0]][tile[1] - 1]
-            tile_down = self.tiles[tile[0]][tile[1] + 1]
+            tile_left = self.map.get(Point(tile[0] - 1, tile[1]))
+            tile_right = self.map.get(Point(tile[0] + 1, tile[1]))
+            tile_up = self.map.get(Point(tile[0], tile[1] - 1))
+            tile_down = self.map.get(Point(tile[0], tile[1] + 1))
             if all(t == Constants.FLOOR for t in [tile_left, tile_right, tile_up, tile_down]):
                 continue
             tile_choices.append(tile)
         if not tile_choices:
             print()
         return tile_choices
-
-    def print_map(self):
-        for y in range(self.height):
-            line = ""
-            for x in range(self.width):
-                value = self.tiles[x][y]
-                line += Colors.get(value, colorama.Fore.BLACK)
-                line += value
-            print(line)
 
     def print_info(self):
         print('rooms:', len(self.rooms))
@@ -196,11 +183,11 @@ class Dungeon:
 
     def _make_h_tunnel(self, x1: int, x2: int, y: int):
         for x in range(min(x1, x2), max(x1, x2) + 1):
-            self.tiles[x][y] = Constants.FLOOR
+            self.map.set(Point(x, y), Constants.FLOOR)
 
     def _make_v_tunnel(self, y1: int, y2: int, x: int):
         for y in range(min(y1, y2), max(y1, y2) + 1):
-            self. tiles[x][y] = Constants.FLOOR
+            self.map.set(Point(x, y), Constants.FLOOR)
 
     def _generate_exit(self):
         # найдем самую дальнюю комнату от старта
@@ -215,4 +202,4 @@ class Dungeon:
         choices = self._get_room_border_places(farthest_room)
         # Выбираем случайную позицию внутри комнаты, избегая границ
         self.exit_point = Point(*random.choice(choices))
-        self.tiles[self.exit_point.x][self.exit_point.y] = Constants.EXIT
+        self.map.set(self.exit_point, Constants.EXIT)

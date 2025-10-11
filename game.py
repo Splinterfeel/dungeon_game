@@ -26,7 +26,7 @@ class Game:
 
     def prepare(self):
         self._place_player(self.dungeon.start_point)
-        # self.dungeon.print_map()
+        self.dungeon.map.print()
 
     def perform_action(self, action):
         print(f"Performing action {action}")
@@ -44,8 +44,8 @@ class Game:
 
     def _place_player(self, point: Point):
         # check for walls
-        tile = self.dungeon.tiles[point.x][point.y]
+        tile = self.dungeon.map.get(point)
         if tile == Constants.WALL:
             raise ValueError("can't place player on wall")
         self.player_position = point
-        self.dungeon.tiles[point.x][point.y] = Constants.PLAYER
+        self.dungeon.map.set(point, Constants.PLAYER)
