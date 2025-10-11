@@ -1,6 +1,6 @@
 import colorama
 from base import Point
-from dungeon.constants import Colors, Constants
+from dungeon.constants import BackColors, ForeColors, Constants
 
 
 class DungeonMap:
@@ -20,10 +20,14 @@ class DungeonMap:
         self.tiles[point.x][point.y] = value
 
     def print(self):
+        colorama.init(autoreset=True, convert=True)
         for y in range(self._height):
             line = ""
             for x in range(self._width):
                 value = self.get(Point(x, y))
-                line += Colors.get(value, colorama.Fore.BLACK)
-                line += value
+                back_color = BackColors.get(value, colorama.Fore.BLACK)
+                fore_color = ForeColors.get(value, colorama.Fore.BLACK)
+                line += back_color + fore_color + value
+            # возвращаем черный в конце строки
+            line += colorama.Back.RESET
             print(line)
