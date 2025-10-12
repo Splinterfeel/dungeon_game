@@ -1,5 +1,5 @@
 import random
-from base import Point, PointOffset, get_distance
+from base import Point, PointOffset
 from src.constants import Constants
 from src.entities.base import CharacterStats
 from src.entities.chest import Chest
@@ -197,7 +197,7 @@ class Dungeon:
         farthest_room = self.start_room
         largest_distance = 0
         for room in self.rooms:
-            distance = get_distance(self.start_room, room.center())
+            distance = Point.get_distance(self.start_room.center(), room.center())
             if distance > largest_distance:
                 largest_distance = distance
                 farthest_room = room

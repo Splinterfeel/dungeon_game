@@ -21,7 +21,7 @@ dungeon = Dungeon(
 game = Game(
     dungeon=dungeon,
     players=[player_1, player_2],
-    # with_plot=True,
+    with_plot=True,
 )
 game.prepare()
 game.loop()

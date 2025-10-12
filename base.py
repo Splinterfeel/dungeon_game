@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import math
 from dataclasses import dataclass
+from typing import Self
 
 
 class PointOffset(Enum):
@@ -26,11 +27,11 @@ class Point:
             case PointOffset.RIGHT:
                 return Point(self.x + 1, self.y)
 
-
-def get_distance(point_1: Point, point_2: Point) -> int:
-    delta_x = point_2.x - point_1.x
-    delta_y = point_2.y - point_1.y
-    squared_delta_x = delta_x ** 2
-    squared_delta_y = delta_y ** 2
-    sum_of_squares = squared_delta_x + squared_delta_y
-    return math.sqrt(sum_of_squares)
+    @staticmethod
+    def get_distance(point_1: Self, point_2: Self) -> int:
+        delta_x = point_2.x - point_1.x
+        delta_y = point_2.y - point_1.y
+        squared_delta_x = delta_x ** 2
+        squared_delta_y = delta_y ** 2
+        sum_of_squares = squared_delta_x + squared_delta_y
+        return math.sqrt(sum_of_squares)
