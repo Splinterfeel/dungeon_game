@@ -1,4 +1,4 @@
-from base import Point
+from src.base import Point
 from src.entities.base import CharacterStats, Entity
 
 

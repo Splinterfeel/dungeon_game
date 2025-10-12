@@ -1,5 +1,5 @@
 import random
-from base import Point, PointOffset
+from src.base import Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import Constants

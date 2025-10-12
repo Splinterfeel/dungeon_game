@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from base import Point
+from src.base import Point
 
 
 class Entity:

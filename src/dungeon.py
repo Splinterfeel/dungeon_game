@@ -1,5 +1,5 @@
 import random
-from base import Point, PointOffset
+from src.base import Point, PointOffset
 from src.constants import Constants
 from src.entities.base import CharacterStats
 from src.entities.chest import Chest

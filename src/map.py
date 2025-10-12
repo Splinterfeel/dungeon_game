@@ -1,5 +1,5 @@
 import threading
-from base import Point
+from src.base import Point
 from src.constants import Constants, MapEntities, MapEntity
 import matplotlib
 import matplotlib.pyplot as plt

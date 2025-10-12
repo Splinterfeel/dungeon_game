@@ -1,7 +1,7 @@
 from src import Dungeon
 from src.entities.base import CharacterStats
 from src.entities.player import Player
-from game import Game
+from src.game import Game
 import warnings
 
 

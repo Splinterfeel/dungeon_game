@@ -1,6 +1,6 @@
 from typing import Self
 
-from base import Point
+from src.base import Point
 
 
 class Room:
