@@ -11,3 +11,8 @@ class CharacterStats:
     health: int
     damage: int
     speed: int
+
+
+class Actor:
+    def is_dead(self) -> bool:
+        return self.stats.health <= 0

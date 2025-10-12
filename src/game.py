@@ -1,3 +1,4 @@
+import enum
 import random
 from src.base import Point, PointOffset
 from src.entities.player import Player
@@ -6,12 +7,18 @@ from src.constants import Constants
 from InquirerLib import prompt
 
 
+class GamePhase(enum.Enum):
+    PLAYER_PHASE = enum.auto()
+    ENEMY_PHASE = enum.auto()
+
+
 class Game:
     def __init__(self, dungeon: Dungeon, players: list[Player], with_plot: bool = False):
         self.dungeon = dungeon
         self.with_plot = with_plot
         self.player_position = None
-        self.turn = 0
+        self.phase: GamePhase = None
+        self.turn = 1
         self.players = players
         if not players:
             raise ValueError("No players passed")
@@ -31,7 +38,7 @@ class Game:
             },
         ]
 
-    def prepare(self):
+    def init(self):
         self._init_players(self.dungeon.start_point)
         if self.with_plot:
             self.dungeon.map.show()
@@ -46,13 +53,39 @@ class Game:
 
     def loop(self):
         while True:
-            self.turn += 1
             print(f"=== TURN {self.turn} ===")
-            action = self._get_next_player_action()
-            self.perform_action(action)
-            print("=========================")
+            self.phase = GamePhase.PLAYER_PHASE
+            print("Player phase")
+            for player in self.players:
+                action = self._get_player_action(player)
+                self.perform_action(action)
+                if self.check_game_end():
+                    break
+            self.phase = GamePhase.ENEMY_PHASE
+            game_end = self.enemy_phase()
+            if game_end:
+                break
+            self.turn += 1
+            print(f"= END TURN {self.turn} =")
+        print("Game end")
 
-    def _get_next_player_action(self):
+    def enemy_phase(self) -> bool:
+        print("Enemy phase")
+        for enemy in self.dungeon.enemies:
+            print(f"{enemy} turn")
+            if self.check_game_end():
+                return True
+        return False
+
+    def check_game_end(self) -> bool:
+        if all([p.is_dead() for p in self.players]):
+            return True
+        if all([e.is_dead() for e in self.dungeon.enemies]):
+            return True
+        return False
+
+    def _get_player_action(self, player: Player):
+        print(f"[*] Player {player.name} turn")
         return prompt(self.action_choices)
 
     def _init_players(self, point: Point):

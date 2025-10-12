@@ -23,5 +23,5 @@ game = Game(
     players=[player_1, player_2],
     with_plot=True,
 )
-game.prepare()
+game.init()
 game.loop()
