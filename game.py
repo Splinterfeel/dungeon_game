@@ -57,7 +57,7 @@ class Game:
 
     def _init_players(self, point: Point):
         # все точки на расстоянии 1 клетки от point
-        choices = [
+        point_choices = [
             point,  # центр
             point.on(PointOffset.LEFT),  # слева
             point.on(PointOffset.LEFT).on(PointOffset.TOP),  # сверху-слева
@@ -68,13 +68,12 @@ class Game:
             point.on(PointOffset.BOTTOM),  # снизу
             point.on(PointOffset.BOTTOM).on(PointOffset.LEFT),  # снизу-слева
         ]
+        choices = [c for c in point_choices if self.dungeon.map.is_free(c)]
         if len(choices) < len(self.players):
             raise ValueError("Not enough place choices for all players")
         for player in self.players:
             position = random.choice(choices)
             choices.remove(position)
-            if not self.dungeon.map.is_free(position):
-                continue
             player.position = position
             self.dungeon.map.set(player.position, Constants.PLAYER)
         if not all(player.position is not None for player in self.players):

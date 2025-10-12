@@ -1,5 +1,5 @@
 import random
-from base import Point, get_distance
+from base import Point, PointOffset, get_distance
 from src.constants import Constants
 from src.entities.base import CharacterStats
 from src.entities.chest import Chest
@@ -49,8 +49,8 @@ class Dungeon:
                     speed=2,
                 )
             )
-            if self.map.get(enemy.position) != Constants.FLOOR:
-                raise ValueError('Enemy not in floor')
+            if not self.map.is_free(enemy.position):
+                raise ValueError('Enemy not in free tile')
             self.map.set(enemy.position, Constants.ENEMY)
             self.enemies.append(enemy)
 
@@ -131,7 +131,7 @@ class Dungeon:
         for room in rooms_with_chests:
             choices = self._get_room_border_places(room)
             # Выбираем случайную позицию внутри комнаты, избегая границ
-            position = Point(*random.choice(choices))
+            position = random.choice(choices)
             # Определяем количество золота
             # Чем дальше комната, тем больше золота.
             # Мы можем использовать индекс комнаты как простую меру удаленности
@@ -139,43 +139,42 @@ class Dungeon:
             gold_amount = random.randint(10 + distance_factor * 5, 50 + distance_factor * 10)
             new_chest = Chest(position, gold_amount)
             self.chests.append(new_chest)
-            # Помечаем тайл как сундук, чтобы его можно было нарисовать
             self.map.set(new_chest.position, Constants.CHEST)
 
-    def _get_room_border_places(self, room: Room) -> list[list[int, int]]:
-        wall = random.randint(0, 3)
-        if wall == 0:
-            # верхняя стена
-            x_choices = [x for x in range(room.x, room.x + room.width)]
-            y_choices = [room.y for _ in x_choices]
-        elif wall == 1:
-            # нижняя стена
-            x_choices = [x for x in range(room.x, room.x + room.width)]
-            y_choices = [room.y + room.height - 1 for _ in x_choices]
-        elif wall == 2:
-            # левая стена
-            y_choices = [y for y in range(room.y, room.y + room.height)]
-            x_choices = [room.x for _ in y_choices]
-        elif wall == 3:
-            # правая стена
-            y_choices = [y for y in range(room.y, room.y + room.height)]
-            x_choices = [room.x + room.width - 1 for _ in y_choices]
-        _tile_choices = [[x, y] for x, y in zip(x_choices, y_choices)]
+    def _get_room_border_places(self, room: Room) -> list[Point]:
+        _point_choices = []
+        # верхняя стена
+        x_choices = [x for x in range(room.x, room.x + room.width)]
+        y_choices = [room.y for _ in x_choices]
+        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
+        # нижняя стена
+        x_choices = [x for x in range(room.x, room.x + room.width)]
+        y_choices = [room.y + room.height - 1 for _ in x_choices]
+        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
+        # левая стена
+        y_choices = [y for y in range(room.y, room.y + room.height)]
+        x_choices = [room.x for _ in y_choices]
+        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
+        # правая стена
+        y_choices = [y for y in range(room.y, room.y + room.height)]
+        x_choices = [room.x + room.width - 1 for _ in y_choices]
+        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
+        _point_choices = [p for p in _point_choices if self.map.is_free(p)]
         # исключить тайлы, которые находятся на проходе
-        tile_choices = []
-        for tile in _tile_choices:
-            if self.map.get(Point(tile[0], tile[1])) != Constants.FLOOR:
+        result_choices = []
+        for point in _point_choices:
+            if self.map.get(point) != Constants.FLOOR:
                 continue
-            tile_left = self.map.get(Point(tile[0] - 1, tile[1]))
-            tile_right = self.map.get(Point(tile[0] + 1, tile[1]))
-            tile_up = self.map.get(Point(tile[0], tile[1] - 1))
-            tile_down = self.map.get(Point(tile[0], tile[1] + 1))
-            if all(t == Constants.FLOOR for t in [tile_left, tile_right, tile_up, tile_down]):
+            point_left = self.map.get(point.on(PointOffset.LEFT))
+            point_right = self.map.get(point.on(PointOffset.RIGHT))
+            point_up = self.map.get(point.on(PointOffset.TOP))
+            point_down = self.map.get(point.on(PointOffset.BOTTOM))
+            if all(t == Constants.FLOOR for t in [point_left, point_right, point_up, point_down]):
                 continue
-            tile_choices.append(tile)
-        if not tile_choices:
-            print()
-        return tile_choices
+            result_choices.append(point)
+        if not result_choices:
+            raise ValueError("No choices for rooms borders")
+        return result_choices
 
     def print_info(self):
         print('rooms:', len(self.rooms))
@@ -205,5 +204,5 @@ class Dungeon:
         # генерим точку выхода
         choices = self._get_room_border_places(farthest_room)
         # Выбираем случайную позицию внутри комнаты, избегая границ
-        self.exit_point = Point(*random.choice(choices))
+        self.exit_point = random.choice(choices)
         self.map.set(self.exit_point, Constants.EXIT)

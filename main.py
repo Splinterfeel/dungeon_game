@@ -18,6 +18,10 @@ dungeon = Dungeon(
     max_chests=3,
     enemies_num=2,
 )
-game = Game(dungeon=dungeon, players=[player_1, player_2], with_plot=True)
+game = Game(
+    dungeon=dungeon,
+    players=[player_1, player_2],
+    # with_plot=True,
+)
 game.prepare()
 game.loop()
