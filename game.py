@@ -1,14 +1,19 @@
-from base import Point
+import random
+from base import Point, PointOffset
+from dungeon.entities.player import Player
 from dungeon.main import Dungeon
 from dungeon.constants import Constants
 from InquirerLib import prompt
 
 
 class Game:
-    def __init__(self, dungeon: Dungeon):
+    def __init__(self, dungeon: Dungeon, players: list[Player]):
         self.dungeon = dungeon
         self.player_position = None
         self.turn = 0
+        self.players = players
+        if not players:
+            raise ValueError("No players passed")
         self.action_choices = [
             {
                 "type": "list",
@@ -25,7 +30,7 @@ class Game:
         ]
 
     def prepare(self):
-        self._place_player(self.dungeon.start_point)
+        self._init_players(self.dungeon.start_point)
         self.dungeon.map.print()
 
     def perform_action(self, action):
@@ -42,10 +47,27 @@ class Game:
     def _get_next_player_action(self):
         return prompt(self.action_choices)
 
-    def _place_player(self, point: Point):
-        # check for walls
-        tile = self.dungeon.map.get(point)
-        if tile == Constants.WALL:
-            raise ValueError("can't place player on wall")
-        self.player_position = point
-        self.dungeon.map.set(point, Constants.PLAYER)
+    def _init_players(self, point: Point):
+        # все точки на расстоянии 1 клетки от point
+        choices = [
+            point,  # центр
+            point.on(PointOffset.LEFT),  # слева
+            point.on(PointOffset.LEFT).on(PointOffset.TOP),  # сверху-слева
+            point.on(PointOffset.TOP),  # сверху
+            point.on(PointOffset.TOP).on(PointOffset.RIGHT),  # сверху-справа
+            point.on(PointOffset.RIGHT),  # справа
+            point.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),  # снизу-справа
+            point.on(PointOffset.BOTTOM),  # снизу
+            point.on(PointOffset.BOTTOM).on(PointOffset.LEFT),  # снизу-слева
+        ]
+        if len(choices) < len(self.players):
+            raise ValueError("Not enough place choices for all players")
+        for player in self.players:
+            position = random.choice(choices)
+            choices.remove(position)
+            if not self.dungeon.map.is_free(position):
+                continue
+            player.position = position
+            self.dungeon.map.set(player.position, Constants.PLAYER)
+        if not all(player.position is not None for player in self.players):
+            raise ValueError("Not all players were placed!")

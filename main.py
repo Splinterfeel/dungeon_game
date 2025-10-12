@@ -1,6 +1,11 @@
 from dungeon import Dungeon
+from dungeon.entities.base import CharacterStats
+from dungeon.entities.player import Player
 from game import Game
 
+
+player_1 = Player(name="Me", positon=None, stats=CharacterStats(health=10, damage=3, speed=3))
+player_2 = Player(name="Me2", positon=None, stats=CharacterStats(health=8, damage=4, speed=4))
 
 dungeon = Dungeon(
     width=20, height=20,
@@ -9,6 +14,7 @@ dungeon = Dungeon(
     max_chests=3,
     enemies_num=2,
 )
-game = Game(dungeon=dungeon)
+game = Game(dungeon=dungeon, players=[player_1, player_2])
+game.dungeon.map.print()
 game.prepare()
-game.loop()
+# game.loop()

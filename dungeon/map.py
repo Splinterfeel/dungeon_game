@@ -19,6 +19,11 @@ class DungeonMap:
     def set(self, point: Point, value):
         self.tiles[point.x][point.y] = value
 
+    def is_free(self, point: Point) -> bool:
+        if self.get(point) == Constants.FLOOR:
+            return True
+        return False
+
     def print(self):
         colorama.init(autoreset=True, convert=True)
         for y in range(self._height):
