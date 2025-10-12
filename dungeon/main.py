@@ -1,6 +1,7 @@
 import random
 from base import Point, get_distance
 from dungeon.constants import Constants
+from dungeon.entities.base import CharacterStats
 from dungeon.entities.chest import Chest
 from dungeon.entities.room import Room
 from dungeon.entities.enemy import Enemy
@@ -42,8 +43,11 @@ class Dungeon:
             position = room.center()
             enemy = Enemy(
                 position=position,
-                health=random.randint(10, 20),
-                damage=random.randint(3, 5),
+                stats=CharacterStats(
+                    health=random.randint(10, 20),
+                    damage=random.randint(3, 5),
+                    speed=2,
+                )
             )
             if self.map.get(enemy.position) != Constants.FLOOR:
                 raise ValueError('Enemy not in floor')
@@ -179,7 +183,7 @@ class Dungeon:
             print(chest)
         print('full dungeon gold:', sum(chest.gold for chest in self.chests))
         for enemy in self.enemies:
-            print("Enemy: Health", enemy.health, 'Dmg', enemy.damage)
+            print("Enemy: stats", enemy.stats)
 
     def _make_h_tunnel(self, x1: int, x2: int, y: int):
         for x in range(min(x1, x2), max(x1, x2) + 1):
