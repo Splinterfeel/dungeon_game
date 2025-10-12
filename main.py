@@ -2,6 +2,10 @@ from dungeon import Dungeon
 from dungeon.entities.base import CharacterStats
 from dungeon.entities.player import Player
 from game import Game
+import warnings
+
+
+warnings.filterwarnings("ignore")
 
 
 player_1 = Player(name="Me", positon=None, stats=CharacterStats(health=10, damage=3, speed=3))
@@ -14,7 +18,6 @@ dungeon = Dungeon(
     max_chests=3,
     enemies_num=2,
 )
-game = Game(dungeon=dungeon, players=[player_1, player_2])
-game.dungeon.map.print()
+game = Game(dungeon=dungeon, players=[player_1, player_2], with_plot=True)
 game.prepare()
-# game.loop()
+game.loop()

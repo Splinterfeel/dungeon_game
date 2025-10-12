@@ -7,8 +7,9 @@ from InquirerLib import prompt
 
 
 class Game:
-    def __init__(self, dungeon: Dungeon, players: list[Player]):
+    def __init__(self, dungeon: Dungeon, players: list[Player], with_plot: bool = False):
         self.dungeon = dungeon
+        self.with_plot = with_plot
         self.player_position = None
         self.turn = 0
         self.players = players
@@ -23,6 +24,7 @@ class Game:
                     "MOVE DOWN",
                     "MOVE LEFT",
                     "MOVE RIGHT",
+                    "<EXIT>",
                 ],
                 "multiselect": False,
                 "name": "class_name"
@@ -31,10 +33,16 @@ class Game:
 
     def prepare(self):
         self._init_players(self.dungeon.start_point)
-        self.dungeon.map.print()
+        if self.with_plot:
+            self.dungeon.map.show()
 
     def perform_action(self, action):
-        print(f"Performing action {action}")
+        match action["class_name"]:
+            case "<EXIT>":
+                self.dungeon.map.destroy()
+                exit()
+            case _:
+                print(f"Unknown action {action}")
 
     def loop(self):
         while True:

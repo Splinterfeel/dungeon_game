@@ -1,6 +1,3 @@
-import colorama
-
-
 class Constants:
     WALL = ' # '
     FLOOR = '   '
@@ -11,26 +8,20 @@ class Constants:
     PLAYER = ' P '
 
 
-ForeColors = {
-    Constants.WALL: colorama.Fore.LIGHTBLACK_EX,
-    Constants.FLOOR: colorama.Fore.BLACK,
-    Constants.CHEST: colorama.Fore.YELLOW,
+class MapEntity:
+    def __init__(self, color: str = "black", text: str = "?"):
+        self.color = color
+        self.text = text
 
-    Constants.PLAYER: colorama.Fore.WHITE,
-    Constants.ENEMY: colorama.Fore.WHITE,
 
-    Constants.START: colorama.Fore.GREEN,
-    Constants.EXIT: colorama.Fore.LIGHTMAGENTA_EX,
-}
+MapEntities = {
+    Constants.WALL: MapEntity(color="blue", text=""),
+    Constants.FLOOR: MapEntity(color="black", text=""),
+    Constants.CHEST: MapEntity(color="yellow", text="C"),
 
-BackColors = {
-    Constants.WALL: colorama.Back.LIGHTBLACK_EX,
-    Constants.FLOOR: colorama.Back.BLACK,
-    Constants.CHEST: colorama.Back.BLACK,
+    Constants.PLAYER: MapEntity(color="white", text="P"),
+    Constants.ENEMY: MapEntity(color="red", text="E"),
 
-    Constants.PLAYER: colorama.Back.GREEN,
-    Constants.ENEMY: colorama.Back.RED,
-
-    Constants.START: colorama.Back.BLACK,
-    Constants.EXIT: colorama.Back.BLACK,
+    Constants.START: MapEntity(color="green", text="Start"),
+    Constants.EXIT: MapEntity(color="green", text="Exit"),
 }
