@@ -1,11 +1,11 @@
 import random
 from base import Point, get_distance
-from dungeon.constants import Constants
-from dungeon.entities.base import CharacterStats
-from dungeon.entities.chest import Chest
-from dungeon.entities.room import Room
-from dungeon.entities.enemy import Enemy
-from dungeon.map import DungeonMap
+from src.constants import Constants
+from src.entities.base import CharacterStats
+from src.entities.chest import Chest
+from src.entities.room import Room
+from src.entities.enemy import Enemy
+from src.map import DungeonMap
 
 
 class Dungeon:

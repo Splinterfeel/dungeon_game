@@ -1,5 +1,5 @@
 from base import Point
-from dungeon.entities.base import Entity
+from src.entities.base import Entity
 
 
 class Chest(Entity):

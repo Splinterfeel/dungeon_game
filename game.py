@@ -1,8 +1,8 @@
 import random
 from base import Point, PointOffset
-from dungeon.entities.player import Player
-from dungeon.main import Dungeon
-from dungeon.constants import Constants
+from src.entities.player import Player
+from src.dungeon import Dungeon
+from src.constants import Constants
 from InquirerLib import prompt
 
 

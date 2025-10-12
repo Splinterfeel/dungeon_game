@@ -1,6 +1,6 @@
 import threading
 from base import Point
-from dungeon.constants import Constants, MapEntities, MapEntity
+from src.constants import Constants, MapEntities, MapEntity
 import matplotlib
 import matplotlib.pyplot as plt
 

@@ -1,5 +1,5 @@
 from base import Point
-from dungeon.entities.base import CharacterStats, Entity
+from src.entities.base import CharacterStats, Entity
 
 
 class Player(Entity):
