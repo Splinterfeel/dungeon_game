@@ -1,10 +1,12 @@
 import enum
+import queue
 import random
-from src.base import Point, PointOffset
+import time
+from src.base import COMMAND_QUEUE, Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import Constants
-from InquirerLib import prompt
+# from InquirerLib import prompt
 
 
 class GamePhase(enum.Enum):
@@ -44,12 +46,7 @@ class Game:
             self.dungeon.map.show()
 
     def perform_action(self, action):
-        match action["class_name"]:
-            case "<EXIT>":
-                self.dungeon.map.destroy()
-                exit()
-            case _:
-                print(f"Unknown action {action}")
+        print("Performing action", action)
 
     def loop(self):
         while True:
@@ -86,7 +83,14 @@ class Game:
 
     def _get_player_action(self, player: Player):
         print(f"[*] Player {player.name} turn")
-        return prompt(self.action_choices)
+        while True:
+            try:
+                cmd, data = COMMAND_QUEUE.get_nowait()
+                print(f"[Render thread] Получена команда: {cmd}, {data}")
+                return {"cmd": cmd, "data": data}
+            except queue.Empty:
+                pass
+            time.sleep(0.05)
 
     def _init_players(self, point: Point):
         # все точки на расстоянии 1 клетки от point
@@ -108,6 +112,6 @@ class Game:
             position = random.choice(choices)
             choices.remove(position)
             player.position = position
-            self.dungeon.map.set(player.position, Constants.PLAYER)
+            self.dungeon.map.set(player.position, Constants.PLAYER.value)
         if not all(player.position is not None for player in self.players):
             raise ValueError("Not all players were placed!")

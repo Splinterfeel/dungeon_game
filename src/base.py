@@ -1,7 +1,11 @@
 from enum import Enum, auto
 import math
 from dataclasses import dataclass
+import queue
 from typing import Self
+
+
+COMMAND_QUEUE = queue.Queue()
 
 
 class PointOffset(Enum):

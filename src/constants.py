@@ -1,4 +1,7 @@
-class Constants:
+from enum import Enum
+
+
+class Constants(Enum):
     WALL = ' # '
     FLOOR = '   '
     START = ' S '
@@ -8,6 +11,11 @@ class Constants:
     PLAYER = ' P '
 
 
+class ButtonPressed:
+    LEFT = 1
+    RIGHT = 3
+
+
 class MapEntity:
     def __init__(self, color: str = "black", text: str = "?"):
         self.color = color
@@ -15,13 +23,13 @@ class MapEntity:
 
 
 MapEntities = {
-    Constants.WALL: MapEntity(color="blue", text=""),
-    Constants.FLOOR: MapEntity(color="black", text=""),
-    Constants.CHEST: MapEntity(color="yellow", text="C"),
+    Constants.WALL.value: MapEntity(color="blue", text=""),
+    Constants.FLOOR.value: MapEntity(color="black", text=""),
+    Constants.CHEST.value: MapEntity(color="yellow", text="C"),
 
-    Constants.PLAYER: MapEntity(color="white", text="P"),
-    Constants.ENEMY: MapEntity(color="red", text="E"),
+    Constants.PLAYER.value: MapEntity(color="white", text="P"),
+    Constants.ENEMY.value: MapEntity(color="red", text="E"),
 
-    Constants.START: MapEntity(color="green", text="Start"),
-    Constants.EXIT: MapEntity(color="green", text="Exit"),
+    Constants.START.value: MapEntity(color="green", text="Start"),
+    Constants.EXIT.value: MapEntity(color="green", text="Exit"),
 }
