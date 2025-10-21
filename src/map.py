@@ -4,12 +4,12 @@ from src.constants import CELL_TYPE
 
 class DungeonMap:
     def __init__(self, width: int, height: int):
-        self._width = width
-        self._height = height
+        self.width = width
+        self.height = height
         self.tiles = [
             [
-                CELL_TYPE.WALL.value for _ in range(self._height)
-            ] for _ in range(self._width)
+                CELL_TYPE.WALL.value for _ in range(self.height)
+            ] for _ in range(self.width)
         ]
 
     def get(self, point: Point):
