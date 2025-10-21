@@ -1,13 +1,15 @@
 import matplotlib.pyplot as plt
 from src.base import Point
-from src.constants import Constants, MapEntities, MapEntity
+from src.constants import CELL_TYPE, MapEntities, MapEntity
 from matplotlib.patches import FancyBboxPatch
 
 
 import matplotlib
 
+from src.entities.interaction import get_interaction_options
 
-matplotlib.use('wxcairo')
+
+matplotlib.use('tkagg')
 
 
 def render_thread(map):
@@ -50,18 +52,6 @@ def render_thread(map):
         menu_callbacks = []
         fig.canvas.draw_idle()
 
-    def go_to(cell):
-        map.set(Point(0, 0), Constants.FLOOR)
-        print(f"🚶 Идем в клетку {cell}")
-        clear_menu()
-
-    def inspect(cell):
-        print(f"🔍 Осматриваем клетку {cell}")
-        clear_menu()
-
-    def open_chest(cell):
-        print(f"🗝️  Открываем сундук в {cell}")
-        clear_menu()
 
     def show_menu_at(event, cell, cell_type):
         """
@@ -70,19 +60,14 @@ def render_thread(map):
         """
         clear_menu()
         # Формируем список опций в зависимости от типа клетки
-        if cell_type == Constants.FLOOR:
-            options = [("Идти сюда", go_to), ("Осмотреть", inspect)]
-        elif cell_type == Constants.CHEST:
-            options = [("Открыть сундук", open_chest), ("Осмотреть", inspect)]
-        else:
-            options = [("Осмотреть", inspect)]
+        interaction_options = get_interaction_options(cell_type)
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
         mx = event.xdata
         my = event.ydata
         menu_w = 4
         option_h = 1
-        total_h = option_h * len(options)
+        total_h = option_h * len(interaction_options)
         # # Подвинем меню влево/вверх при необходимости, чтобы не выходило правее/ниже
         if mx + menu_w > map._width:
             mx = map._width - menu_w - 0.1
@@ -102,8 +87,8 @@ def render_thread(map):
         menu_artists.append(bg)
 
         # Добавим опции как тексты
-        for i, (label, callback) in enumerate(options):
-            ty = my + (len(options) - 1 - i) * option_h + option_h * 0.15
+        for i, (label, callback) in enumerate(interaction_options):
+            ty = my + (len(interaction_options) - 1 - i) * option_h + option_h * 0.15
             txt = ax.text(
                 mx + menu_w * 0.5, ty, label, ha='center', va='center',
                 fontsize=9, zorder=11
@@ -124,6 +109,7 @@ def render_thread(map):
                 if contains:
                     # вызываем соответствующий callback
                     menu_callbacks[i]()
+                    clear_menu()
                     return
             # если клик был внутри фона, но не по тексту — закроем меню
             for a in menu_artists:
@@ -133,7 +119,7 @@ def render_thread(map):
                         return
         cell = Point(int(event.xdata), int(event.ydata))
         cell_value = map.get(cell)
-        cell_type = Constants(cell_value)
+        cell_type = CELL_TYPE(cell_value)
         # print(int(event.xdata), int(event.ydata), cell_type.name)
         if not menu_exists:
             show_menu_at(event, cell, cell_type)

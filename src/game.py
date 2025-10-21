@@ -5,7 +5,7 @@ import time
 from src.base import COMMAND_QUEUE, Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
-from src.constants import Constants
+from src.constants import CELL_TYPE
 # from InquirerLib import prompt
 
 
@@ -112,6 +112,6 @@ class Game:
             position = random.choice(choices)
             choices.remove(position)
             player.position = position
-            self.dungeon.map.set(player.position, Constants.PLAYER.value)
+            self.dungeon.map.set(player.position, CELL_TYPE.PLAYER.value)
         if not all(player.position is not None for player in self.players):
             raise ValueError("Not all players were placed!")

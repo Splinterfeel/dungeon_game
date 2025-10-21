@@ -1,6 +1,6 @@
 import threading
 from src.base import Point
-from src.constants import Constants
+from src.constants import CELL_TYPE
 from src.visualization import render_thread
 
 
@@ -11,7 +11,7 @@ class DungeonMap:
         self.plt_thread: threading.Thread = None
         self.tiles = [
             [
-                Constants.WALL.value for _ in range(self._height)
+                CELL_TYPE.WALL.value for _ in range(self._height)
             ] for _ in range(self._width)
         ]
 
@@ -22,7 +22,7 @@ class DungeonMap:
         self.tiles[point.x][point.y] = value
 
     def is_free(self, point: Point) -> bool:
-        if self.get(point) == Constants.FLOOR.value:
+        if self.get(point) == CELL_TYPE.FLOOR.value:
             return True
         return False
 

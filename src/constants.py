@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Constants(Enum):
+class CELL_TYPE(Enum):
     WALL = ' # '
     FLOOR = '   '
     START = ' S '
@@ -23,13 +23,13 @@ class MapEntity:
 
 
 MapEntities = {
-    Constants.WALL.value: MapEntity(color="blue", text=""),
-    Constants.FLOOR.value: MapEntity(color="black", text=""),
-    Constants.CHEST.value: MapEntity(color="yellow", text="C"),
+    CELL_TYPE.WALL.value: MapEntity(color="blue", text=""),
+    CELL_TYPE.FLOOR.value: MapEntity(color="black", text=""),
+    CELL_TYPE.CHEST.value: MapEntity(color="yellow", text="C"),
 
-    Constants.PLAYER.value: MapEntity(color="white", text="P"),
-    Constants.ENEMY.value: MapEntity(color="red", text="E"),
+    CELL_TYPE.PLAYER.value: MapEntity(color="white", text="P"),
+    CELL_TYPE.ENEMY.value: MapEntity(color="red", text="E"),
 
-    Constants.START.value: MapEntity(color="green", text="Start"),
-    Constants.EXIT.value: MapEntity(color="green", text="Exit"),
+    CELL_TYPE.START.value: MapEntity(color="green", text="Start"),
+    CELL_TYPE.EXIT.value: MapEntity(color="green", text="Exit"),
 }
