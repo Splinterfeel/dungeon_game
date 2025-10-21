@@ -3,31 +3,33 @@ from src.constants import CELL_TYPE
 
 
 class InteractionHandlers:
-    def go_to(cell):
-        print(f"🚶 Идем в клетку {cell}")
+    def get_interaction_options(cell_type: CELL_TYPE):
+        default_options =  [("Осмотреть", InteractionHandlers._inspect)]
+        match cell_type:
+            case CELL_TYPE.FLOOR:
+                return [("Идти сюда", InteractionHandlers._go_to)] + default_options
+            case CELL_TYPE.EXIT:
+                return [("Покинуть", InteractionHandlers._interact_with_exit)] + default_options
+            case CELL_TYPE.ENEMY:
+                return [("Атаковать", InteractionHandlers._interact_with_enemy)] + default_options
+            case CELL_TYPE.CHEST:
+                return [("Открыть сундук", InteractionHandlers._open_chest),] + default_options
+            case _:
+                return default_options
 
-    def inspect(cell):
-        print(f"🔍 Осматриваем клетку {cell}")
+    def _go_to(point: Point):
+        print(f"🚶 Идем в клетку {point}")
 
-    def open_chest(cell):
-        print(f"🗝️  Открываем сундук в {cell}")
+    def _inspect(point: Point):
+        print(f"🔍 Осматриваем клетку {point}")
 
-    def interact_with_enemy(cell):
-        print(f"Атакуем врага в {cell}")
+    def _open_chest(point: Point):
+        print(f"🗝️  Открываем сундук в {point}")
 
-    def interact_with_exit(cell):
-        print(f"Покидаем подземелье в {cell}")
+    def _interact_with_enemy(point: Point):
+        print(f"Атакуем врага в {point}")
+
+    def _interact_with_exit(point: Point):
+        print(f"Покидаем подземелье в {point}")
 
 
-def get_interaction_options(cell_type: CELL_TYPE):
-    match cell_type:
-        case CELL_TYPE.FLOOR:
-            return [("Идти сюда", InteractionHandlers.go_to), ("Осмотреть", InteractionHandlers.inspect)]
-        case CELL_TYPE.EXIT:
-            return [("Покинуть", InteractionHandlers.interact_with_exit), ("Осмотреть", InteractionHandlers.inspect)]
-        case CELL_TYPE.ENEMY:
-            return [("Атаковать", InteractionHandlers.interact_with_enemy), ("Осмотреть", InteractionHandlers.inspect)]
-        case CELL_TYPE.CHEST:
-            return [("Открыть сундук", InteractionHandlers.open_chest), ("Осмотреть", InteractionHandlers.inspect)]
-        case _:
-            return [("Осмотреть", InteractionHandlers.inspect)]

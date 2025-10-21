@@ -6,7 +6,7 @@ from matplotlib.patches import FancyBboxPatch
 
 import matplotlib
 
-from src.entities.interaction import get_interaction_options
+from src.entities.interaction import InteractionHandlers
 
 
 matplotlib.use('tkagg')
@@ -60,7 +60,7 @@ def render_thread(map):
         """
         clear_menu()
         # Формируем список опций в зависимости от типа клетки
-        interaction_options = get_interaction_options(cell_type)
+        interaction_options = InteractionHandlers.get_interaction_options(cell_type)
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
         mx = event.xdata
