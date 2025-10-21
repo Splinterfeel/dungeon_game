@@ -7,7 +7,7 @@ from matplotlib.patches import FancyBboxPatch
 import matplotlib
 from matplotlib.text import Text as mText
 
-from src.entities.interaction import InteractionHandlers
+from src.interaction import InteractionHandlers
 from src.map import DungeonMap
 
 
