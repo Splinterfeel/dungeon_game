@@ -1,11 +1,13 @@
 import enum
 import queue
 import random
+import threading
 import time
 from src.base import COMMAND_QUEUE, Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
+from src.visualization import render_thread
 # from InquirerLib import prompt
 
 
@@ -16,6 +18,7 @@ class GamePhase(enum.Enum):
 
 class Game:
     def __init__(self, dungeon: Dungeon, players: list[Player], with_plot: bool = False):
+        self.plt_thread: threading.Thread = None
         self.dungeon = dungeon
         self.with_plot = with_plot
         self.player_position = None
@@ -43,7 +46,8 @@ class Game:
     def init(self):
         self._init_players(self.dungeon.start_point)
         if self.with_plot:
-            self.dungeon.map.show()
+            self.plt_thread = threading.Thread(target=render_thread, args=[self.dungeon.map])
+            self.plt_thread.start()
 
     def perform_action(self, action):
         print("Performing action", action)

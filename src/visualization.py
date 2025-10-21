@@ -5,15 +5,17 @@ from matplotlib.patches import FancyBboxPatch
 
 
 import matplotlib
+from matplotlib.text import Text as mText
 
 from src.entities.interaction import InteractionHandlers
+from src.map import DungeonMap
 
 
 matplotlib.use('tkagg')
 
 
 class Visualization:
-    def __init__(self, map):
+    def __init__(self, map: DungeonMap):
         self.map = map
         self.menu_artists = []  # все артисты меню (фон + тексты)
         self.menu_texts = []  # текстовые артисты (для hit-testing через .contains(event))
@@ -26,8 +28,8 @@ class Visualization:
         self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
         self.ax.axis('off')
-        self.rects = {}
-        self.texts = {}
+        self.rects: dict[tuple, plt.Rectangle] = {}
+        self.texts: dict[tuple, mText] = {}
         self.fig.canvas.mpl_connect("button_press_event", self.onclick)
 
     def clear_menu(self):
@@ -145,7 +147,7 @@ class Visualization:
         #     COMMAND_QUEUE.put(("click", (event.xdata, event.ydata)))
 
 
-def render_thread(map):
+def render_thread(map: DungeonMap):
     visualization = Visualization(map)
     visualization.init_map()
     visualization.loop()
