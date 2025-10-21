@@ -12,53 +12,71 @@ from src.entities.interaction import InteractionHandlers
 matplotlib.use('tkagg')
 
 
-def render_thread(map):
-    menu_artists = []  # все артисты меню (фон + тексты)
-    menu_texts = []  # текстовые артисты (для hit-testing через .contains(event))
-    menu_callbacks = []  # соответствующие callback'и для текстов
+class Visualization:
+    def __init__(self, map):
+        self.map = map
+        self.menu_artists = []  # все артисты меню (фон + тексты)
+        self.menu_texts = []  # текстовые артисты (для hit-testing через .contains(event))
+        self.menu_callbacks = []  # соответствующие callback'и для текстов
+        self.menu_exists = False
+        # init matplotlib
+        self.fig, self.ax = plt.subplots(figsize=(6, 6))
+        self.ax.set_xlim(0, self.map._width)
+        self.ax.set_ylim(0, self.map._height)
+        self.ax.set_aspect('equal')
+        self.ax.invert_yaxis()
+        self.ax.axis('off')
+        self.rects = {}
+        self.texts = {}
+        self.fig.canvas.mpl_connect("button_press_event", self.onclick)
 
-    menu_exists = False
-
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set_xlim(0, map._width)
-    ax.set_ylim(0, map._height)
-    ax.set_aspect('equal')
-    ax.invert_yaxis()
-    ax.axis('off')
-    rects = {}
-    texts = {}
-
-    def init_map():
-        # создаём сетку один раз
-        for y in range(map._height):
-            for x in range(map._width):
-                rect = plt.Rectangle((x, y), 1, 1, facecolor='wheat', edgecolor='gray')
-                ax.add_patch(rect)
-                rects[(x, y)] = rect
-                t = ax.text(x + 0.5, y + 0.5, "", ha='center', va='center', fontsize=6, color='black')
-                texts[(x, y)] = t
-
-    def clear_menu():
-        nonlocal menu_exists, menu_artists, menu_texts, menu_callbacks
+    def clear_menu(self):
         """Безопасно удаляет все элементы меню (если они ещё существуют)."""
-        for a in menu_artists:
+        for a in self.menu_artists:
             try:
                 a.remove()
             except Exception:
                 # если по какой-то причине remove() не поддерживается или артист уже удалён — пропускаем
                 pass
-        menu_artists = []
-        menu_texts = []
-        menu_callbacks = []
-        fig.canvas.draw_idle()
+        self.menu_artists = []
+        self.menu_texts = []
+        self.menu_callbacks = []
+        self.menu_exists = False
+        self.fig.canvas.draw_idle()
 
+    def init_map(self):
+        # создаём сетку один раз
+        for y in range(self.map._height):
+            for x in range(self.map._width):
+                rect = plt.Rectangle((x, y), 1, 1, facecolor='wheat', edgecolor='gray')
+                self.ax.add_patch(rect)
+                self.rects[(x, y)] = rect
+                t = self.ax.text(x + 0.5, y + 0.5, "", ha='center', va='center', fontsize=6, color='black')
+                self.texts[(x, y)] = t
 
-    def show_menu_at(event, cell, cell_type):
+    def loop(self):
+        plt.show(block=False)
+        while True:
+            for x in range(self.map._width):
+                for y in range(self.map._height):
+                    map_entity = MapEntities.get(self.map.get(Point(x, y)), MapEntity())
+                    rect = self.rects[(x, y)]
+                    text = self.texts[(x, y)]
+                    rect.set_facecolor(map_entity.color)
+                    text.set_text(map_entity.text)
+                    # показываем номер шага, если клетка достижима и не старт
+                    # if (x, y) in reachable and (x, y) != start:
+                    #     ax.text(x + 0.5, y + 0.5, str(reachable[(x, y)]),
+                    #             ha='center', va='center', fontsize=8, color='black')
+            self.fig.canvas.draw_idle()
+            plt.pause(0.05)
+
+    def show_menu_at(self, event, cell, cell_type):
         """
         Показывает компактное меню рядом с координатами event.xdata/event.ydata.
         Для hit-testing используется метод artist.contains(event).
         """
-        clear_menu()
+        self.clear_menu()
         # Формируем список опций в зависимости от типа клетки
         interaction_options = InteractionHandlers.get_interaction_options(cell_type)
 
@@ -69,10 +87,10 @@ def render_thread(map):
         option_h = 1
         total_h = option_h * len(interaction_options)
         # # Подвинем меню влево/вверх при необходимости, чтобы не выходило правее/ниже
-        if mx + menu_w > map._width:
-            mx = map._width - menu_w - 0.1
-        if my + total_h > map._height:
-            my = map._height - total_h - 0.1
+        if mx + menu_w > self.map._width:
+            mx = self.map._width - menu_w - 0.1
+        if my + total_h > self.map._height:
+            my = self.map._height - total_h - 0.1
         if mx < 0.1:
             mx = 0.1
         if my < 0.1:
@@ -83,63 +101,51 @@ def render_thread(map):
             (mx, my - 0.5), menu_w, total_h,
             boxstyle="round,pad=0.02", linewidth=1,
             facecolor="white", edgecolor="black", zorder=10)
-        ax.add_patch(bg)
-        menu_artists.append(bg)
+        self.ax.add_patch(bg)
+        self.menu_artists.append(bg)
 
         # Добавим опции как тексты
         for i, (label, callback) in enumerate(interaction_options):
             ty = my + (len(interaction_options) - 1 - i) * option_h + option_h * 0.15
-            txt = ax.text(
+            txt = self.ax.text(
                 mx + menu_w * 0.5, ty, label, ha='center', va='center',
                 fontsize=9, zorder=11
             )
 
-            menu_artists.append(txt)
-            menu_texts.append(txt)
+            self.menu_artists.append(txt)
+            self.menu_texts.append(txt)
             # Сохраняем обёртку callback, передаём cell как параметр
-            menu_callbacks.append(lambda cb=callback, cell=cell: cb(cell))
+            self.menu_callbacks.append(lambda cb=callback, cell=cell: cb(cell))
 
-        fig.canvas.draw()  # нужно, чтобы artist.contains(event) корректно работал
+        self.fig.canvas.draw()  # нужно, чтобы artist.contains(event) корректно работал
 
-    def onclick(event):
+    def onclick(self, event):
         # Сначала проверим — клик по пункту меню?
-        if menu_texts:
-            for i, txt in enumerate(menu_texts):
+        if self.menu_texts:
+            for i, txt in enumerate(self.menu_texts):
                 contains, _ = txt.contains(event)
                 if contains:
                     # вызываем соответствующий callback
-                    menu_callbacks[i]()
-                    clear_menu()
+                    self.menu_callbacks[i]()
+                    self.clear_menu()
                     return
             # если клик был внутри фона, но не по тексту — закроем меню
-            for a in menu_artists:
+            for a in self.menu_artists:
                 if isinstance(a, FancyBboxPatch):
                     if a.get_bbox().contains(event.xdata, event.ydata):
-                        clear_menu()
+                        self.clear_menu()
                         return
         cell = Point(int(event.xdata), int(event.ydata))
-        cell_value = map.get(cell)
+        cell_value = self.map.get(cell)
         cell_type = CELL_TYPE(cell_value)
         # print(int(event.xdata), int(event.ydata), cell_type.name)
-        if not menu_exists:
-            show_menu_at(event, cell, cell_type)
+        if not self.menu_exists:
+            self.show_menu_at(event, cell, cell_type)
         # if event.xdata and event.ydata:
         #     COMMAND_QUEUE.put(("click", (event.xdata, event.ydata)))
 
-    fig.canvas.mpl_connect("button_press_event", onclick)
-    plt.show(block=False)
-    init_map()
-    while True:
-        for x in range(map._width):
-            for y in range(map._height):
-                map_entity = MapEntities.get(map.get(Point(x, y)), MapEntity())
-                rect = rects[(x, y)]
-                text = texts[(x, y)]
-                rect.set_facecolor(map_entity.color)
-                text.set_text(map_entity.text)
-                # показываем номер шага, если клетка достижима и не старт
-                # if (x, y) in reachable and (x, y) != start:
-                #     ax.text(x + 0.5, y + 0.5, str(reachable[(x, y)]),
-                #             ha='center', va='center', fontsize=8, color='black')
-        fig.canvas.draw_idle()
-        plt.pause(0.05)
+
+def render_thread(map):
+    visualization = Visualization(map)
+    visualization.init_map()
+    visualization.loop()
