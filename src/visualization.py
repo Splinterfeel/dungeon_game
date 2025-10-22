@@ -1,6 +1,7 @@
+from copy import deepcopy
 import matplotlib.pyplot as plt
 from src.base import Point
-from src.constants import CELL_TYPE, MapEntities, MapEntity
+from src.constants import CELL_TYPE, ColorPallette, MapEntities, MapEntity
 from matplotlib.patches import FancyBboxPatch
 
 
@@ -50,7 +51,7 @@ class Visualization:
         # создаём сетку один раз
         for y in range(self.map.height):
             for x in range(self.map.width):
-                rect = plt.Rectangle((x, y), 1, 1, facecolor='wheat', edgecolor='gray')
+                rect = plt.Rectangle((x, y), 1, 1, facecolor='wheat', edgecolor=ColorPallette.DEFAULT_EDGE_COLOR)
                 self.ax.add_patch(rect)
                 self.rects[(x, y)] = rect
                 t = self.ax.text(x + 0.5, y + 0.5, "", ha='center', va='center', fontsize=6, color='black')
@@ -65,11 +66,15 @@ class Visualization:
                     rect = self.rects[(x, y)]
                     text = self.texts[(x, y)]
                     rect.set_facecolor(map_entity.color)
+                    rect.set_edgecolor(ColorPallette.DEFAULT_EDGE_COLOR)
                     text.set_text(map_entity.text)
                     # показываем номер шага, если клетка достижима и не старт
-                    # if (x, y) in reachable and (x, y) != start:
-                    #     ax.text(x + 0.5, y + 0.5, str(reachable[(x, y)]),
-                    #             ha='center', va='center', fontsize=8, color='black')
+            # дорисовываем клетки доступные для перемещения, другой BG цвет
+            move_points = deepcopy(self.map.move_tiles)
+            for point in move_points:
+                rect = self.rects[(point.x, point.y)]
+                rect.set_edgecolor(ColorPallette.MOVE_CELL_EDGE_COLOR)
+                rect.set_facecolor(ColorPallette.MOVE_CELL_BG_COLOR)
             self.fig.canvas.draw_idle()
             plt.pause(0.05)
 

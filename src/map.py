@@ -1,4 +1,4 @@
-from src.base import Point
+from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
 from src.entities.base import Actor
 
@@ -12,6 +12,7 @@ class DungeonMap:
                 CELL_TYPE.WALL.value for _ in range(self.height)
             ] for _ in range(self.width)
         ]
+        self.move_tiles: list[Point] = []  # клетки, подсвеченные для текущего хода
 
     def get(self, point: Point):
         return self.tiles[point.x][point.y]
@@ -23,3 +24,20 @@ class DungeonMap:
         if self.get(point) == CELL_TYPE.FLOOR.value:
             return True
         return False
+
+    def set_available_moves(self, moves: list[Point]):
+        self.move_tiles = moves
+
+    def get_avaliable_moves(self, actor: Actor) -> list[Point]:
+        cells = [
+            actor.position.on(PointOffset.LEFT),
+            actor.position.on(PointOffset.LEFT).on(PointOffset.TOP),
+            actor.position.on(PointOffset.LEFT).on(PointOffset.BOTTOM),
+            actor.position.on(PointOffset.RIGHT),
+            actor.position.on(PointOffset.RIGHT).on(PointOffset.TOP),
+            actor.position.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),
+            actor.position.on(PointOffset.TOP),
+            actor.position.on(PointOffset.BOTTOM),
+        ]
+        free_cells = [cell for cell in cells if self.is_free(cell)]
+        return free_cells

@@ -36,14 +36,23 @@ class Game:
     def perform_action(self, action):
         print("Performing action", action)
 
+    def peform_player_turn(self, player: Player):
+        avaliable_moves = self.dungeon.map.get_avaliable_moves(player)
+        # возможная предобработка доступных клеток для перемещения
+        self.dungeon.map.set_available_moves(avaliable_moves)
+        print(f"{avaliable_moves=}")
+        action = self._get_player_action(player)
+        self.perform_action(action)
+        # очищаем доступные для хода клетки
+        self.dungeon.map.set_available_moves([])
+
     def run_turn(self):
         self.turn_number += 1
         print(f"=== TURN {self.turn_number} ===")
         self.phase = GamePhase.PLAYER_PHASE
         print("Player phase")
         for player in self.players:
-            action = self._get_player_action(player)
-            self.perform_action(action)
+            self.peform_player_turn(player)
         self.phase = GamePhase.ENEMY_PHASE
         print("Enemy phase")
         for enemy in self.dungeon.enemies:

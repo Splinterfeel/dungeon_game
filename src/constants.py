@@ -33,3 +33,10 @@ MapEntities = {
     CELL_TYPE.START.value: MapEntity(color="green", text="Start"),
     CELL_TYPE.EXIT.value: MapEntity(color="green", text="Exit"),
 }
+
+
+class ColorPallette:
+    DEFAULT_EDGE_COLOR = "gray"
+    # цвет для ячеек доступных для перемещения
+    MOVE_CELL_EDGE_COLOR = "green"
+    MOVE_CELL_BG_COLOR = (0.2, 0.2, 0.2)
