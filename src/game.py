@@ -8,7 +8,6 @@ from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.visualization import render_thread
-# from InquirerLib import prompt
 
 
 class GamePhase(enum.Enum):
@@ -23,25 +22,10 @@ class Game:
         self.with_plot = with_plot
         self.player_position = None
         self.phase: GamePhase = None
-        self.turn = 1
+        self.turn_number = 0
         self.players = players
         if not players:
             raise ValueError("No players passed")
-        self.action_choices = [
-            {
-                "type": "list",
-                "message": "Choose action?",
-                "choices": [
-                    "MOVE UP",
-                    "MOVE DOWN",
-                    "MOVE LEFT",
-                    "MOVE RIGHT",
-                    "<EXIT>",
-                ],
-                "multiselect": False,
-                "name": "class_name"
-            },
-        ]
 
     def init(self):
         self._init_players(self.dungeon.start_point)
@@ -52,31 +36,26 @@ class Game:
     def perform_action(self, action):
         print("Performing action", action)
 
-    def loop(self):
-        while True:
-            print(f"=== TURN {self.turn} ===")
-            self.phase = GamePhase.PLAYER_PHASE
-            print("Player phase")
-            for player in self.players:
-                action = self._get_player_action(player)
-                self.perform_action(action)
-                if self.check_game_end():
-                    break
-            self.phase = GamePhase.ENEMY_PHASE
-            game_end = self.enemy_phase()
-            if game_end:
-                break
-            self.turn += 1
-            print(f"= END TURN {self.turn} =")
-        print("Game end")
-
-    def enemy_phase(self) -> bool:
+    def run_turn(self):
+        self.turn_number += 1
+        print(f"=== TURN {self.turn_number} ===")
+        self.phase = GamePhase.PLAYER_PHASE
+        print("Player phase")
+        for player in self.players:
+            action = self._get_player_action(player)
+            self.perform_action(action)
+        self.phase = GamePhase.ENEMY_PHASE
         print("Enemy phase")
         for enemy in self.dungeon.enemies:
             print(f"{enemy} turn")
+        print(f"= END TURN {self.turn_number} =")
+
+    def loop(self):
+        while True:
+            self.run_turn()
             if self.check_game_end():
-                return True
-        return False
+                break
+        print("Game end")
 
     def check_game_end(self) -> bool:
         if all([p.is_dead() for p in self.players]):
