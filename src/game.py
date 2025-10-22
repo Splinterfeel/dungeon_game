@@ -3,6 +3,7 @@ import queue
 import random
 import threading
 import time
+from src.action import Action, ActionType
 from src.base import COMMAND_QUEUE, Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
@@ -33,16 +34,29 @@ class Game:
             self.plt_thread = threading.Thread(target=render_thread, args=[self.dungeon.map])
             self.plt_thread.start()
 
-    def perform_action(self, action):
-        print("Performing action", action)
+    def perform_player_action(self, player: Player, action: Action):
+        match action.type:
+            case ActionType.MOVE:
+                self.move_player(player, action.cell)
+            case _:
+                print("Performing action", action)
+        print()
+
+    def move_player(self, player: Player, cell: Point):
+        self.dungeon.map.set(player.position, CELL_TYPE.FLOOR.value)
+        player.position = cell
+        self.dungeon.map.set(cell, CELL_TYPE.PLAYER.value)
 
     def peform_player_turn(self, player: Player):
         avaliable_moves = self.dungeon.map.get_avaliable_moves(player)
         # возможная предобработка доступных клеток для перемещения
         self.dungeon.map.set_available_moves(avaliable_moves)
-        print(f"{avaliable_moves=}")
-        action = self._get_player_action(player)
-        self.perform_action(action)
+        # можно выполнять сколько угодно действий, не завершающих ход
+        player_turn_end = False
+        while not player_turn_end:
+            action = self._get_player_action(player)
+            self.perform_player_action(player, action)
+            player_turn_end = action.ends_turn
         # очищаем доступные для хода клетки
         self.dungeon.map.set_available_moves([])
 
@@ -77,9 +91,9 @@ class Game:
         print(f"[*] Player {player.name} turn")
         while True:
             try:
-                cmd, data = COMMAND_QUEUE.get_nowait()
-                print(f"[Render thread] Получена команда: {cmd}, {data}")
-                return {"cmd": cmd, "data": data}
+                action: Action = COMMAND_QUEUE.get_nowait()
+                print(f"[Game thread] Получена команда: {action}")
+                return action
             except queue.Empty:
                 pass
             time.sleep(0.05)

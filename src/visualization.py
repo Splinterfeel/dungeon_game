@@ -68,7 +68,6 @@ class Visualization:
                     rect.set_facecolor(map_entity.color)
                     rect.set_edgecolor(ColorPallette.DEFAULT_EDGE_COLOR)
                     text.set_text(map_entity.text)
-                    # показываем номер шага, если клетка достижима и не старт
             # дорисовываем клетки доступные для перемещения, другой BG цвет
             move_points = deepcopy(self.map.move_tiles)
             for point in move_points:
@@ -145,11 +144,8 @@ class Visualization:
         cell = Point(int(event.xdata), int(event.ydata))
         cell_value = self.map.get(cell)
         cell_type = CELL_TYPE(cell_value)
-        # print(int(event.xdata), int(event.ydata), cell_type.name)
         if not self.menu_exists:
             self.show_menu_at(event, cell, cell_type)
-        # if event.xdata and event.ydata:
-        #     COMMAND_QUEUE.put(("click", (event.xdata, event.ydata)))
 
 
 def render_thread(map: DungeonMap):
