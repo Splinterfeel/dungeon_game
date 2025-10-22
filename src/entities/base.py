@@ -3,7 +3,8 @@ from src.base import Point
 
 
 class Entity:
-    position: Point
+    def __init__(self, position: Point):
+        self.position = position
 
 
 @dataclass
@@ -13,6 +14,10 @@ class CharacterStats:
     speed: int
 
 
-class Actor:
+class Actor(Entity):
+    def __init__(self, position: Point, stats: CharacterStats):
+        super().__init__(position=position)
+        self.stats = stats
+
     def is_dead(self) -> bool:
         return self.stats.health <= 0

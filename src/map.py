@@ -1,5 +1,6 @@
 from src.base import Point
 from src.constants import CELL_TYPE
+from src.entities.base import Actor
 
 
 class DungeonMap:

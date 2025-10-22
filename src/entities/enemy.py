@@ -1,9 +1,5 @@
-from src.base import Point
-from src.entities.base import Actor, CharacterStats, Entity
+from src.entities.base import Actor
 
 
-class Enemy(Actor, Entity):
-    def __init__(self, position: Point, stats: CharacterStats):
-        self.position = position
-        self.stats = stats
-        super().__init__()
+class Enemy(Actor):
+    ...
