@@ -30,13 +30,17 @@ class DungeonMap:
     def get_avaliable_moves(self, actor: Actor) -> list[Point]:
         cells = [
             actor.position.on(PointOffset.LEFT),
+            actor.position.on(PointOffset.LEFT).on(PointOffset.LEFT),
             actor.position.on(PointOffset.LEFT).on(PointOffset.TOP),
             actor.position.on(PointOffset.LEFT).on(PointOffset.BOTTOM),
             actor.position.on(PointOffset.RIGHT),
+            actor.position.on(PointOffset.RIGHT).on(PointOffset.RIGHT),
             actor.position.on(PointOffset.RIGHT).on(PointOffset.TOP),
             actor.position.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),
             actor.position.on(PointOffset.TOP),
+            actor.position.on(PointOffset.TOP).on(PointOffset.TOP),
             actor.position.on(PointOffset.BOTTOM),
+            actor.position.on(PointOffset.BOTTOM).on(PointOffset.BOTTOM),
         ]
         free_cells = [cell for cell in cells if self.is_free(cell)]
         return free_cells
