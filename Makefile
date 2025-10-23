@@ -1,0 +1,2 @@
+code_style:
+	black .

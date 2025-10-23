@@ -10,8 +10,16 @@ from src.map import DungeonMap
 
 class Dungeon:
     def __init__(
-            self, width: int, height: int, min_rooms: int, max_rooms: int, min_room_size: int,
-            max_room_size: int, max_chests: int, enemies_num: int):
+        self,
+        width: int,
+        height: int,
+        min_rooms: int,
+        max_rooms: int,
+        min_room_size: int,
+        max_room_size: int,
+        max_chests: int,
+        enemies_num: int,
+    ):
         self.width = width
         self.height = height
         self.min_rooms = min_rooms
@@ -47,10 +55,10 @@ class Dungeon:
                     health=random.randint(10, 20),
                     damage=random.randint(3, 5),
                     speed=2,
-                )
+                ),
             )
             if not self.map.is_free(enemy.position):
-                raise ValueError('Enemy not in free tile')
+                raise ValueError("Enemy not in free tile")
             self.map.set(enemy.position, CELL_TYPE.ENEMY.value)
             self.enemies.append(enemy)
 
@@ -136,7 +144,9 @@ class Dungeon:
             # Чем дальше комната, тем больше золота.
             # Мы можем использовать индекс комнаты как простую меру удаленности
             distance_factor = self.rooms.index(room)
-            gold_amount = random.randint(10 + distance_factor * 5, 50 + distance_factor * 10)
+            gold_amount = random.randint(
+                10 + distance_factor * 5, 50 + distance_factor * 10
+            )
             new_chest = Chest(position, gold_amount)
             self.chests.append(new_chest)
             self.map.set(new_chest.position, CELL_TYPE.CHEST.value)
@@ -173,7 +183,10 @@ class Dungeon:
             point_right = self.map.get(point.on(PointOffset.RIGHT))
             point_up = self.map.get(point.on(PointOffset.TOP))
             point_down = self.map.get(point.on(PointOffset.BOTTOM))
-            if all(t == CELL_TYPE.FLOOR.value for t in [point_left, point_right, point_up, point_down]):
+            if all(
+                t == CELL_TYPE.FLOOR.value
+                for t in [point_left, point_right, point_up, point_down]
+            ):
                 continue
             result_choices.append(point)
         if not result_choices:
@@ -181,10 +194,10 @@ class Dungeon:
         return result_choices
 
     def print_info(self):
-        print('rooms:', len(self.rooms))
+        print("rooms:", len(self.rooms))
         for chest in self.chests:
             print(chest)
-        print('full dungeon gold:', sum(chest.gold for chest in self.chests))
+        print("full dungeon gold:", sum(chest.gold for chest in self.chests))
         for enemy in self.enemies:
             print("Enemy: stats", enemy.stats)
 

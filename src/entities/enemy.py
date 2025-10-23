@@ -1,5 +1,4 @@
 from src.entities.base import Actor
 
 
-class Enemy(Actor):
-    ...
+class Enemy(Actor): ...

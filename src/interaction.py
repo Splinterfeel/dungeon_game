@@ -5,16 +5,22 @@ from src.constants import CELL_TYPE
 
 class InteractionHandlers:
     def get_interaction_options(cell_type: CELL_TYPE):
-        default_options =  [("Осмотреть", InteractionHandlers._inspect)]
+        default_options = [("Осмотреть", InteractionHandlers._inspect)]
         match cell_type:
             case CELL_TYPE.FLOOR:
                 return [("Идти сюда", InteractionHandlers._go_to)] + default_options
             case CELL_TYPE.EXIT:
-                return [("Покинуть", InteractionHandlers._interact_with_exit)] + default_options
+                return [
+                    ("Покинуть", InteractionHandlers._interact_with_exit)
+                ] + default_options
             case CELL_TYPE.ENEMY:
-                return [("Атаковать", InteractionHandlers._interact_with_enemy)] + default_options
+                return [
+                    ("Атаковать", InteractionHandlers._interact_with_enemy)
+                ] + default_options
             case CELL_TYPE.CHEST:
-                return [("Открыть сундук", InteractionHandlers._open_chest),] + default_options
+                return [
+                    ("Открыть сундук", InteractionHandlers._open_chest),
+                ] + default_options
             case _:
                 return default_options
 
@@ -28,11 +34,15 @@ class InteractionHandlers:
 
     def _open_chest(point: Point):
         print(f"🗝️  Открываем сундук в {point}")
-        COMMAND_QUEUE.put(Action(type=ActionType.OPEN_CHEST, cell=point, ends_turn=False))
+        COMMAND_QUEUE.put(
+            Action(type=ActionType.OPEN_CHEST, cell=point, ends_turn=False)
+        )
 
     def _interact_with_enemy(point: Point):
         print(f"Атакуем врага в {point}")
-        COMMAND_QUEUE.put(Action(type=ActionType.ATTACK_ENEMY, cell=point, ends_turn=True))
+        COMMAND_QUEUE.put(
+            Action(type=ActionType.ATTACK_ENEMY, cell=point, ends_turn=True)
+        )
 
     def _interact_with_exit(point: Point):
         print(f"Покидаем подземелье в {point}")

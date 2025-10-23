@@ -8,9 +8,8 @@ class DungeonMap:
         self.width = width
         self.height = height
         self.tiles = [
-            [
-                CELL_TYPE.WALL.value for _ in range(self.height)
-            ] for _ in range(self.width)
+            [CELL_TYPE.WALL.value for _ in range(self.height)]
+            for _ in range(self.width)
         ]
         self.move_tiles: list[Point] = []  # клетки, подсвеченные для текущего хода
 

@@ -2,13 +2,13 @@ from enum import Enum
 
 
 class CELL_TYPE(Enum):
-    WALL = ' # '
-    FLOOR = '   '
-    START = ' S '
-    CHEST = ' C '
-    ENEMY = ' E '
-    EXIT = ' X '
-    PLAYER = ' P '
+    WALL = " # "
+    FLOOR = "   "
+    START = " S "
+    CHEST = " C "
+    ENEMY = " E "
+    EXIT = " X "
+    PLAYER = " P "
 
 
 class ButtonPressed:
@@ -26,10 +26,8 @@ MapEntities = {
     CELL_TYPE.WALL.value: MapEntity(color="blue", text=""),
     CELL_TYPE.FLOOR.value: MapEntity(color="black", text=""),
     CELL_TYPE.CHEST.value: MapEntity(color="yellow", text="C"),
-
     CELL_TYPE.PLAYER.value: MapEntity(color="white", text="P"),
     CELL_TYPE.ENEMY.value: MapEntity(color="red", text="E"),
-
     CELL_TYPE.START.value: MapEntity(color="green", text="Start"),
     CELL_TYPE.EXIT.value: MapEntity(color="green", text="Exit"),
 }

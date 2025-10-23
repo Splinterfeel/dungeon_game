@@ -10,6 +10,7 @@ class ActionType(Enum):
     OPEN_CHEST = auto()
     EXIT = auto()
 
+
 @dataclass
 class Action:
     type: ActionType

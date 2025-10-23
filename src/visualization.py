@@ -12,23 +12,25 @@ from src.interaction import InteractionHandlers
 from src.map import DungeonMap
 
 
-matplotlib.use('tkagg')
+matplotlib.use("tkagg")
 
 
 class Visualization:
     def __init__(self, map: DungeonMap):
         self.map = map
         self.menu_drawables = []  # все артисты меню (фон + тексты)
-        self.menu_texts = []  # текстовые артисты (для hit-testing через .contains(event))
+        self.menu_texts = (
+            []
+        )  # текстовые артисты (для hit-testing через .contains(event))
         self.menu_callbacks = []  # соответствующие callback'и для текстов
         self.menu_exists = False
         # init matplotlib
         self.fig, self.ax = plt.subplots(figsize=(6, 6))
         self.ax.set_xlim(0, self.map.width)
         self.ax.set_ylim(0, self.map.height)
-        self.ax.set_aspect('equal')
+        self.ax.set_aspect("equal")
         self.ax.invert_yaxis()
-        self.ax.axis('off')
+        self.ax.axis("off")
         self.rects: dict[tuple, plt.Rectangle] = {}
         self.texts: dict[tuple, mText] = {}
         self.fig.canvas.mpl_connect("button_press_event", self.onclick)
@@ -51,10 +53,24 @@ class Visualization:
         # создаём сетку один раз
         for y in range(self.map.height):
             for x in range(self.map.width):
-                rect = plt.Rectangle((x, y), 1, 1, facecolor='wheat', edgecolor=ColorPallette.DEFAULT_EDGE_COLOR)
+                rect = plt.Rectangle(
+                    (x, y),
+                    1,
+                    1,
+                    facecolor="wheat",
+                    edgecolor=ColorPallette.DEFAULT_EDGE_COLOR,
+                )
                 self.ax.add_patch(rect)
                 self.rects[(x, y)] = rect
-                t = self.ax.text(x + 0.5, y + 0.5, "", ha='center', va='center', fontsize=6, color='black')
+                t = self.ax.text(
+                    x + 0.5,
+                    y + 0.5,
+                    "",
+                    ha="center",
+                    va="center",
+                    fontsize=6,
+                    color="black",
+                )
                 self.texts[(x, y)] = t
 
     def loop(self):
@@ -104,9 +120,15 @@ class Visualization:
 
         # Фон меню (с закруглением)
         bg = FancyBboxPatch(
-            (mx, my - 0.5), menu_w, total_h,
-            boxstyle="round,pad=0.02", linewidth=1,
-            facecolor="white", edgecolor="black", zorder=10)
+            (mx, my - 0.5),
+            menu_w,
+            total_h,
+            boxstyle="round,pad=0.02",
+            linewidth=1,
+            facecolor="white",
+            edgecolor="black",
+            zorder=10,
+        )
         self.ax.add_patch(bg)
         self.menu_drawables.append(bg)
 
@@ -114,8 +136,13 @@ class Visualization:
         for i, (label, callback) in enumerate(interaction_options):
             ty = my + (len(interaction_options) - 1 - i) * option_h + option_h * 0.15
             txt = self.ax.text(
-                mx + menu_w * 0.5, ty, label, ha='center', va='center',
-                fontsize=9, zorder=11
+                mx + menu_w * 0.5,
+                ty,
+                label,
+                ha="center",
+                va="center",
+                fontsize=9,
+                zorder=11,
             )
 
             self.menu_drawables.append(txt)

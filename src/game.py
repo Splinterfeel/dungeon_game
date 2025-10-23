@@ -17,7 +17,9 @@ class GamePhase(enum.Enum):
 
 
 class Game:
-    def __init__(self, dungeon: Dungeon, players: list[Player], with_plot: bool = False):
+    def __init__(
+        self, dungeon: Dungeon, players: list[Player], with_plot: bool = False
+    ):
         self.plt_thread: threading.Thread = None
         self.dungeon = dungeon
         self.with_plot = with_plot
@@ -31,7 +33,9 @@ class Game:
     def init(self):
         self._init_players(self.dungeon.start_point)
         if self.with_plot:
-            self.plt_thread = threading.Thread(target=render_thread, args=[self.dungeon.map])
+            self.plt_thread = threading.Thread(
+                target=render_thread, args=[self.dungeon.map]
+            )
             self.plt_thread.start()
 
     def perform_player_action(self, player: Player, action: Action):
