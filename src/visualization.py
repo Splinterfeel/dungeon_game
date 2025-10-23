@@ -1,3 +1,8 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.game import Game
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from src.base import Point
@@ -8,16 +13,16 @@ from matplotlib.patches import FancyBboxPatch
 import matplotlib
 from matplotlib.text import Text as mText
 
+
 from src.interaction import InteractionHandlers
-from src.map import DungeonMap
 
 
 matplotlib.use("tkagg")
 
 
 class Visualization:
-    def __init__(self, map: DungeonMap):
-        self.map = map
+    def __init__(self, game: Game):
+        self.game = game
         self.menu_drawables = []  # все артисты меню (фон + тексты)
         self.menu_texts = (
             []
@@ -26,8 +31,8 @@ class Visualization:
         self.menu_exists = False
         # init matplotlib
         self.fig, self.ax = plt.subplots(figsize=(6, 6))
-        self.ax.set_xlim(0, self.map.width)
-        self.ax.set_ylim(0, self.map.height)
+        self.ax.set_xlim(0, self.game.dungeon.map.width)
+        self.ax.set_ylim(0, self.game.dungeon.map.height)
         self.ax.set_aspect("equal")
         self.ax.invert_yaxis()
         self.ax.axis("off")
@@ -51,8 +56,8 @@ class Visualization:
 
     def init_map(self):
         # создаём сетку один раз
-        for y in range(self.map.height):
-            for x in range(self.map.width):
+        for y in range(self.game.dungeon.height):
+            for x in range(self.game.dungeon.width):
                 rect = plt.Rectangle(
                     (x, y),
                     1,
@@ -76,16 +81,18 @@ class Visualization:
     def loop(self):
         plt.show(block=False)
         while True:
-            for x in range(self.map.width):
-                for y in range(self.map.height):
-                    map_entity = MapEntities.get(self.map.get(Point(x, y)), MapEntity())
+            for x in range(self.game.dungeon.width):
+                for y in range(self.game.dungeon.map.height):
+                    map_entity = MapEntities.get(
+                        self.game.dungeon.map.get(Point(x, y)), MapEntity()
+                    )
                     rect = self.rects[(x, y)]
                     text = self.texts[(x, y)]
                     rect.set_facecolor(map_entity.color)
                     rect.set_edgecolor(ColorPallette.DEFAULT_EDGE_COLOR)
                     text.set_text(map_entity.text)
             # дорисовываем клетки доступные для перемещения, другой BG цвет
-            move_points = deepcopy(self.map.move_tiles)
+            move_points = deepcopy(self.game.turn.available_moves)
             for point in move_points:
                 rect = self.rects[(point.x, point.y)]
                 rect.set_edgecolor(ColorPallette.MOVE_CELL_EDGE_COLOR)
@@ -109,10 +116,10 @@ class Visualization:
         option_h = 1
         total_h = option_h * len(interaction_options)
         # # Подвинем меню влево/вверх при необходимости, чтобы не выходило правее/ниже
-        if mx + menu_w > self.map.width:
-            mx = self.map.width - menu_w - 0.1
-        if my + total_h > self.map.height:
-            my = self.map.height - total_h - 0.1
+        if mx + menu_w > self.game.dungeon.map.width:
+            mx = self.game.dungeon.map.width - menu_w - 0.1
+        if my + total_h > self.game.dungeon.map.height:
+            my = self.game.dungeon.map.height - total_h - 0.1
         if mx < 0.1:
             mx = 0.1
         if my < 0.1:
@@ -169,13 +176,7 @@ class Visualization:
                         self.clear_menu()
                         return
         cell = Point(int(event.xdata), int(event.ydata))
-        cell_value = self.map.get(cell)
+        cell_value = self.game.dungeon.map.get(cell)
         cell_type = CELL_TYPE(cell_value)
         if not self.menu_exists:
             self.show_menu_at(event, cell, cell_type)
-
-
-def render_thread(map: DungeonMap):
-    visualization = Visualization(map)
-    visualization.init_map()
-    visualization.loop()

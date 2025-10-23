@@ -1,4 +1,3 @@
-import enum
 import queue
 import random
 import threading
@@ -8,12 +7,8 @@ from src.base import COMMAND_QUEUE, Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
-from src.visualization import render_thread
-
-
-class GamePhase(enum.Enum):
-    PLAYER_PHASE = enum.auto()
-    ENEMY_PHASE = enum.auto()
+from src.turn import GamePhase, Turn
+from src.threads import render_thread
 
 
 class Game:
@@ -24,7 +19,7 @@ class Game:
         self.dungeon = dungeon
         self.with_plot = with_plot
         self.player_position = None
-        self.phase: GamePhase = None
+        self.turn: Turn = Turn()
         self.turn_number = 0
         self.players = players
         if not players:
@@ -33,9 +28,7 @@ class Game:
     def init(self):
         self._init_players(self.dungeon.start_point)
         if self.with_plot:
-            self.plt_thread = threading.Thread(
-                target=render_thread, args=[self.dungeon.map]
-            )
+            self.plt_thread = threading.Thread(target=render_thread, args=[self])
             self.plt_thread.start()
 
     def perform_player_action(self, player: Player, action: Action):
@@ -52,9 +45,8 @@ class Game:
         self.dungeon.map.set(cell, CELL_TYPE.PLAYER.value)
 
     def peform_player_turn(self, player: Player):
-        avaliable_moves = self.dungeon.map.get_avaliable_moves(player)
+        self.turn.available_moves = self.dungeon.map.get_avaliable_moves(player)
         # возможная предобработка доступных клеток для перемещения
-        self.dungeon.map.set_available_moves(avaliable_moves)
         # можно выполнять сколько угодно действий, не завершающих ход
         player_turn_end = False
         while not player_turn_end:
@@ -62,14 +54,14 @@ class Game:
             self.perform_player_action(player, action)
             player_turn_end = action.ends_turn
         # очищаем доступные для хода клетки
-        self.dungeon.map.set_available_moves([])
 
     def run_turn(self):
-        self.turn_number += 1
-        print(f"=== TURN {self.turn_number} ===")
-        self.phase = GamePhase.PLAYER_PHASE
+        self.turn.next()
+        print(f"=== TURN {self.turn.number} ===")
+        self.turn.phase = GamePhase.PLAYER_PHASE
         print("Player phase")
         for player in self.players:
+            self.turn.current_actor = player
             self.peform_player_turn(player)
         self.phase = GamePhase.ENEMY_PHASE
         print("Enemy phase")
