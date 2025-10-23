@@ -100,26 +100,26 @@ class Visualization:
             self.fig.canvas.draw_idle()
             plt.pause(0.05)
 
-    def show_menu_at(self, event, cell, cell_type):
+    def show_menu_at(self, event, cell: Point, cell_type: CELL_TYPE):
         """
         Показывает компактное меню рядом с координатами event.xdata/event.ydata.
         Для hit-testing используется метод artist.contains(event).
         """
         self.clear_menu()
         # Формируем список опций в зависимости от типа клетки
-        interaction_options = InteractionHandlers.get_interaction_options(cell_type)
+        interaction_options = InteractionHandlers.get_interaction_options(cell, cell_type)
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
         mx = event.xdata
         my = event.ydata
-        menu_w = 4
-        option_h = 1
-        total_h = option_h * len(interaction_options)
+        menu_width = 6
+        option_height = 1
+        total_height = option_height * len(interaction_options)
         # # Подвинем меню влево/вверх при необходимости, чтобы не выходило правее/ниже
-        if mx + menu_w > self.game.dungeon.map.width:
-            mx = self.game.dungeon.map.width - menu_w - 0.1
-        if my + total_h > self.game.dungeon.map.height:
-            my = self.game.dungeon.map.height - total_h - 0.1
+        if mx + menu_width > self.game.dungeon.map.width:
+            mx = self.game.dungeon.map.width - menu_width - 0.1
+        if my + total_height > self.game.dungeon.map.height:
+            my = self.game.dungeon.map.height - total_height - 0.1
         if mx < 0.1:
             mx = 0.1
         if my < 0.1:
@@ -128,8 +128,8 @@ class Visualization:
         # Фон меню (с закруглением)
         bg = FancyBboxPatch(
             (mx, my - 0.5),
-            menu_w,
-            total_h,
+            menu_width,
+            total_height,
             boxstyle="round,pad=0.02",
             linewidth=1,
             facecolor="white",
@@ -141,9 +141,9 @@ class Visualization:
 
         # Добавим опции как тексты
         for i, (label, callback) in enumerate(interaction_options):
-            ty = my + (len(interaction_options) - 1 - i) * option_h + option_h * 0.15
+            ty = my + (len(interaction_options) - 1 - i) * option_height + option_height * 0.15
             txt = self.ax.text(
-                mx + menu_w * 0.5,
+                mx + menu_width * 0.5,
                 ty,
                 label,
                 ha="center",
@@ -169,12 +169,9 @@ class Visualization:
                     self.menu_callbacks[i]()
                     self.clear_menu()
                     return
-            # если клик был внутри фона, но не по тексту — закроем меню
-            for a in self.menu_drawables:
-                if isinstance(a, FancyBboxPatch):
-                    if a.get_bbox().contains(event.xdata, event.ydata):
-                        self.clear_menu()
-                        return
+            # если меню открыто, но клик не по нему - закрываем меню
+            self.clear_menu()
+            return
         cell = Point(int(event.xdata), int(event.ydata))
         cell_value = self.game.dungeon.map.get(cell)
         cell_type = CELL_TYPE(cell_value)

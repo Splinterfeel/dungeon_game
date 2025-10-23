@@ -4,8 +4,8 @@ from src.constants import CELL_TYPE
 
 
 class InteractionHandlers:
-    def get_interaction_options(cell_type: CELL_TYPE):
-        default_options = [("Осмотреть", InteractionHandlers._inspect)]
+    def get_interaction_options(cell: Point, cell_type: CELL_TYPE):
+        default_options = [(f"Осмотреть [{cell.x}, {cell.y}]", InteractionHandlers._inspect)]
         match cell_type:
             case CELL_TYPE.FLOOR:
                 return [("Идти сюда", InteractionHandlers._go_to)] + default_options
