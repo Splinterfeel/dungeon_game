@@ -20,7 +20,6 @@ class Game:
         self.with_plot = with_plot
         self.player_position = None
         self.turn: Turn = Turn()
-        self.turn_number = 0
         self.players = players
         if not players:
             raise ValueError("No players passed")
@@ -67,7 +66,7 @@ class Game:
         print("Enemy phase")
         for enemy in self.dungeon.enemies:
             print(f"{enemy} turn")
-        print(f"= END TURN {self.turn_number} =")
+        print(f"= END TURN {self.turn.number} =")
 
     def loop(self):
         while True:
