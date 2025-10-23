@@ -180,3 +180,9 @@ class Visualization:
         cell_type = CELL_TYPE(cell_value)
         if not self.menu_exists:
             self.show_menu_at(event, cell, cell_type)
+
+
+def render_thread(*args, **kwargs):
+    visualization = Visualization(*args, **kwargs)
+    visualization.init_map()
+    visualization.loop()

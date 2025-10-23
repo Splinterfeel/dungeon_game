@@ -8,7 +8,7 @@ from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
-from src.threads import render_thread
+from src.visualization import render_thread
 
 
 class Game:
