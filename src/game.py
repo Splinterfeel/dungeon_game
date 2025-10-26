@@ -1,34 +1,28 @@
 import queue
 import random
-import threading
 import time
 from src.action import Action, ActionType
-from src.base import COMMAND_QUEUE, Point, PointOffset
+from src.base import Point, PointOffset, Queues
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
-from src.visualization import render_thread
 
 
 class Game:
-    def __init__(
-        self, dungeon: Dungeon, players: list[Player], with_plot: bool = False
-    ):
-        self.plt_thread: threading.Thread = None
+    def __init__(self, dungeon: Dungeon, players: list[Player], turn: Turn = None):
         self.dungeon = dungeon
-        self.with_plot = with_plot
-        self.player_position = None
-        self.turn: Turn = Turn()
         self.players = players
+        if turn is not None:
+            self.turn = turn
+        else:
+            self.turn = Turn()
+
         if not players:
             raise ValueError("No players passed")
 
     def init(self):
         self._init_players(self.dungeon.start_point)
-        if self.with_plot:
-            self.plt_thread = threading.Thread(target=render_thread, args=[self])
-            self.plt_thread.start()
 
     def perform_player_action(self, player: Player, action: Action):
         match action.type:
@@ -45,27 +39,27 @@ class Game:
 
     def peform_player_turn(self, player: Player):
         self.turn.available_moves = self.dungeon.map.get_avaliable_moves(player)
-        # возможная предобработка доступных клеток для перемещения
-        # можно выполнять сколько угодно действий, не завершающих ход
         player_turn_end = False
         while not player_turn_end:
             action = self._get_player_action(player)
             self.perform_player_action(player, action)
             player_turn_end = action.ends_turn
-        # очищаем доступные для хода клетки
 
     def run_turn(self):
         self.turn.next()
         print(f"=== TURN {self.turn.number} ===")
         self.turn.phase = GamePhase.PLAYER_PHASE
         print("Player phase")
+
         for player in self.players:
             self.turn.current_actor = player
             self.peform_player_turn(player)
-        self.phase = GamePhase.ENEMY_PHASE
+
+        self.turn.phase = GamePhase.ENEMY_PHASE
         print("Enemy phase")
         for enemy in self.dungeon.enemies:
             print(f"{enemy} turn")
+
         print(f"= END TURN {self.turn.number} =")
 
     def loop(self):
@@ -76,17 +70,13 @@ class Game:
         print("Game end")
 
     def check_game_end(self) -> bool:
-        if all([p.is_dead() for p in self.players]):
-            return True
-        if all([e.is_dead() for e in self.dungeon.enemies]):
-            return True
-        return False
+        return all(p.is_dead() for p in self.players) or all(e.is_dead() for e in self.dungeon.enemies)
 
     def _get_player_action(self, player: Player):
         print(f"[*] Player {player.name} turn")
         while True:
             try:
-                action: Action = COMMAND_QUEUE.get_nowait()
+                action: Action = Queues.COMMAND_QUEUE.get_nowait()
                 print(f"[Game thread] Получена команда: {action}")
                 return action
             except queue.Empty:
@@ -94,17 +84,16 @@ class Game:
             time.sleep(0.05)
 
     def _init_players(self, point: Point):
-        # все точки на расстоянии 1 клетки от point
         point_choices = [
-            point,  # центр
-            point.on(PointOffset.LEFT),  # слева
-            point.on(PointOffset.LEFT).on(PointOffset.TOP),  # сверху-слева
-            point.on(PointOffset.TOP),  # сверху
-            point.on(PointOffset.TOP).on(PointOffset.RIGHT),  # сверху-справа
-            point.on(PointOffset.RIGHT),  # справа
-            point.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),  # снизу-справа
-            point.on(PointOffset.BOTTOM),  # снизу
-            point.on(PointOffset.BOTTOM).on(PointOffset.LEFT),  # снизу-слева
+            point,
+            point.on(PointOffset.LEFT),
+            point.on(PointOffset.LEFT).on(PointOffset.TOP),
+            point.on(PointOffset.TOP),
+            point.on(PointOffset.TOP).on(PointOffset.RIGHT),
+            point.on(PointOffset.RIGHT),
+            point.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),
+            point.on(PointOffset.BOTTOM),
+            point.on(PointOffset.BOTTOM).on(PointOffset.LEFT),
         ]
         choices = [c for c in point_choices if self.dungeon.map.is_free(c)]
         if len(choices) < len(self.players):
@@ -114,5 +103,23 @@ class Game:
             choices.remove(position)
             player.position = position
             self.dungeon.map.set(player.position, CELL_TYPE.PLAYER.value)
-        if not all(player.position is not None for player in self.players):
-            raise ValueError("Not all players were placed!")
+
+    def to_dict(self) -> dict:
+        """Сериализует всё состояние игры в словарь"""
+        return {
+            "dungeon": self.dungeon.to_dict(),
+            "players": [p.to_dict() for p in self.players],
+            "turn": self.turn.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict) -> "Game":
+        """Создает Game из сериализованных данных"""
+        dungeon = Dungeon.from_dict(_dict["dungeon"])
+        players = [Player.from_dict(p) for p in _dict.get("players", [])]
+        if "turn" in _dict:
+            turn = Turn.from_dict(_dict["turn"])
+        else:
+            turn = None
+        game = cls(dungeon=dungeon, players=players, turn=turn)
+        return game
