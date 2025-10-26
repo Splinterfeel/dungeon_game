@@ -5,7 +5,10 @@ import queue
 from typing import Self
 
 
-COMMAND_QUEUE = queue.Queue()
+class Queues:
+    COMMAND_QUEUE = queue.Queue()
+    RENDER_QUEUE = queue.Queue()
+    PLAYER_QUEUES: dict[str, queue.Queue] = dict()
 
 
 class PointOffset(Enum):
@@ -31,6 +34,11 @@ class Point:
             case PointOffset.RIGHT:
                 return Point(self.x + 1, self.y)
 
+    def __eq__(self, value):
+        if not isinstance(value, Point):
+            raise ValueError(f"Can't compare Point with {type(value)}")
+        return self.x == value.x and self.y == value.y
+
     @staticmethod
     def get_distance(point_1: Self, point_2: Self) -> int:
         delta_x = point_2.x - point_1.x
@@ -39,3 +47,13 @@ class Point:
         squared_delta_y = delta_y**2
         sum_of_squares = squared_delta_x + squared_delta_y
         return math.sqrt(sum_of_squares)
+
+    def to_dict(self):
+        return {
+            "x": self.x,
+            "y": self.y,
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        return cls(**_dict)
