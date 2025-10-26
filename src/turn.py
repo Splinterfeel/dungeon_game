@@ -14,11 +14,12 @@ class GamePhase(enum.Enum):
 
 class Turn:
     def __init__(
-            self, number: int = None,
-            phase: GamePhase = None,
-            current_actor: Actor = None,
-            available_moves: list[Point] = None
-            ):
+        self,
+        number: int = None,
+        phase: GamePhase = None,
+        current_actor: Actor = None,
+        available_moves: list[Point] = None,
+    ):
         self.number = number if number is not None else 0
         self.phase = GamePhase(phase) if phase is not None else GamePhase.PLAYER_PHASE
         self.current_actor = current_actor if current_actor is not None else None
@@ -32,7 +33,9 @@ class Turn:
         return {
             "number": self.number,
             "phase": self.phase.value,
-            "current_actor": self.current_actor.to_dict() if self.current_actor else None,
+            "current_actor": (
+                self.current_actor.to_dict() if self.current_actor else None
+            ),
             "available_moves": [m.to_dict() for m in self.available_moves],
         }
 
@@ -42,7 +45,13 @@ class Turn:
             **{
                 "number": _dict["number"],
                 "phase": GamePhase(_dict["phase"]),
-                "current_actor": Actor.from_dict(_dict["current_actor"]) if _dict["current_actor"] else None,
-                "available_moves": [Point.from_dict(m) for m in _dict["available_moves"]],
+                "current_actor": (
+                    Actor.from_dict(_dict["current_actor"])
+                    if _dict["current_actor"]
+                    else None
+                ),
+                "available_moves": [
+                    Point.from_dict(m) for m in _dict["available_moves"]
+                ],
             }
         )

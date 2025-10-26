@@ -70,7 +70,9 @@ class Game:
         print("Game end")
 
     def check_game_end(self) -> bool:
-        return all(p.is_dead() for p in self.players) or all(e.is_dead() for e in self.dungeon.enemies)
+        return all(p.is_dead() for p in self.players) or all(
+            e.is_dead() for e in self.dungeon.enemies
+        )
 
     def _get_player_action(self, player: Player):
         print(f"[*] Player {player.name} turn")

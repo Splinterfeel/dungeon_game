@@ -105,7 +105,9 @@ class Visualization:
         """
         self.clear_menu()
         # Формируем список опций в зависимости от типа клетки
-        interaction_options = InteractionHandlers.get_interaction_options(cell, cell_type)
+        interaction_options = InteractionHandlers.get_interaction_options(
+            cell, cell_type
+        )
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
         mx = event.xdata
@@ -139,7 +141,11 @@ class Visualization:
 
         # Добавим опции как тексты
         for i, (label, callback) in enumerate(interaction_options):
-            ty = my + (len(interaction_options) - 1 - i) * option_height + option_height * 0.15
+            ty = (
+                my
+                + (len(interaction_options) - 1 - i) * option_height
+                + option_height * 0.15
+            )
             txt = self.ax.text(
                 mx + menu_width * 0.5,
                 ty,

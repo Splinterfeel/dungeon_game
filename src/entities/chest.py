@@ -18,7 +18,9 @@ class Chest(Entity):
 
     @classmethod
     def from_dict(cls, _dict: dict):
-        return cls(**{
-            "position": Point.from_dict(_dict["position"]),
-            "gold": _dict["gold"],
-        })
+        return cls(
+            **{
+                "position": Point.from_dict(_dict["position"]),
+                "gold": _dict["gold"],
+            }
+        )

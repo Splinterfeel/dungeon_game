@@ -24,7 +24,7 @@ class Dungeon:
         rooms: list[Room] = None,
         chests: list[Chest] = None,
         enemies: list[Enemy] = None,
-        exit: Point = None
+        exit: Point = None,
     ):
         self.width = width
         self.height = height
@@ -91,22 +91,24 @@ class Dungeon:
 
     @classmethod
     def from_dict(cls, _dict: dict):
-        return cls(**{
-            "width": _dict["width"],
-            "height": _dict["height"],
-            "min_rooms": _dict["min_rooms"],
-            "max_rooms": _dict["max_rooms"],
-            "min_room_size": _dict["min_room_size"],
-            "max_room_size": _dict["max_room_size"],
-            "max_chests": _dict["max_chests"],
-            "enemies_num": _dict["enemies_num"],
-            "start_room": Room.from_dict(_dict["start_room"]),
-            "rooms": [Room.from_dict(r) for r in _dict["rooms"]],
-            "chests": [Chest.from_dict(c) for c in _dict["chests"]],
-            "enemies": [Enemy.from_dict(e) for e in _dict["enemies"]],
-            "map": DungeonMap.from_dict(_dict["map"]),
-            "exit": Point.from_dict(_dict["exit"]),
-        })
+        return cls(
+            **{
+                "width": _dict["width"],
+                "height": _dict["height"],
+                "min_rooms": _dict["min_rooms"],
+                "max_rooms": _dict["max_rooms"],
+                "min_room_size": _dict["min_room_size"],
+                "max_room_size": _dict["max_room_size"],
+                "max_chests": _dict["max_chests"],
+                "enemies_num": _dict["enemies_num"],
+                "start_room": Room.from_dict(_dict["start_room"]),
+                "rooms": [Room.from_dict(r) for r in _dict["rooms"]],
+                "chests": [Chest.from_dict(c) for c in _dict["chests"]],
+                "enemies": [Enemy.from_dict(e) for e in _dict["enemies"]],
+                "map": DungeonMap.from_dict(_dict["map"]),
+                "exit": Point.from_dict(_dict["exit"]),
+            }
+        )
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
