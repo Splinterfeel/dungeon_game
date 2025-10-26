@@ -19,6 +19,12 @@ class Dungeon:
         max_room_size: int,
         max_chests: int,
         enemies_num: int,
+        map: DungeonMap = None,
+        start_room: Room = None,
+        rooms: list[Room] = None,
+        chests: list[Chest] = None,
+        enemies: list[Enemy] = None,
+        exit: Point = None
     ):
         self.width = width
         self.height = height
@@ -28,19 +34,79 @@ class Dungeon:
         self.max_room_size = max_room_size
         self.max_chests = max_chests
         self.enemies_num = enemies_num
-        self.map = DungeonMap(self.width, self.height)
-        self.start_room: Room = None
-        self.rooms: list[Room] = []
-        self.chests: list[Chest] = []
-        self.enemies: list[Enemy] = []
-        self._generate_dungeon()
 
-    def _generate_dungeon(self):
-        self._generate_rooms()
-        self._generate_start_point()
-        self._generate_chests()
-        self._generate_enemies()
-        self._generate_exit()
+        if map is None:
+            self.map = DungeonMap(self.width, self.height)
+        else:
+            self.map = map
+
+        if rooms is None:
+            self.rooms = []
+            self._generate_rooms()
+        else:
+            self.rooms = rooms
+
+        if start_room is None:
+            self._generate_start_room()
+        else:
+            self.start_room: Room = start_room
+        # 3. Размещаем стартовую точку в центре этой комнаты
+        self.start_point = self.start_room.center()
+        self.map.set(self.start_point, CELL_TYPE.FLOOR.value)
+
+        if chests is None:
+            self.chests = []
+            self._generate_chests()
+        else:
+            self.chests = chests
+
+        if enemies is None:
+            self.enemies = []
+            self._generate_enemies()
+        else:
+            self.enemies = enemies
+
+        if exit is None:
+            self._generate_exit()
+        else:
+            self.exit = exit
+
+    def to_dict(self):
+        return {
+            "width": self.width,
+            "height": self.height,
+            "min_rooms": self.min_rooms,
+            "max_rooms": self.max_rooms,
+            "min_room_size": self.min_room_size,
+            "max_room_size": self.max_room_size,
+            "max_chests": self.max_chests,
+            "enemies_num": self.enemies_num,
+            "start_room": self.start_room.to_dict(),
+            "rooms": [room.to_dict() for room in self.rooms],
+            "chests": [c.to_dict() for c in self.chests],
+            "enemies": [e.to_dict() for e in self.enemies],
+            "map": self.map.to_dict(),
+            "exit": self.exit.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        return cls(**{
+            "width": _dict["width"],
+            "height": _dict["height"],
+            "min_rooms": _dict["min_rooms"],
+            "max_rooms": _dict["max_rooms"],
+            "min_room_size": _dict["min_room_size"],
+            "max_room_size": _dict["max_room_size"],
+            "max_chests": _dict["max_chests"],
+            "enemies_num": _dict["enemies_num"],
+            "start_room": Room.from_dict(_dict["start_room"]),
+            "rooms": [Room.from_dict(r) for r in _dict["rooms"]],
+            "chests": [Chest.from_dict(c) for c in _dict["chests"]],
+            "enemies": [Enemy.from_dict(e) for e in _dict["enemies"]],
+            "map": DungeonMap.from_dict(_dict["map"]),
+            "exit": Point.from_dict(_dict["exit"]),
+        })
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
@@ -103,7 +169,7 @@ class Dungeon:
                     self._make_v_tunnel(pos_1.y, pos_2.y, pos_1.x)
                     self._make_h_tunnel(pos_1.x, pos_2.x, pos_2.y)
 
-    def _generate_start_point(self):
+    def _generate_start_room(self):
         distances = {room: 0 for room in self.rooms}
 
         # Мы можем использовать простую эвристику: расстояние от первой комнаты в списке.
@@ -124,9 +190,6 @@ class Dungeon:
                 farthest_room = room
 
         self.start_room = farthest_room
-        # 3. Размещаем стартовую точку в центре этой комнаты
-        self.start_point = farthest_room.center()
-        self.map.set(self.start_point, CELL_TYPE.FLOOR.value)
 
     def _generate_chests(self):
         # 1. Отфильтруем комнаты, чтобы исключить стартовую
@@ -173,10 +236,6 @@ class Dungeon:
         # исключить тайлы, которые находятся на проходе
         result_choices = []
         for point in _point_choices:
-            print(self.map.get(point))
-            print(self.map.get(point))
-            print(self.map.get(point))
-            print(self.map.get(point))
             if self.map.get(point) != CELL_TYPE.FLOOR.value:
                 continue
             point_left = self.map.get(point.on(PointOffset.LEFT))
@@ -221,5 +280,5 @@ class Dungeon:
         # генерим точку выхода
         choices = self._get_room_border_places(farthest_room)
         # Выбираем случайную позицию внутри комнаты, избегая границ
-        self.exit_point = random.choice(choices)
-        self.map.set(self.exit_point, CELL_TYPE.EXIT.value)
+        self.exit = random.choice(choices)
+        self.map.set(self.exit, CELL_TYPE.EXIT.value)
