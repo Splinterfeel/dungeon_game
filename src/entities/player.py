@@ -14,7 +14,7 @@ class Player(Actor):
     def from_dict(cls, _dict):
         return cls(
             **{
-                "position": Point.from_dict(_dict["position"]),
+                "position": Point.from_dict(_dict["position"]) if _dict["position"] else None,
                 "stats": CharacterStats.from_dict(_dict["stats"]),
                 "name": _dict["name"]
             }
