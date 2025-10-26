@@ -4,13 +4,27 @@ from src.entities.base import Actor
 
 
 class DungeonMap:
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, tiles: list[str] = None):
         self.width = width
         self.height = height
-        self.tiles = [
-            [CELL_TYPE.WALL.value for _ in range(self.height)]
-            for _ in range(self.width)
-        ]
+        if tiles:
+            self.tiles = tiles
+        else:
+            self.tiles = [
+                [CELL_TYPE.WALL.value for _ in range(self.height)]
+                for _ in range(self.width)
+            ]
+
+    def to_dict(self):
+        return {
+            "width": self.width,
+            "height": self.height,
+            "tiles": self.tiles,
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        return cls(**_dict)
 
     def get(self, point: Point):
         return self.tiles[point.x][point.y]
