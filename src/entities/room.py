@@ -29,3 +29,15 @@ class Room:
             return False
         # If none of the non-overlapping conditions are true, they must intersect.
         return True
+
+    def to_dict(self):
+        return {
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        return cls(**_dict)
