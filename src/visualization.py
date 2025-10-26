@@ -1,8 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from src.game import Game
+from src.game import Game
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from src.base import Point
@@ -21,8 +19,8 @@ matplotlib.use("tkagg")
 
 
 class Visualization:
-    def __init__(self, game: Game):
-        self.game = game
+    def __init__(self, game_dump: dict):
+        self.game = Game.from_dict(game_dump)
         self.menu_drawables = []  # все артисты меню (фон + тексты)
         self.menu_texts = (
             []

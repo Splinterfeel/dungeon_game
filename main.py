@@ -1,19 +1,27 @@
 from src import Dungeon
+import threading
 from src.entities.base import CharacterStats
 from src.entities.player import Player
 from src.game import Game
 import warnings
+
+from src.visualization import render_thread
 
 
 warnings.filterwarnings("ignore")
 
 
 player_1 = Player(
-    name="Me", positon=None, stats=CharacterStats(health=10, damage=3, speed=3)
+    name="Me", position=None, stats=CharacterStats(health=10, damage=3, speed=3)
 )
 player_2 = Player(
-    name="Me2", positon=None, stats=CharacterStats(health=8, damage=4, speed=4)
+    name="Me2", position=None, stats=CharacterStats(health=8, damage=4, speed=4)
 )
+
+
+def run_game(game: Game):
+    game.loop()
+
 
 dungeon = Dungeon(
     width=20,
@@ -28,7 +36,8 @@ dungeon = Dungeon(
 game = Game(
     dungeon=dungeon,
     players=[player_1, player_2],
-    with_plot=True,
 )
 game.init()
-game.loop()
+game_thread = threading.Thread(target=run_game, kwargs={"game": game}, daemon=True)
+game_thread.start()
+render_thread(game_dump=game.to_dict())
