@@ -49,7 +49,7 @@ class Actor(Entity):
 
     def to_dict(self):
         return {
-            "position": self.position.to_dict(),
+            "position": self.position.to_dict() if self.position else None,
             "stats": self.stats.to_dict(),
         }
 
