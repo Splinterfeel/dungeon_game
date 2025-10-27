@@ -1,9 +1,11 @@
 from __future__ import annotations
+import queue
+import time
 
 from src.game import Game
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from src.base import Point
+from src.base import Point, Queues
 from src.constants import CELL_TYPE, ColorPallette, MapEntities, MapEntity
 from matplotlib.patches import FancyBboxPatch
 
@@ -19,8 +21,12 @@ matplotlib.use("tkagg")
 
 
 class Visualization:
-    def __init__(self, game_dump: dict):
-        self.game = Game.from_dict(game_dump)
+    def __init__(self):
+        self.game = None
+        while self.game is None:
+            print("[RENDER] waiting for game state")
+            self.read_new_game_state()
+            time.sleep(0.2)
         self.menu_drawables = []  # все артисты меню (фон + тексты)
         self.menu_texts = (
             []
@@ -76,9 +82,18 @@ class Visualization:
                 )
                 self.texts[(x, y)] = t
 
+    def read_new_game_state(self):
+        while not Queues.RENDER_QUEUE.empty():
+            try:
+                new_game_dump = Queues.RENDER_QUEUE.get_nowait()
+                self.game = Game.from_dict(new_game_dump)
+            except queue.Empty:
+                break
+
     def loop(self):
         plt.show(block=False)
         while True:
+            self.read_new_game_state()
             for x in range(self.game.dungeon.width):
                 for y in range(self.game.dungeon.map.height):
                     map_entity = MapEntities.get(
@@ -96,7 +111,7 @@ class Visualization:
                 rect.set_edgecolor(ColorPallette.MOVE_CELL_EDGE_COLOR)
                 rect.set_facecolor(ColorPallette.MOVE_CELL_BG_COLOR)
             self.fig.canvas.draw_idle()
-            plt.pause(0.05)
+            plt.pause(0.1)
 
     def show_menu_at(self, event, cell: Point, cell_type: CELL_TYPE):
         """

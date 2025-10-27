@@ -40,4 +40,4 @@ game = Game(
 game.init()
 game_thread = threading.Thread(target=run_game, kwargs={"game": game}, daemon=True)
 game_thread.start()
-render_thread(game_dump=game.to_dict())
+render_thread()

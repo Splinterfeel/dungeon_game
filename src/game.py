@@ -10,7 +10,8 @@ from src.turn import GamePhase, Turn
 
 
 class Game:
-    def __init__(self, dungeon: Dungeon, players: list[Player], turn: Turn = None):
+    def __init__(self, dungeon: Dungeon, players: list[Player], turn: Turn = None, is_server: bool = True):
+        self.is_server = is_server
         self.dungeon = dungeon
         self.players = players
         if turn is not None:
@@ -20,6 +21,8 @@ class Game:
 
         if not players:
             raise ValueError("No players passed")
+        if self.is_server:
+            self.dump_state()
 
     def init(self):
         self._init_players(self.dungeon.start_point)
@@ -37,9 +40,16 @@ class Game:
         player.position = cell
         self.dungeon.map.set(cell, CELL_TYPE.PLAYER.value)
 
+    def dump_state(self):
+        if not self.is_server:
+            raise ValueError("Can't dump not server instance of Game")
+        # положить состояние в очередь
+        Queues.RENDER_QUEUE.put(self.to_dict())
+
     def peform_player_turn(self, player: Player):
         self.turn.available_moves = self.dungeon.map.get_avaliable_moves(player)
         player_turn_end = False
+        self.dump_state()
         while not player_turn_end:
             action = self._get_player_action(player)
             self.perform_player_action(player, action)
@@ -123,5 +133,5 @@ class Game:
             turn = Turn.from_dict(_dict["turn"])
         else:
             turn = None
-        game = cls(dungeon=dungeon, players=players, turn=turn)
+        game = cls(dungeon=dungeon, players=players, turn=turn, is_server=_dict.get("is_server", False))
         return game
