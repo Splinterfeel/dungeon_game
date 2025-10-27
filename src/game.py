@@ -10,7 +10,13 @@ from src.turn import GamePhase, Turn
 
 
 class Game:
-    def __init__(self, dungeon: Dungeon, players: list[Player], turn: Turn = None, is_server: bool = True):
+    def __init__(
+        self,
+        dungeon: Dungeon,
+        players: list[Player],
+        turn: Turn = None,
+        is_server: bool = True,
+    ):
         self.is_server = is_server
         self.dungeon = dungeon
         self.players = players
@@ -133,5 +139,10 @@ class Game:
             turn = Turn.from_dict(_dict["turn"])
         else:
             turn = None
-        game = cls(dungeon=dungeon, players=players, turn=turn, is_server=_dict.get("is_server", False))
+        game = cls(
+            dungeon=dungeon,
+            players=players,
+            turn=turn,
+            is_server=_dict.get("is_server", False),
+        )
         return game

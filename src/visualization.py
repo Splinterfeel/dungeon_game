@@ -43,6 +43,7 @@ class Visualization:
         self.rects: dict[tuple, plt.Rectangle] = {}
         self.texts: dict[tuple, mText] = {}
         self.fig.canvas.mpl_connect("button_press_event", self.onclick)
+        self.init_map()
 
     def clear_menu(self):
         """Безопасно удаляет все элементы меню (если они ещё существуют)."""
@@ -200,5 +201,4 @@ class Visualization:
 
 def render_thread(*args, **kwargs):
     visualization = Visualization(*args, **kwargs)
-    visualization.init_map()
     visualization.loop()
