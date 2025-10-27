@@ -33,13 +33,20 @@ class Game:
     def init(self):
         self._init_players(self.dungeon.start_point)
 
-    def perform_player_action(self, player: Player, action: Action):
+    def perform_player_action(self, player: Player, action: Action) -> bool:
+        "True если действие выполнено успешно, иначе False"
+        if self.turn.current_actor != player:
+            raise ValueError(f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}")
         match action.type:
             case ActionType.MOVE:
+                if action.cell not in self.turn.available_moves:
+                    print(f"Can't move player {player} to cell {action.cell}")
+                    return False
                 self.move_player(player, action.cell)
+                return True
             case _:
                 print("Performing action", action)
-        print()
+                return True
 
     def move_player(self, player: Player, cell: Point):
         self.dungeon.map.set(player.position, CELL_TYPE.FLOOR.value)
@@ -58,8 +65,9 @@ class Game:
         self.dump_state()
         while not player_turn_end:
             action = self._get_player_action(player)
-            self.perform_player_action(player, action)
-            player_turn_end = action.ends_turn
+            action_performed = self.perform_player_action(player, action)
+            if action_performed:
+                player_turn_end = action.ends_turn
 
     def run_turn(self):
         self.turn.next()

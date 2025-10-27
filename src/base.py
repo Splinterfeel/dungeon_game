@@ -57,3 +57,6 @@ class Point:
     @classmethod
     def from_dict(cls, _dict: dict):
         return cls(**_dict)
+
+    def __hash__(self):
+        return hash((self.x, self.y))
