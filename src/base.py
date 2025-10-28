@@ -40,7 +40,7 @@ class Point:
         return self.x == value.x and self.y == value.y
 
     @staticmethod
-    def get_distance(point_1: Self, point_2: Self) -> int:
+    def distance_euklid(point_1: Self, point_2: Self) -> int:
         delta_x = point_2.x - point_1.x
         delta_y = point_2.y - point_1.y
         squared_delta_x = delta_x**2
@@ -57,6 +57,12 @@ class Point:
     @classmethod
     def from_dict(cls, _dict: dict):
         return cls(**_dict)
+
+    @staticmethod
+    def distance_chebyshev(point_1: Self, point_2: Self) -> int:
+        delta_x = point_2.x - point_1.x
+        delta_y = point_2.y - point_1.y
+        return max(abs(delta_x), abs(delta_y))
 
     def __hash__(self):
         return hash((self.x, self.y))

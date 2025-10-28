@@ -275,7 +275,7 @@ class Dungeon:
         farthest_room = self.start_room
         largest_distance = 0
         for room in self.rooms:
-            distance = Point.get_distance(self.start_room.center(), room.center())
+            distance = Point.distance_euklid(self.start_room.center(), room.center())
             if distance > largest_distance:
                 largest_distance = distance
                 farthest_room = room
