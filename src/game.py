@@ -36,14 +36,25 @@ class Game:
     def perform_player_action(self, player: Player, action: Action) -> bool:
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != player:
-            raise ValueError(f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}")
+            raise ValueError(f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}")  # noqa
         match action.type:
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
                     print(f"Can't move player {player} to cell {action.cell}")
                     return False
+                if not self.dungeon.map.is_free(action.cell):
+                    print(f"Cell {action.cell} is not free, can't move {player} here")
+                    return False
                 self.move_player(player, action.cell)
                 return True
+            case ActionType.ATTACK_ENEMY:
+                if self.dungeon.map.get(action.cell) != CELL_TYPE.ENEMY.value:
+                    print(f"Attempt to attack {action.cell}, cell is not enemy")
+                    return False
+                if Point.distance_chebyshev(player.position, action.cell) > 1:
+                    print(f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}")  # noqa
+                    return False
+                print(f"Attacking enemy at {action.cell}")
             case _:
                 print("Performing action", action)
                 return True
