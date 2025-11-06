@@ -8,7 +8,7 @@ from typing import Self
 class Queues:
     COMMAND_QUEUE = queue.Queue()
     RENDER_QUEUE = queue.Queue()
-    PLAYER_QUEUES: dict[str, queue.Queue] = dict()
+    SOUND_QUEUE = queue.Queue()
 
 
 class PointOffset(Enum):

@@ -2,6 +2,7 @@ import queue
 import random
 import time
 from src.action import Action, ActionType
+from src.audio import SoundEvent
 from src.base import Point, PointOffset, Queues
 from src.entities.player import Player
 from src.dungeon import Dungeon
@@ -33,6 +34,9 @@ class Game:
     def init(self):
         self._init_players(self.dungeon.start_point)
 
+    def send_sound_event(self, event_name: str):
+        Queues.SOUND_QUEUE.put(SoundEvent(name=event_name))
+
     def perform_player_action(self, player: Player, action: Action) -> bool:
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != player:
@@ -48,6 +52,7 @@ class Game:
                     print(f"Cell {action.cell} is not free, can't move {player} here")
                     return False
                 self.move_player(player, action.cell)
+                self.send_sound_event("move")
                 return True
             case ActionType.ATTACK_ENEMY:
                 if self.dungeon.map.get(action.cell) != CELL_TYPE.ENEMY.value:
@@ -66,7 +71,10 @@ class Game:
                     f"Attacked enemy at {action.cell}, enemy health: {enemy.stats.health}"
                 )
                 if enemy.is_dead():
+                    self.send_sound_event("kill")
                     self.dungeon.remove_dead_enemy(enemy=enemy)
+                else:
+                    self.send_sound_event("hit")
                 return True
             case _:
                 print("Performing action", action)
@@ -109,6 +117,7 @@ class Game:
             print(f"{enemy} turn")
 
         print(f"= END TURN {self.turn.number} =")
+        self.send_sound_event("turn")
 
     def loop(self):
         while True:

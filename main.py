@@ -1,5 +1,6 @@
 from src import Dungeon
 import threading
+from src.audio import run_sound_thread
 from src.entities.base import CharacterStats
 from src.entities.player import Player
 from src.game import Game
@@ -38,6 +39,8 @@ game = Game(
     players=[player_1, player_2],
 )
 game.init()
+sound_thread = threading.Thread(target=run_sound_thread, daemon=True)
 game_thread = threading.Thread(target=run_game, kwargs={"game": game}, daemon=True)
+sound_thread.start()
 game_thread.start()
 render_thread()
