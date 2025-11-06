@@ -36,7 +36,9 @@ class Game:
     def perform_player_action(self, player: Player, action: Action) -> bool:
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != player:
-            raise ValueError(f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}")  # noqa
+            raise ValueError(
+                f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}"
+            )  # noqa
         match action.type:
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
@@ -52,11 +54,17 @@ class Game:
                     print(f"Attempt to attack {action.cell}, cell is not enemy")
                     return False
                 if Point.distance_chebyshev(player.position, action.cell) > 1:
-                    print(f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}")  # noqa
+                    print(
+                        f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}"
+                    )  # noqa
                     return False
-                print(f"Attacking enemy at {action.cell}")
-                enemy = next(x for x in self.dungeon.enemies if x.position == action.cell)
+                enemy = next(
+                    x for x in self.dungeon.enemies if x.position == action.cell
+                )
                 enemy.apply_damage(player.stats.damage)
+                print(
+                    f"Attacked enemy at {action.cell}, enemy health: {enemy.stats.health}"
+                )
                 if enemy.is_dead():
                     self.dungeon.remove_dead_enemy(enemy=enemy)
                 return True
@@ -119,7 +127,6 @@ class Game:
         while True:
             try:
                 action: Action = Queues.COMMAND_QUEUE.get_nowait()
-                print(f"[Game thread] Получена команда: {action}")
                 return action
             except queue.Empty:
                 pass

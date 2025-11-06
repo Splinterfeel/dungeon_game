@@ -1,3 +1,4 @@
+from collections import deque
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
 from src.entities.base import Actor
@@ -38,19 +39,28 @@ class DungeonMap:
         return False
 
     def get_avaliable_moves(self, actor: Actor) -> list[Point]:
-        cells = [
-            actor.position.on(PointOffset.LEFT),
-            actor.position.on(PointOffset.LEFT).on(PointOffset.LEFT),
-            actor.position.on(PointOffset.LEFT).on(PointOffset.TOP),
-            actor.position.on(PointOffset.LEFT).on(PointOffset.BOTTOM),
-            actor.position.on(PointOffset.RIGHT),
-            actor.position.on(PointOffset.RIGHT).on(PointOffset.RIGHT),
-            actor.position.on(PointOffset.RIGHT).on(PointOffset.TOP),
-            actor.position.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),
-            actor.position.on(PointOffset.TOP),
-            actor.position.on(PointOffset.TOP).on(PointOffset.TOP),
-            actor.position.on(PointOffset.BOTTOM),
-            actor.position.on(PointOffset.BOTTOM).on(PointOffset.BOTTOM),
+        "Возвращает список всех достижимых клеток за указанную скорость (BFS)"
+        visited = {actor.position}
+        available = []
+        queue = deque([(actor.position, 0)])
+        directions = [
+            PointOffset.LEFT,
+            PointOffset.RIGHT,
+            PointOffset.TOP,
+            PointOffset.BOTTOM,
         ]
-        free_cells = [cell for cell in cells if self.is_free(cell)]
-        return free_cells
+        while queue:
+            point, distance = queue.popleft()
+            # если точка достижима с текущей скоростью
+            if 0 < distance <= actor.stats.speed:
+                available.append(point)
+            # если точка - крайняя, которая достижима, то уже не пытаемся идти еще куда-то
+            if distance >= actor.stats.speed:
+                continue
+            # добавляем соседние точки для анализа
+            for offset in directions:
+                next_point = point.on(offset)
+                if next_point not in visited and self.is_free(next_point):
+                    visited.add(next_point)
+                    queue.append((next_point, distance + 1))
+        return available

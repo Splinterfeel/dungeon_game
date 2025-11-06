@@ -27,31 +27,26 @@ class InteractionHandlers:
                 return default_options
 
     def _go_to(point: Point):
-        print(f"🚶 Идем в клетку {point}")
         Queues.COMMAND_QUEUE.put(
             Action(type=ActionType.MOVE, cell=point, ends_turn=True)
         )
 
     def _inspect(point: Point):
-        print(f"🔍 Осматриваем клетку {point}")
         Queues.COMMAND_QUEUE.put(
             Action(type=ActionType.INSPECT, cell=point, ends_turn=False)
         )
 
     def _open_chest(point: Point):
-        print(f"🗝️  Открываем сундук в {point}")
         Queues.COMMAND_QUEUE.put(
             Action(type=ActionType.OPEN_CHEST, cell=point, ends_turn=False)
         )
 
     def _interact_with_enemy(point: Point):
-        print(f"Атакуем врага в {point}")
         Queues.COMMAND_QUEUE.put(
             Action(type=ActionType.ATTACK_ENEMY, cell=point, ends_turn=True)
         )
 
     def _interact_with_exit(point: Point):
-        print(f"Покидаем подземелье в {point}")
         Queues.COMMAND_QUEUE.put(
             Action(type=ActionType.EXIT, cell=point, ends_turn=True)
         )

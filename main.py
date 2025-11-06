@@ -12,10 +12,10 @@ warnings.filterwarnings("ignore")
 
 
 player_1 = Player(
-    name="Me", position=None, stats=CharacterStats(health=10, damage=3, speed=3)
+    name="Me", position=None, stats=CharacterStats(health=10, damage=5, speed=3)
 )
 player_2 = Player(
-    name="Me2", position=None, stats=CharacterStats(health=8, damage=4, speed=4)
+    name="Me2", position=None, stats=CharacterStats(health=8, damage=3, speed=5)
 )
 
 
