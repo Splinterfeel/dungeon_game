@@ -4,6 +4,7 @@ import time
 from src.action import Action, ActionType
 from src.audio import SoundEvent
 from src.base import Point, PointOffset, Queues
+from src.entities.enemy import Enemy
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
@@ -91,8 +92,8 @@ class Game:
         # положить состояние в очередь
         Queues.RENDER_QUEUE.put(self.to_dict())
 
-    def peform_player_turn(self, player: Player):
-        self.turn.available_moves = self.dungeon.map.get_avaliable_moves(player)
+    def run_player_turn(self, player: Player):
+        self.turn.available_moves = self.dungeon.map.get_available_moves(player)
         player_turn_end = False
         self.dump_state()
         while not player_turn_end:
@@ -100,6 +101,16 @@ class Game:
             action_performed = self.perform_player_action(player, action)
             if action_performed:
                 player_turn_end = action.ends_turn
+
+    def run_enemy_turn(self, enemy: Enemy):
+        old_position = enemy.position
+        enemy.ai.perform_action(enemy=enemy, game=self)
+        new_position = enemy.position
+        if old_position != new_position:
+            print(f"Enemy moved: {old_position}, {new_position}")
+            self.dungeon.map.set(old_position, CELL_TYPE.FLOOR.value)
+            self.dungeon.map.set(new_position, CELL_TYPE.ENEMY.value)
+            self.dump_state()
 
     def run_turn(self):
         self.turn.next()
@@ -109,12 +120,12 @@ class Game:
 
         for player in self.players:
             self.turn.current_actor = player
-            self.peform_player_turn(player)
+            self.run_player_turn(player)
 
         self.turn.phase = GamePhase.ENEMY_PHASE
         print("Enemy phase")
         for enemy in self.dungeon.enemies:
-            print(f"{enemy} turn")
+            self.run_enemy_turn(enemy)
 
         print(f"= END TURN {self.turn.number} =")
         self.send_sound_event("turn")

@@ -38,7 +38,7 @@ class DungeonMap:
             return True
         return False
 
-    def get_avaliable_moves(self, actor: Actor) -> list[Point]:
+    def get_available_moves(self, actor: Actor) -> list[Point]:
         "Возвращает список всех достижимых клеток за указанную скорость (BFS)"
         visited = {actor.position}
         available = []
@@ -64,3 +64,33 @@ class DungeonMap:
                     visited.add(next_point)
                     queue.append((next_point, distance + 1))
         return available
+
+    def bfs_path(self, start: Point, goal: Point) -> list[Point] | None:
+        """
+        Находит кратчайший путь от start до goal (BFS).
+        Возвращает список клеток от старта до цели включительно.
+        """
+        queue = deque([(start, [start])])
+        visited = {start}
+
+        directions = [
+            PointOffset.LEFT,
+            PointOffset.RIGHT,
+            PointOffset.TOP,
+            PointOffset.BOTTOM,
+        ]
+
+        while queue:
+            point, path = queue.popleft()
+            if point == goal:
+                return path
+
+            for offset in directions:
+                next_point = point.on(offset)
+                if next_point not in visited and (
+                    self.is_free(next_point)
+                    or self.get(next_point) == CELL_TYPE.PLAYER.value
+                ):
+                    visited.add(next_point)
+                    queue.append((next_point, path + [next_point]))
+        return None  # путь не найден
