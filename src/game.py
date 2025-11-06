@@ -55,6 +55,11 @@ class Game:
                     print(f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}")  # noqa
                     return False
                 print(f"Attacking enemy at {action.cell}")
+                enemy = next(x for x in self.dungeon.enemies if x.position == action.cell)
+                enemy.apply_damage(player.stats.damage)
+                if enemy.is_dead():
+                    self.dungeon.remove_dead_enemy(enemy=enemy)
+                return True
             case _:
                 print("Performing action", action)
                 return True

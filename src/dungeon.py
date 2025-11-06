@@ -110,6 +110,10 @@ class Dungeon:
             }
         )
 
+    def remove_dead_enemy(self, enemy: Enemy):
+        self.enemies.remove(enemy)
+        self.map.set(enemy.position, CELL_TYPE.FLOOR.value)
+
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
         num_enemies = min(self.enemies_num, len(possible_enemy_rooms))

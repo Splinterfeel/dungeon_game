@@ -53,6 +53,9 @@ class Actor(Entity):
             "stats": self.stats.to_dict(),
         }
 
+    def apply_damage(self, damage: int):
+        self.stats.health = max(self.stats.health - damage, 0)
+
     @classmethod
     def from_dict(cls, _dict: dict):
         return cls(
