@@ -2,6 +2,7 @@ import queue
 import random
 import time
 from src.action import Action, ActionResult, ActionType
+from src.ai.enemy import SimpleEnemyAI
 from src.entities.base import Actor
 from src.audio import SoundEvent
 from src.base import Point, PointOffset, Queues
@@ -58,8 +59,8 @@ class Game:
         match action.type:
             case ActionType.END_TURN:
                 if current_actor != action.actor:
-                    print(f"not turn of actor {action.actor}, now turn of {self.turn.current_actor}")
-                print("end turn of actor at", action.actor.position)
+                    print(f"[!] not turn of actor {action.actor}, now turn of {self.turn.current_actor}")
+                print("         end turn of actor at", action.actor.position)
                 return ActionResult(
                     action=action,
                     action_cost=30000,  # TODO пока просто завершаем ход немыслимым кол-вом AP
@@ -121,9 +122,10 @@ class Game:
                 return ActionResult(action=action)
 
     def move_actor(self, actor: Actor, cell: Point):
+        actor_cell_type = self.dungeon.map.get(actor.position)
         self.dungeon.map.set(actor.position, CELL_TYPE.FLOOR.value)
         actor.position = cell
-        self.dungeon.map.set(cell, CELL_TYPE.PLAYER.value)
+        self.dungeon.map.set(cell, actor_cell_type)
 
     def dump_state(self):
         if not self.is_server:
@@ -132,22 +134,22 @@ class Game:
         Queues.RENDER_QUEUE.put(self.to_dict())
 
     def run_actor_turn(self, actor: Actor):
-        actor.current_action_points = actor.stats.action_points
-        print(f"[*] Actor {actor} turn, AP {actor.current_action_points}")
-        if isinstance(actor, Enemy):
-            actor.ai.perform_action(actor, self)
         # в начале хода задаем базовое количество AP игроку
+        actor.current_action_points = actor.stats.action_points
         # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
         while actor.current_action_points > 0:
             self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
+            if isinstance(actor, Enemy):
+                ai = SimpleEnemyAI(actor=actor, game=self)
+                ai.generate_action()
             self.dump_state()
             action = self._get_actor_action(actor)
             action_result = self.perform_actor_action(actor, action)
             if action_result.performed:
                 actor.current_action_points = max(actor.current_action_points - action_result.action_cost, 0)
                 actor.current_speed_spent += action_result.speed_spent
-        self.dump_state()
+            self.dump_state()
 
     # def run_enemy_turn(self, enemy: Enemy):
     #     old_position = enemy.position
@@ -163,19 +165,18 @@ class Game:
         self.turn.next()
         print(f"=== TURN {self.turn.number} ===")
         self.turn.phase = GamePhase.PLAYER_PHASE
-        print("== Player phase")
+        print("==       Player phase")
 
         for player in self.players:
             self.turn.current_actor = player
             self.run_actor_turn(player)
 
         self.turn.phase = GamePhase.ENEMY_PHASE
-        print("== Enemy phase")
+        print("==       Enemy phase")
         for enemy in self.dungeon.enemies:
             self.turn.current_actor = enemy
             self.run_actor_turn(enemy)
 
-        print(f"========= END TURN {self.turn.number} =")
         self.send_sound_event("turn")
 
     def loop(self):

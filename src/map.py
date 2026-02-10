@@ -74,6 +74,7 @@ class DungeonMap:
         Возвращает список клеток от старта до цели включительно.
         """
         queue = deque([(start, [start])])
+        # goal_cell_type = self.get(goal)
         visited = {start}
 
         directions = [
@@ -92,7 +93,7 @@ class DungeonMap:
                 next_point = point.on(offset)
                 if next_point not in visited and (
                     self.is_free(next_point)
-                    or self.get(next_point) == CELL_TYPE.PLAYER.value
+                    or next_point == goal
                 ):
                     visited.add(next_point)
                     queue.append((next_point, path + [next_point]))

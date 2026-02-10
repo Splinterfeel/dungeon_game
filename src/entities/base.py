@@ -1,9 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from src.base import Point
 
 
 class Entity(BaseModel):
     position: Point | None
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def to_dict(self):
         return {

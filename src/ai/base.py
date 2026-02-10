@@ -1,8 +1,16 @@
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
+
+from src.entities.base import Actor
+import typing_extensions
+if typing_extensions.TYPE_CHECKING:
+    from src.game import Game
 
 
-class AI(BaseModel, ABC):
+class AI(ABC):
+    def __init__(self, actor: Actor, game: "Game"):
+        self.actor = actor
+        self.game = game
+
     @abstractmethod
-    def perform_action(self, actor, game):
+    def generate_action(self):
         pass
