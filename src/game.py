@@ -65,9 +65,12 @@ class Game:
                 if not self.dungeon.map.is_free(action.cell):
                     print(f"Cell {action.cell} is not free, can't move {player} here")
                     return False, 0
-                distance = Point.distance_manhattan(action.cell, current_actor.position)
-                # TODO не учитывает препятствия
-                action_ap_cost = distance
+                path = self.dungeon.map.bfs_path(action.cell, current_actor.position)
+                if not path:
+                    print(f"Can't reach point (BFS): {action.cell}")
+                    return False, 0
+                action_ap_cost = len(path) - 1
+                assert action_ap_cost > 0
                 if current_actor.current_action_points < action_ap_cost:
                     print(f"Not enough AP: {current_actor.current_action_points} / {action_ap_cost}")
                     return False, 0
@@ -128,7 +131,6 @@ class Game:
             action_performed, ap_cost = self.perform_player_action(player, action)
             if action_performed:
                 player.current_action_points -= ap_cost
-            print("AP after:", player.current_action_points)
             self.dump_state()
 
     def run_enemy_turn(self, enemy: Enemy):
