@@ -60,3 +60,8 @@ class AttackType:
 class Attack:
     SIMPLE = AttackType(cost=5, default_multiplier=1.0)
     HEAVY = AttackType(cost=8, default_multiplier=1.5)
+
+
+class ActionPoints:
+    ATTACK = 5
+    HEAVY_ATTACK = 7

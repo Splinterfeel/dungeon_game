@@ -39,7 +39,8 @@ class Game:
     def send_sound_event(self, event_name: str):
         Queues.SOUND_QUEUE.put(SoundEvent(name=event_name))
 
-    def perform_player_action(self, player: Player, action: Action) -> bool:
+    def perform_player_action(self, player: Player, action: Action) -> tuple[bool, int]:
+        # возвращает action_performed (bool), AP cost (int)
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != player:
             raise ValueError(
@@ -47,35 +48,47 @@ class Game:
             )  # noqa
         current_actor = Actor(
             position=self.turn.current_actor.position,
-            stats=self.turn.current_actor.stats
+            stats=self.turn.current_actor.stats,
+            current_action_points=self.turn.current_actor.current_action_points,
         )
+        action_ap_cost = 0
         match action.type:
             case ActionType.END_TURN:
                 if current_actor != action.actor:
                     print(f"not turn of actor {action.actor}, now turn of {self.turn.current_actor}")
                 print("end turn of actor at", action.actor.position)
-                return True
+                return True, 30000  # TODO пока просто завершаем ход немыслимым кол-вом AP
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
                     print(f"Can't move player {player} to cell {action.cell}")
-                    return False
+                    return False, 0
                 if not self.dungeon.map.is_free(action.cell):
                     print(f"Cell {action.cell} is not free, can't move {player} here")
-                    return False
+                    return False, 0
+                distance = Point.distance_manhattan(action.cell, current_actor.position)
+                # TODO не учитывает препятствия
+                action_ap_cost = distance
+                if current_actor.current_action_points < action_ap_cost:
+                    print(f"Not enough AP: {current_actor.current_action_points} / {action_ap_cost}")
+                    return False, 0
                 self.move_player(player, action.cell)
                 self.send_sound_event("move")
-                return True
+                return True, action_ap_cost
             case ActionType.ATTACK:
                 attack_action = AttackType.from_dict(action.params)
+                action_ap_cost = attack_action.cost
+                if current_actor.current_action_points < action_ap_cost:
+                    print(f"Not enough AP: {current_actor.current_action_points} / {action_ap_cost}")
+                    return False, 0
                 print(action.params)
                 if self.dungeon.map.get(action.cell) != CELL_TYPE.ENEMY.value:
                     print(f"Attempt to attack {action.cell}, cell is not enemy")
-                    return False
+                    return False, 0
                 if Point.distance_chebyshev(player.position, action.cell) > 1:
                     print(
                         f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}"
                     )  # noqa
-                    return False
+                    return False, 0
                 enemy = next(
                     x for x in self.dungeon.enemies if x.position == action.cell
                 )
@@ -89,10 +102,10 @@ class Game:
                     self.dungeon.remove_dead_enemy(enemy=enemy)
                 else:
                     self.send_sound_event("hit")
-                return True
+                return True, action_ap_cost
             case _:
                 print("Performing action", action)
-                return True
+                return True, 0
 
     def move_player(self, player: Player, cell: Point):
         self.dungeon.map.set(player.position, CELL_TYPE.FLOOR.value)
@@ -106,14 +119,17 @@ class Game:
         Queues.RENDER_QUEUE.put(self.to_dict())
 
     def run_player_turn(self, player: Player):
+        # в начале хода задаем базовое количество AP игроку
+        player.current_action_points = player.stats.action_points
         self.turn.available_moves = self.dungeon.map.get_available_moves(player)
-        player_turn_end = False
         self.dump_state()
-        while not player_turn_end:
+        while player.current_action_points > 0:
             action = self._get_player_action(player)
-            action_performed = self.perform_player_action(player, action)
+            action_performed, ap_cost = self.perform_player_action(player, action)
             if action_performed:
-                player_turn_end = action.ends_turn
+                player.current_action_points -= ap_cost
+            print("AP after:", player.current_action_points)
+            self.dump_state()
 
     def run_enemy_turn(self, enemy: Enemy):
         old_position = enemy.position
@@ -156,7 +172,7 @@ class Game:
         )
 
     def _get_player_action(self, player: Player):
-        print(f"[*] Player {player.name} turn")
+        print(f"[*] Player {player.name} turn, AP {player.current_action_points}")
         while True:
             try:
                 action: Action = Queues.COMMAND_QUEUE.get_nowait()

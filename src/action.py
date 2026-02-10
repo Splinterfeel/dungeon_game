@@ -19,5 +19,4 @@ class Action(BaseModel):
     actor: Actor
     type: ActionType
     cell: Point = None
-    ends_turn: bool
     params: dict | None = None

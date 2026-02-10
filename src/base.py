@@ -59,6 +59,10 @@ class Point:
         return cls(**_dict)
 
     @staticmethod
+    def distance_manhattan(point_1: Self, point_2: Self) -> int:
+        return abs(point_1.x - point_2.x) + abs(point_1.y - point_2.y)
+
+    @staticmethod
     def distance_chebyshev(point_1: Self, point_2: Self) -> int:
         delta_x = point_2.x - point_1.x
         delta_y = point_2.y - point_1.y

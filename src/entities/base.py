@@ -43,6 +43,7 @@ class CharacterStats(BaseModel):
 
 class Actor(Entity):
     stats: CharacterStats
+    current_action_points: int = 0
 
     def is_dead(self) -> bool:
         return self.stats.health <= 0

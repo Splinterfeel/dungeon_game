@@ -1,6 +1,6 @@
 from src.action import Action, ActionType
 from src.base import Queues, Point
-from src.constants import CELL_TYPE, Attack
+from src.constants import CELL_TYPE, ActionPoints, Attack
 from src.entities.base import Actor
 
 
@@ -32,30 +32,30 @@ class InteractionHandlers:
 
     def _end_turn(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.END_TURN, ends_turn=True)
+            Action(actor=actor, type=ActionType.END_TURN)
         )
 
     def _go_to(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.MOVE, cell=point, ends_turn=True)
+            Action(actor=actor, type=ActionType.MOVE, cell=point)
         )
 
     def _inspect(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.INSPECT, cell=point, ends_turn=False)
+            Action(actor=actor, type=ActionType.INSPECT, cell=point)
         )
 
     def _open_chest(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.OPEN_CHEST, cell=point, ends_turn=False)
+            Action(actor=actor, type=ActionType.OPEN_CHEST, cell=point)
         )
 
     def _attack(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.ATTACK, cell=point, ends_turn=True, params=params)
+            Action(actor=actor, type=ActionType.ATTACK, cell=point, params=params)
         )
 
     def _interact_with_exit(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.EXIT, cell=point, ends_turn=True)
+            Action(actor=actor, type=ActionType.EXIT, cell=point)
         )
