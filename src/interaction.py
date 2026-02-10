@@ -1,13 +1,15 @@
 from src.action import Action, ActionType
 from src.base import Queues, Point
 from src.constants import CELL_TYPE, Attack
+from src.entities.base import Actor
 
 
 class InteractionHandlers:
-    def get_interaction_options(cell: Point, cell_type: CELL_TYPE):
+    def get_interaction_options(actor: Actor, cell: Point, cell_type: CELL_TYPE):
         # (текст, коллбэк, доп.параметры (словарь)
         default_options = [
-            (f"Осмотреть [{cell.x}, {cell.y}]", InteractionHandlers._inspect, None)
+            (f"Осмотреть [{cell.x}, {cell.y}]", InteractionHandlers._inspect, None),
+            ("Завершить ход", InteractionHandlers._end_turn, None),
         ]
         match cell_type:
             case CELL_TYPE.FLOOR:
@@ -28,27 +30,32 @@ class InteractionHandlers:
             case _:
                 return default_options
 
-    def _go_to(point: Point, params: dict=None):
+    def _end_turn(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(type=ActionType.MOVE, cell=point, ends_turn=True)
+            Action(actor=actor, type=ActionType.END_TURN, ends_turn=True)
         )
 
-    def _inspect(point: Point, params: dict=None):
+    def _go_to(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(type=ActionType.INSPECT, cell=point, ends_turn=False)
+            Action(actor=actor, type=ActionType.MOVE, cell=point, ends_turn=True)
         )
 
-    def _open_chest(point: Point, params: dict=None):
+    def _inspect(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(type=ActionType.OPEN_CHEST, cell=point, ends_turn=False)
+            Action(actor=actor, type=ActionType.INSPECT, cell=point, ends_turn=False)
         )
 
-    def _attack(point: Point, params: dict=None):
+    def _open_chest(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(type=ActionType.ATTACK, cell=point, ends_turn=True, params=params)
+            Action(actor=actor, type=ActionType.OPEN_CHEST, cell=point, ends_turn=False)
         )
 
-    def _interact_with_exit(point: Point, params: dict=None):
+    def _attack(actor: Actor, point: Point, params: dict=None):
         Queues.COMMAND_QUEUE.put(
-            Action(type=ActionType.EXIT, cell=point, ends_turn=True)
+            Action(actor=actor, type=ActionType.ATTACK, cell=point, ends_turn=True, params=params)
+        )
+
+    def _interact_with_exit(actor: Actor, point: Point, params: dict=None):
+        Queues.COMMAND_QUEUE.put(
+            Action(actor=actor, type=ActionType.EXIT, cell=point, ends_turn=True)
         )

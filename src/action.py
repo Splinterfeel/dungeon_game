@@ -2,9 +2,11 @@ from pydantic import BaseModel
 
 from enum import Enum, auto
 from src.base import Point
+from src.entities.base import Actor
 
 
 class ActionType(Enum):
+    END_TURN = auto()
     MOVE = auto()
     INSPECT = auto()
     ATTACK = auto()
@@ -14,7 +16,8 @@ class ActionType(Enum):
 
 
 class Action(BaseModel):
+    actor: Actor
     type: ActionType
-    cell: Point
+    cell: Point = None
     ends_turn: bool
     params: dict | None = None

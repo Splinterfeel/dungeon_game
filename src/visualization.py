@@ -122,7 +122,7 @@ class Visualization:
         self.clear_menu()
         # Формируем список опций в зависимости от типа клетки
         interaction_options = InteractionHandlers.get_interaction_options(
-            cell, cell_type
+            actor=self.game.turn.current_actor, cell=cell, cell_type=cell_type
         )
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
@@ -174,7 +174,7 @@ class Visualization:
             self.menu_drawables.append(txt)
             self.menu_texts.append(txt)
             # Сохраняем обёртку callback, передаём cell как параметр
-            self.menu_callbacks.append(lambda cb=callback, cell=cell, params=params: cb(cell, params))
+            self.menu_callbacks.append(lambda cb=callback, actor=self.game.turn.current_actor, cell=cell, params=params: cb(actor, cell, params))
         self.menu_exists = True
         self.fig.canvas.draw()  # нужно, чтобы artist.contains(event) корректно работал
 

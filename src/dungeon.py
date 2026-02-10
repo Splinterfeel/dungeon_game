@@ -221,7 +221,7 @@ class Dungeon:
             gold_amount = random.randint(
                 10 + distance_factor * 5, 50 + distance_factor * 10
             )
-            new_chest = Chest(position, gold_amount)
+            new_chest = Chest(position=position, gold=gold_amount)
             self.chests.append(new_chest)
             self.map.set(new_chest.position, CELL_TYPE.CHEST.value)
 

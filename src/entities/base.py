@@ -1,10 +1,11 @@
 from dataclasses import dataclass
+
+from pydantic import BaseModel
 from src.base import Point
 
 
-class Entity:
-    def __init__(self, position: Point):
-        self.position = position
+class Entity(BaseModel):
+    position: Point | None
 
     def to_dict(self):
         return {
@@ -21,8 +22,7 @@ class Entity:
         return self.position == value.position
 
 
-@dataclass
-class CharacterStats:
+class CharacterStats(BaseModel):
     health: int
     damage: int
     speed: int
@@ -42,9 +42,7 @@ class CharacterStats:
 
 
 class Actor(Entity):
-    def __init__(self, position: Point, stats: CharacterStats):
-        super().__init__(position=position)
-        self.stats = stats
+    stats: CharacterStats
 
     def is_dead(self) -> bool:
         return self.stats.health <= 0

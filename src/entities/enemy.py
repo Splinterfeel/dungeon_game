@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+
+from pydantic import BaseModel
 from src.base import Point
 from src.entities.base import Actor
 import typing_extensions
@@ -7,22 +9,16 @@ if typing_extensions.TYPE_CHECKING:
     from src.game import Game
 
 
-class EnemyAI(ABC):
+class EnemyAI(BaseModel, ABC):
     @abstractmethod
     def perform_action(self, enemy, game):
         pass
 
 
-class Enemy(Actor):
-    def __init__(self, position, stats, ai: EnemyAI = None):
-        super().__init__(position, stats)
-        self.ai = ai if ai is not None else SimpleEnemyAI()
-
-
 class SimpleEnemyAI(EnemyAI):
-    WAKE_DISTANCE = 10
+    WAKE_DISTANCE: int = 10
 
-    def perform_action(self, enemy: Enemy, game: "Game"):
+    def perform_action(self, enemy: "Enemy", game: "Game"):
         # если расстояние в 1 клетку (в т.ч. по диагонали) - надо атаковать
         for player in game.players:
             if Point.distance_chebyshev(player.position, enemy.position) == 1:
@@ -68,3 +64,11 @@ class SimpleEnemyAI(EnemyAI):
                 enemy.position = step  # делаем максимально возможный шаг по пути
             else:
                 break  # дальше по пути нельзя идти, упираемся в препятствие
+
+
+class Enemy(Actor):
+    ai: EnemyAI = SimpleEnemyAI
+
+
+    def model_post_init(self, __context=None):
+        self.ai = self.ai()

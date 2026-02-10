@@ -2,6 +2,7 @@ import queue
 import random
 import time
 from src.action import Action, ActionType
+from src.entities.base import Actor
 from src.audio import SoundEvent
 from src.base import Point, PointOffset, Queues
 from src.entities.enemy import Enemy
@@ -44,7 +45,16 @@ class Game:
             raise ValueError(
                 f"Attempt to perform action of player {player} when turn of player {self.turn.current_actor}"
             )  # noqa
+        current_actor = Actor(
+            position=self.turn.current_actor.position,
+            stats=self.turn.current_actor.stats
+        )
         match action.type:
+            case ActionType.END_TURN:
+                if current_actor != action.actor:
+                    print(f"not turn of actor {action.actor}, now turn of {self.turn.current_actor}")
+                print("end turn of actor at", action.actor.position)
+                return True
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
                     print(f"Can't move player {player} to cell {action.cell}")
@@ -69,9 +79,10 @@ class Game:
                 enemy = next(
                     x for x in self.dungeon.enemies if x.position == action.cell
                 )
-                enemy.apply_damage(player.stats.damage)
+                damage = int(player.stats.damage * attack_action.default_multiplier)
+                enemy.apply_damage(damage)
                 print(
-                    f"Attacked enemy at {action.cell}, enemy health: {enemy.stats.health}"
+                    f"Attacked enemy at {action.cell}, DMG {damage}, enemy health: {enemy.stats.health}"
                 )
                 if enemy.is_dead():
                     self.send_sound_event("kill")
@@ -178,6 +189,7 @@ class Game:
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
         return {
+            "current_actor": self.turn.current_actor.to_dict() if self.turn.current_actor else None,
             "dungeon": self.dungeon.to_dict(),
             "players": [p.to_dict() for p in self.players],
             "turn": self.turn.to_dict(),

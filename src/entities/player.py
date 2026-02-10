@@ -3,9 +3,7 @@ from src.entities.base import Actor, CharacterStats
 
 
 class Player(Actor):
-    def __init__(self, position: Point, name: str, stats: CharacterStats):
-        super().__init__(position=position, stats=stats)
-        self.name = name
+    name: str
 
     def to_dict(self):
         return super().to_dict() | {"name": self.name}
@@ -21,3 +19,6 @@ class Player(Actor):
                 "name": _dict["name"],
             }
         )
+
+    def __str__(self):
+        return f"Player {self.name}"

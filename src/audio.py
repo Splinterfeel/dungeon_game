@@ -25,7 +25,6 @@ def run_sound_thread():
         while not Queues.SOUND_QUEUE.empty():
             try:
                 sound_event: SoundEvent = Queues.SOUND_QUEUE.get_nowait()
-                print(f"[SOUND THREAD] GOT {sound_event}")
                 playaudio(sound_files_map[sound_event.name])
             except queue.Empty:
                 break
