@@ -132,9 +132,11 @@ class Game:
         Queues.RENDER_QUEUE.put(self.to_dict())
 
     def run_actor_turn(self, actor: Actor):
-        print(f"[*] Actor {actor} turn, AP {actor.current_action_points}")
-        # в начале хода задаем базовое количество AP игроку
         actor.current_action_points = actor.stats.action_points
+        print(f"[*] Actor {actor} turn, AP {actor.current_action_points}")
+        if isinstance(actor, Enemy):
+            actor.ai.perform_action(actor, self)
+        # в начале хода задаем базовое количество AP игроку
         # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
         while actor.current_action_points > 0:
@@ -143,19 +145,19 @@ class Game:
             action = self._get_actor_action(actor)
             action_result = self.perform_actor_action(actor, action)
             if action_result.performed:
-                actor.current_action_points -= action_result.action_cost
+                actor.current_action_points = max(actor.current_action_points - action_result.action_cost, 0)
                 actor.current_speed_spent += action_result.speed_spent
         self.dump_state()
 
-    def run_enemy_turn(self, enemy: Enemy):
-        old_position = enemy.position
-        enemy.ai.perform_action(actor=enemy, game=self)
-        new_position = enemy.position
-        if old_position != new_position:
-            print(f"Enemy moved: {old_position}, {new_position}")
-            self.dungeon.map.set(old_position, CELL_TYPE.FLOOR.value)
-            self.dungeon.map.set(new_position, CELL_TYPE.ENEMY.value)
-            self.dump_state()
+    # def run_enemy_turn(self, enemy: Enemy):
+    #     old_position = enemy.position
+    #     enemy.ai.perform_action(actor=enemy, game=self)
+    #     new_position = enemy.position
+    #     if old_position != new_position:
+    #         print(f"Enemy moved: {old_position}, {new_position}")
+    #         self.dungeon.map.set(old_position, CELL_TYPE.FLOOR.value)
+    #         self.dungeon.map.set(new_position, CELL_TYPE.ENEMY.value)
+    #         self.dump_state()
 
     def run_turn(self):
         self.turn.next()

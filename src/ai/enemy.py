@@ -1,7 +1,10 @@
+from src.action import Action
+import time
 import typing_extensions
 
+from src.action import ActionType
 from src.ai.base import AI
-from src.base import Point
+from src.base import Point, Queues
 from src.entities.base import Actor
 
 if typing_extensions.TYPE_CHECKING:
@@ -12,6 +15,11 @@ class SimpleEnemyAI(AI):
     WAKE_DISTANCE: int = 10
 
     def perform_action(self, actor: Actor, game: "Game"):
+        # TODO пока просто завершаем ход за противника
+        time.sleep(2)
+        Queues.COMMAND_QUEUE.put(
+            Action(actor=actor, type=ActionType.END_TURN, cell=actor.position)
+        )
         # если расстояние в 1 клетку (в т.ч. по диагонали) - надо атаковать
         for player in game.players:
             if Point.distance_chebyshev(player.position, actor.position) == 1:
