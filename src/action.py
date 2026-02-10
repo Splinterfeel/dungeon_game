@@ -20,3 +20,10 @@ class Action(BaseModel):
     type: ActionType
     cell: Point = None
     params: dict | None = None
+
+
+class ActionResult(BaseModel):
+    action: Action
+    performed: bool = True
+    action_cost: int = 0
+    speed_spent: int = 0

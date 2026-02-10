@@ -49,13 +49,16 @@ class DungeonMap:
             PointOffset.TOP,
             PointOffset.BOTTOM,
         ]
+        # сколько клеток может пройти
+        _speed = actor.stats.speed - actor.current_speed_spent
+        assert _speed >= 0
         while queue:
             point, distance = queue.popleft()
             # если точка достижима с текущей скоростью
-            if 0 < distance <= actor.stats.speed:
+            if 0 < distance <= _speed:
                 available.append(point)
             # если точка - крайняя, которая достижима, то уже не пытаемся идти еще куда-то
-            if distance >= actor.stats.speed:
+            if distance >= _speed:
                 continue
             # добавляем соседние точки для анализа
             for offset in directions:

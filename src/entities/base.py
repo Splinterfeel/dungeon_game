@@ -23,7 +23,7 @@ class Entity(BaseModel):
 class CharacterStats(BaseModel):
     health: int
     damage: int
-    speed: int
+    speed: int  # сколько клеток может пройти за ход
     action_points: int
 
     def to_dict(self):
@@ -42,6 +42,7 @@ class CharacterStats(BaseModel):
 class Actor(Entity):
     stats: CharacterStats
     current_action_points: int = 0
+    current_speed_spent: int = 0  # сколько клеток прошел за ход
 
     def is_dead(self) -> bool:
         return self.stats.health <= 0
