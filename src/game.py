@@ -83,13 +83,12 @@ class Game:
                 if current_actor.current_action_points < action_ap_cost:
                     print(f"Not enough AP: {current_actor.current_action_points} / {action_ap_cost}")
                     return False, 0
-                print(action.params)
                 if self.dungeon.map.get(action.cell) != CELL_TYPE.ENEMY.value:
                     print(f"Attempt to attack {action.cell}, cell is not enemy")
                     return False, 0
                 if Point.distance_chebyshev(player.position, action.cell) > 1:
                     print(
-                        f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}"
+                        f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(player.position, action.cell)}"  # noqa
                     )  # noqa
                     return False, 0
                 enemy = next(
@@ -135,7 +134,7 @@ class Game:
 
     def run_enemy_turn(self, enemy: Enemy):
         old_position = enemy.position
-        enemy.ai.perform_action(enemy=enemy, game=self)
+        enemy.ai.perform_action(actor=enemy, game=self)
         new_position = enemy.position
         if old_position != new_position:
             print(f"Enemy moved: {old_position}, {new_position}")
