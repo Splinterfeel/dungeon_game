@@ -7,7 +7,7 @@ from src.base import Point, PointOffset, Queues
 from src.entities.enemy import Enemy
 from src.entities.player import Player
 from src.dungeon import Dungeon
-from src.constants import CELL_TYPE
+from src.constants import CELL_TYPE, AttackType
 from src.turn import GamePhase, Turn
 
 
@@ -55,7 +55,9 @@ class Game:
                 self.move_player(player, action.cell)
                 self.send_sound_event("move")
                 return True
-            case ActionType.ATTACK_ENEMY:
+            case ActionType.ATTACK:
+                attack_action = AttackType.from_dict(action.params)
+                print(action.params)
                 if self.dungeon.map.get(action.cell) != CELL_TYPE.ENEMY.value:
                     print(f"Attempt to attack {action.cell}, cell is not enemy")
                     return False

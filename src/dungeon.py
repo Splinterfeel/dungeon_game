@@ -25,6 +25,8 @@ class Dungeon:
         chests: list[Chest] = None,
         enemies: list[Enemy] = None,
         exit: Point = None,
+        min_enemy_ap: int = 8,
+        max_enemy_ap: int = 10,
     ):
         self.width = width
         self.height = height
@@ -34,6 +36,8 @@ class Dungeon:
         self.max_room_size = max_room_size
         self.max_chests = max_chests
         self.enemies_num = enemies_num
+        self.min_enemy_ap = min_enemy_ap
+        self.max_enemy_ap = max_enemy_ap
 
         if map is None:
             self.map = DungeonMap(self.width, self.height)
@@ -127,6 +131,7 @@ class Dungeon:
                     health=random.randint(10, 20),
                     damage=random.randint(3, 5),
                     speed=2,
+                    action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
                 ),
             )
             if not self.map.is_free(enemy.position):

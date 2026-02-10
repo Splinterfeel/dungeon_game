@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -38,3 +39,24 @@ class ColorPallette:
     # цвет для ячеек доступных для перемещения
     MOVE_CELL_EDGE_COLOR = "green"
     MOVE_CELL_BG_COLOR = (0.2, 0.2, 0.2)
+
+
+@dataclass
+class AttackType:
+    cost: int
+    default_multiplier: float
+
+    def to_dict(self):
+        return {
+            "cost": self.cost,
+            "default_multiplier": self.default_multiplier,
+        }
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        return cls(**_dict)
+
+
+class Attack:
+    SIMPLE = AttackType(cost=5, default_multiplier=1.0)
+    HEAVY = AttackType(cost=8, default_multiplier=1.5)

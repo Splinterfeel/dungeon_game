@@ -26,12 +26,14 @@ class CharacterStats:
     health: int
     damage: int
     speed: int
+    action_points: int
 
     def to_dict(self):
         return {
             "health": self.health,
             "damage": self.damage,
             "speed": self.speed,
+            "action_points": self.action_points,
         }
 
     @classmethod

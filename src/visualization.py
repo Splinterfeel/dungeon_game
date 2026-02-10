@@ -156,7 +156,7 @@ class Visualization:
         self.menu_drawables.append(bg)
 
         # Добавим опции как тексты
-        for i, (label, callback) in enumerate(interaction_options):
+        for i, (label, callback, params) in enumerate(interaction_options):
             ty = (
                 my
                 + (len(interaction_options) - 1 - i) * option_height
@@ -171,11 +171,10 @@ class Visualization:
                 fontsize=9,
                 zorder=11,
             )
-
             self.menu_drawables.append(txt)
             self.menu_texts.append(txt)
             # Сохраняем обёртку callback, передаём cell как параметр
-            self.menu_callbacks.append(lambda cb=callback, cell=cell: cb(cell))
+            self.menu_callbacks.append(lambda cb=callback, cell=cell, params=params: cb(cell, params))
         self.menu_exists = True
         self.fig.canvas.draw()  # нужно, чтобы artist.contains(event) корректно работал
 
