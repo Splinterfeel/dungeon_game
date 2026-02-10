@@ -124,6 +124,8 @@ class Visualization:
         interaction_options = InteractionHandlers.get_interaction_options(
             actor=self.game.turn.current_actor, cell=cell, cell_type=cell_type
         )
+        if not interaction_options:
+            return
 
         # Позиционируем меню так, чтобы оно не выходило за пределы axes
         mx = event.xdata

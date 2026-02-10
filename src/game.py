@@ -132,6 +132,7 @@ class Game:
         Queues.RENDER_QUEUE.put(self.to_dict())
 
     def run_actor_turn(self, actor: Actor):
+        print(f"[*] Actor {actor} turn, AP {actor.current_action_points}")
         # в начале хода задаем базовое количество AP игроку
         actor.current_action_points = actor.stats.action_points
         # в начале хода еще не прошел ни одной клетки
@@ -139,7 +140,7 @@ class Game:
         while actor.current_action_points > 0:
             self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
             self.dump_state()
-            action = self._get_player_action(actor)
+            action = self._get_actor_action(actor)
             action_result = self.perform_actor_action(actor, action)
             if action_result.performed:
                 actor.current_action_points -= action_result.action_cost
@@ -160,18 +161,19 @@ class Game:
         self.turn.next()
         print(f"=== TURN {self.turn.number} ===")
         self.turn.phase = GamePhase.PLAYER_PHASE
-        print("Player phase")
+        print("== Player phase")
 
         for player in self.players:
             self.turn.current_actor = player
             self.run_actor_turn(player)
 
         self.turn.phase = GamePhase.ENEMY_PHASE
-        print("Enemy phase")
+        print("== Enemy phase")
         for enemy in self.dungeon.enemies:
-            self.run_enemy_turn(enemy)
+            self.turn.current_actor = enemy
+            self.run_actor_turn(enemy)
 
-        print(f"= END TURN {self.turn.number} =")
+        print(f"========= END TURN {self.turn.number} =")
         self.send_sound_event("turn")
 
     def loop(self):
@@ -186,8 +188,7 @@ class Game:
             e.is_dead() for e in self.dungeon.enemies
         )
 
-    def _get_player_action(self, player: Player):
-        print(f"[*] Player {player.name} turn, AP {player.current_action_points}")
+    def _get_actor_action(self, player: Player):
         while True:
             try:
                 action: Action = Queues.COMMAND_QUEUE.get_nowait()
@@ -219,12 +220,14 @@ class Game:
 
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
-        return {
-            "current_actor": self.turn.current_actor.to_dict() if self.turn.current_actor else None,
+        dump = {
             "dungeon": self.dungeon.to_dict(),
             "players": [p.to_dict() for p in self.players],
             "turn": self.turn.to_dict(),
         }
+        if self.turn.phase == GamePhase.ENEMY_PHASE:
+            dump["turn"]["current_actor"] = None
+        return dump
 
     @classmethod
     def from_dict(cls, _dict: dict) -> "Game":

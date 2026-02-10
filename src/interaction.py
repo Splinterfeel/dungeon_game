@@ -7,6 +7,8 @@ from src.entities.base import Actor
 class InteractionHandlers:
     def get_interaction_options(actor: Actor, cell: Point, cell_type: CELL_TYPE):
         # (текст, коллбэк, доп.параметры (словарь)
+        if not actor:
+            return []
         default_options = [
             (f"Осмотреть [{cell.x}, {cell.y}]", InteractionHandlers._inspect, None),
             ("Завершить ход", InteractionHandlers._end_turn, None),
@@ -32,7 +34,7 @@ class InteractionHandlers:
 
     def _end_turn(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.END_TURN)
+            Action(actor=actor, type=ActionType.END_TURN, cell=actor.position)
         )
 
     def _go_to(actor: Actor, point: Point, params: dict = None):

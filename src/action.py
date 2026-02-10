@@ -18,7 +18,7 @@ class ActionType(Enum):
 class Action(BaseModel):
     actor: Actor
     type: ActionType
-    cell: Point = None
+    cell: Point
     params: dict | None = None
 
 
