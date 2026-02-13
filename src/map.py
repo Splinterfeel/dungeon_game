@@ -92,8 +92,7 @@ class DungeonMap:
             for offset in directions:
                 next_point = point.on(offset)
                 if next_point not in visited and (
-                    self.is_free(next_point)
-                    or next_point == goal
+                    self.is_free(next_point) or next_point == goal
                 ):
                     visited.add(next_point)
                     queue.append((next_point, path + [next_point]))

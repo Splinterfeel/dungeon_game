@@ -15,7 +15,9 @@ class InteractionHandlers:
         ]
         match cell_type:
             case CELL_TYPE.FLOOR:
-                return [("Идти сюда", InteractionHandlers._go_to, None)] + default_options
+                return [
+                    ("Идти сюда", InteractionHandlers._go_to, None)
+                ] + default_options
             case CELL_TYPE.EXIT:
                 return [
                     ("Покинуть", InteractionHandlers._interact_with_exit, None)
@@ -23,7 +25,11 @@ class InteractionHandlers:
             case CELL_TYPE.ENEMY:
                 return [
                     ("Атака", InteractionHandlers._attack, Attack.SIMPLE.to_dict()),
-                    ("Сильная атака", InteractionHandlers._attack, Attack.HEAVY.to_dict()),
+                    (
+                        "Сильная атака",
+                        InteractionHandlers._attack,
+                        Attack.HEAVY.to_dict(),
+                    ),
                 ] + default_options
             case CELL_TYPE.CHEST:
                 return [
@@ -38,9 +44,7 @@ class InteractionHandlers:
         )
 
     def _go_to(actor: Actor, point: Point, params: dict = None):
-        Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.MOVE, cell=point)
-        )
+        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.MOVE, cell=point))
 
     def _inspect(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
@@ -58,6 +62,4 @@ class InteractionHandlers:
         )
 
     def _interact_with_exit(actor: Actor, point: Point, params: dict = None):
-        Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.EXIT, cell=point)
-        )
+        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.EXIT, cell=point))

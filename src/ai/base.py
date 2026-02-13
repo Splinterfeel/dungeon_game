@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from src.entities.base import Actor
 import typing_extensions
+
 if typing_extensions.TYPE_CHECKING:
     from src.game import Game
 

@@ -176,7 +176,11 @@ class Visualization:
             self.menu_drawables.append(txt)
             self.menu_texts.append(txt)
             # Сохраняем обёртку callback, передаём cell как параметр
-            self.menu_callbacks.append(lambda cb=callback, actor=self.game.turn.current_actor, cell=cell, params=params: cb(actor, cell, params))
+            self.menu_callbacks.append(
+                lambda cb=callback, actor=self.game.turn.current_actor, cell=cell, params=params: cb(
+                    actor, cell, params
+                )
+            )
         self.menu_exists = True
         self.fig.canvas.draw()  # нужно, чтобы artist.contains(event) корректно работал
 
