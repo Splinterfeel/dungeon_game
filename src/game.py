@@ -98,9 +98,18 @@ class Game:
                 damage = int(actor.stats.damage * attack_action.default_multiplier)
                 if actor_cell_type == CELL_TYPE.ENEMY.value and action_cell_type == CELL_TYPE.PLAYER.value:
                     print("Enemy атакует Player")
+                    player = next(
+                        x for x in self.players if x.position == action.cell
+                    )
+                    player.apply_damage(damage)
+                    if player.is_dead():
+                        self.send_sound_event("kill")
+                        raise ValueError("player is dead!")
+                    else:
+                        self.send_sound_event("hit")
                     return ActionResult(action=action)
-                elif actor_cell_type == CELL_TYPE.PLAYER.value and action_cell_type != CELL_TYPE.ENEMY.value:
-                    # Player атакует Enemy
+                elif actor_cell_type == CELL_TYPE.PLAYER.value and action_cell_type == CELL_TYPE.ENEMY.value:
+                    print("Enemy атакует Player")
                     enemy = next(
                         x for x in self.dungeon.enemies if x.position == action.cell
                     )
@@ -191,10 +200,13 @@ class Game:
             e.is_dead() for e in self.dungeon.enemies
         )
 
-    def _get_actor_action(self, player: Player):
+    def _get_actor_action(self, actor: Actor):
         while True:
             try:
                 action: Action = Queues.COMMAND_QUEUE.get_nowait()
+                if action.actor != actor:
+                    print("actor mismatch")
+                    continue
                 return action
             except queue.Empty:
                 pass
