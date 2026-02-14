@@ -22,6 +22,11 @@ player_1 = Player(
 #     position=None,
 #     stats=CharacterStats(health=8, damage=3, speed=5, action_points=10),
 # )
+# player_3 = Player(
+#     name="Player 3",
+#     position=None,
+#     stats=CharacterStats(health=8, damage=3, speed=5, action_points=10),
+# )
 
 
 def run_game(game: Game):
@@ -40,7 +45,7 @@ dungeon = Dungeon(
 )
 game = Game(
     dungeon=dungeon,
-    # players=[player_1, player_2],
+    # players=[player_1, player_2, player_3],
     players=[player_1],
 )
 game.init()

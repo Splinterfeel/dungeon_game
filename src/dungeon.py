@@ -56,7 +56,6 @@ class Dungeon:
             self.start_room: Room = start_room
         # 3. Размещаем стартовую точку в центре этой комнаты
         self.start_point = self.start_room.center()
-        self.map.set(self.start_point, CELL_TYPE.FLOOR.value)
 
         if chests is None:
             self.chests = []

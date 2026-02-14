@@ -139,7 +139,9 @@ class Game:
                         actor_cell_type,
                         action_cell_type,
                     )
-
+            case ActionType.INSPECT:
+                print("INSPECTING", action.cell, action_cell_type)
+                return ActionResult(action=action)
             case _:
                 print("Performing unknown action", action)
                 return ActionResult(action=action)
