@@ -34,7 +34,7 @@ class Game:
         if self.is_server:
             self.dump_state()
 
-    def init(self):
+    def launch(self):
         self._init_players(self.dungeon.start_point)
 
     def send_sound_event(self, event_name: str):
