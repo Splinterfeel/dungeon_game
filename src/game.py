@@ -29,7 +29,7 @@ class Game:
         else:
             self.turn = Turn()
 
-        if not players:
+        if is_server and not players:
             raise ValueError("No players passed")
         if self.is_server:
             self.dump_state()
@@ -111,7 +111,9 @@ class Game:
                     player.apply_damage(damage)
                     if player.is_dead():
                         self.send_sound_event("kill")
-                        raise ValueError("player is dead!")
+                        self.dungeon.remove_dead_player(player)
+                        print("[!] player", player, "is dead")
+                        self.players.remove(player)
                     else:
                         self.send_sound_event("hit")
                     return ActionResult(action=action)

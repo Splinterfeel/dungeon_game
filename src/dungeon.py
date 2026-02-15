@@ -3,6 +3,7 @@ from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
 from src.entities.base import CharacterStats
 from src.entities.chest import Chest
+from src.entities.player import Player
 from src.entities.room import Room
 from src.entities.enemy import Enemy
 from src.map import DungeonMap
@@ -116,6 +117,9 @@ class Dungeon:
     def remove_dead_enemy(self, enemy: Enemy):
         self.enemies.remove(enemy)
         self.map.set(enemy.position, CELL_TYPE.FLOOR.value)
+
+    def remove_dead_player(self, player: Player):
+        self.map.set(player.position, CELL_TYPE.FLOOR.value)
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
