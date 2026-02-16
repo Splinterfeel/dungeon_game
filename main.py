@@ -27,6 +27,13 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
     lobby = lobby_manager.get_lobby(lobby_dto.id)
     lobby.connect(player, websocket)
 
+    # --- отправляем текущее состояние игры сразу после подключения ---
+    if lobby.game:  # если игра уже создана
+        await websocket.send_json({
+            "type": "state_update",
+            "payload": lobby.game.dump_state()
+        })
+
     try:
         while True:
             data = await websocket.receive_json()

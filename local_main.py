@@ -6,7 +6,7 @@ from src.entities.player import Player
 from src.game import Game
 import warnings
 
-from src.visualization import render_thread
+from src.visualization import start_render
 
 
 if __name__ == "__main__":
@@ -50,4 +50,4 @@ if __name__ == "__main__":
     game_thread = threading.Thread(target=run_game, kwargs={"game": game}, daemon=True)
     sound_thread.start()
     game_thread.start()
-    render_thread()
+    start_render()

@@ -1,6 +1,12 @@
-from __future__ import annotations
+import threading
+import asyncio
+import json
 import queue
 import time
+import uuid
+import queue
+import requests
+import websockets
 
 from src.game import Game
 from copy import deepcopy
@@ -21,12 +27,21 @@ matplotlib.use("tkagg")
 
 
 class Visualization:
-    def __init__(self):
+    def __init__(self, lobby_id: str, player_id: str):
+        self.state_queue = queue.Queue()
+        self.ws_url = f"ws://127.0.0.1:8000/ws/{lobby_id}/{player_id}"
+        self.start_network()
         self.game = None
         while self.game is None:
-            print("[RENDER] waiting for game state")
-            self.read_new_game_state()
-            time.sleep(0.2)
+            try:
+                # Пытаемся получить новое состояние, если оно пришло
+                state_dict = self.state_queue.get(timeout=0.2)
+                self.game = Game.from_dict(state_dict)
+            except queue.Empty:
+                print("[RENDER] waiting for game state")
+            if self.game is None:
+                time.sleep(0.2)
+
         self.menu_drawables = []  # все артисты меню (фон + тексты)
         self.menu_texts = (
             []
@@ -83,6 +98,25 @@ class Visualization:
                 )
                 self.texts[(x, y)] = t
 
+    def start_network(self):
+        def run():
+            asyncio.run(self.websocket_listener(self.ws_url))
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+
+    async def websocket_listener(self, ws_url):
+        async with websockets.connect(ws_url) as websocket:
+            print("Connected to server")
+            while True:
+                message = await websocket.recv()
+                data = json.loads(message)
+                if data["type"] == "state_update":
+                    new_state = data["payload"]
+                    self.state_queue.put(new_state)
+
+    def read_new_game_state_ws(self, state_dict):
+        self.game = Game.from_dict(state_dict)
+
     def read_new_game_state(self):
         while not Queues.RENDER_QUEUE.empty():
             try:
@@ -94,7 +128,12 @@ class Visualization:
     def loop(self):
         plt.show(block=False)
         while True:
-            self.read_new_game_state()
+            while not self.state_queue.empty():
+                state_dict = self.state_queue.get()
+                self.game = Game.from_dict(state_dict)
+            if self.game is None:
+                plt.pause(0.1)
+                continue
             for x in range(self.game.dungeon.width):
                 for y in range(self.game.dungeon.map.height):
                     map_entity = MapEntities.get(
@@ -204,6 +243,24 @@ class Visualization:
             self.show_menu_at(event, cell, cell_type)
 
 
-def render_thread(*args, **kwargs):
-    visualization = Visualization(*args, **kwargs)
+BASE_URL = "http://127.0.0.1:8000"
+PLAYERS = [
+    {
+        "id": str(uuid.uuid4())
+    }
+]
+
+def create_lobby() -> str:
+    response = requests.post(
+        f"{BASE_URL}/lobbies",
+        json={"players": PLAYERS},
+    )
+    return response.json()["lobby_id"]
+
+
+
+def start_render(*args, **kwargs):
+    lobby_id = create_lobby()
+    player_id = PLAYERS[0]["id"]
+    visualization = Visualization(lobby_id=lobby_id, player_id=player_id)
     visualization.loop()
