@@ -13,11 +13,11 @@ class Lobby:
     def __init__(self, lobby: LobbyDTO, players: list[PlayerDTO]):
         self.id = lobby.id
         self.lobby = lobby
-        std_character_stats = CharacterStats(health=8, damage=3, speed=5, action_points=10)
+        std_character_stats = CharacterStats(
+            health=8, damage=3, speed=5, action_points=10
+        )
         self.players = {
-            p.id: Player(id=p.id, stats=std_character_stats)
-            for p in
-            players
+            p.id: Player(id=p.id, stats=std_character_stats) for p in players
         }
         self.connections: dict[str, WebSocket] = {}
 
@@ -42,10 +42,6 @@ class Lobby:
     def disconnect(self, player: PlayerDTO):
         self.connections.pop(player.id, None)
 
-    # ====================
-    # Обработка действия
-    # ====================
-
     async def handle_action(self, player: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
             player = self.players[player.id]
@@ -57,15 +53,8 @@ class Lobby:
                 print(action_result)
             return action_result.performed
 
-    # ====================
-    # Отправка состояния
-    # ====================
-
     async def broadcast_state(self):
         state = self.game.dump_state()
 
         for ws in self.connections.values():
-            await ws.send_json({
-                "type": "state_update",
-                "payload": state
-            })
+            await ws.send_json({"type": "state_update", "payload": state})

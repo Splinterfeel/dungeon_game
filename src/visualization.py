@@ -100,18 +100,15 @@ class Visualization:
     def start_network(self):
         def run():
             asyncio.run(self.websocket_listener(self.ws_url))
+
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
 
     async def websocket_listener(self, ws_url):
         async with websockets.connect(ws_url) as websocket:
             print("Connected to server")
-            receiver_task = asyncio.create_task(
-                self.receiver(websocket)
-            )
-            sender_task = asyncio.create_task(
-                self.sender(websocket)
-            )
+            receiver_task = asyncio.create_task(self.receiver(websocket))
+            sender_task = asyncio.create_task(self.sender(websocket))
             await asyncio.gather(receiver_task, sender_task)
 
     async def receiver(self, websocket):
@@ -247,11 +244,7 @@ class Visualization:
 
 
 BASE_URL = "http://127.0.0.1:8000"
-PLAYERS = [
-    {
-        "id": str(uuid.uuid4())
-    }
-]
+PLAYERS = [{"id": str(uuid.uuid4())}]
 
 
 def create_lobby() -> str:

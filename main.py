@@ -19,6 +19,7 @@ def create_lobby(request: CreateLobbyRequest) -> dict[str, UUID]:
 # WebSocket — игра
 # =========================
 
+
 @app.websocket("/ws/{lobby_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str):
     await websocket.accept()
