@@ -46,22 +46,23 @@ class Lobby:
     # Обработка действия
     # ====================
 
-    async def handle_action(self, player: PlayerDTO, payload: dict):
+    async def handle_action(self, player: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
             player = self.players[player.id]
             action = Action(**payload)
-            result = self.game.perform_actor_action(player, action)
-            if result.performed:
+            action_result = self.game.perform_actor_action(player, action)
+            if action_result.performed:
                 await self.broadcast_state()
             else:
-                print(result)
+                print(action_result)
+            return action_result.performed
 
     # ====================
     # Отправка состояния
     # ====================
 
     async def broadcast_state(self):
-        state = self.game.to_dict()
+        state = self.game.dump_state()
 
         for ws in self.connections.values():
             await ws.send_json({

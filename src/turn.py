@@ -24,10 +24,29 @@ class Turn:
         self.phase = GamePhase(phase) if phase is not None else GamePhase.PLAYER_PHASE
         self.current_actor = current_actor if current_actor is not None else None
         self.available_moves = available_moves if available_moves is not None else []
+        self.actor_ids_passed_turn: set[str] = set()
 
     def next(self):
         self.number += 1
+        self.actor_ids_passed_turn = set()
         self.phase = GamePhase.PLAYER_PHASE
+
+    def set_current_actor(self, actor: Actor):
+        if actor.id in self.actor_ids_passed_turn:
+            raise ValueError("actor already ran his turn:", actor.id)
+        self.actor_ids_passed_turn.add(actor.id)
+        self.current_actor = actor
+
+    def has_next_phase(self) -> bool:
+        if self.phase == GamePhase.PLAYER_PHASE:
+            return True
+        return False
+
+    def switch_phase(self):
+        if not self.has_next_phase():
+            raise ValueError("can't switch phase")
+        if self.phase == GamePhase.PLAYER_PHASE:
+            self.phase = GamePhase.ENEMY_PHASE
 
     def to_dict(self):
         return {

@@ -40,26 +40,26 @@ class InteractionHandlers:
 
     def _end_turn(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.END_TURN, cell=actor.position)
+            Action(actor=actor, type=ActionType.END_TURN, cell=actor.position).model_dump(mode="json")
         )
 
     def _go_to(actor: Actor, point: Point, params: dict = None):
-        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.MOVE, cell=point))
+        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.MOVE, cell=point).model_dump(mode="json"))
 
     def _inspect(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.INSPECT, cell=point)
+            Action(actor=actor, type=ActionType.INSPECT, cell=point).model_dump(mode="json")
         )
 
     def _open_chest(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.OPEN_CHEST, cell=point)
+            Action(actor=actor, type=ActionType.OPEN_CHEST, cell=point).model_dump(mode="json")
         )
 
     def _attack(actor: Actor, point: Point, params: dict = None):
         Queues.COMMAND_QUEUE.put(
-            Action(actor=actor, type=ActionType.ATTACK, cell=point, params=params)
+            Action(actor=actor, type=ActionType.ATTACK, cell=point, params=params).model_dump(mode="json")
         )
 
     def _interact_with_exit(actor: Actor, point: Point, params: dict = None):
-        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.EXIT, cell=point))
+        Queues.COMMAND_QUEUE.put(Action(actor=actor, type=ActionType.EXIT, cell=point).model_dump(mode="json"))

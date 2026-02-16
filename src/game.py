@@ -1,12 +1,7 @@
-import queue
 import random
-import time
 from src.action import Action, ActionResult, ActionType
-from src.ai.enemy import SimpleEnemyAI
 from src.entities.base import Actor
-from src.audio import SoundEvent
-from src.base import Point, PointOffset, Queues
-from src.entities.enemy import Enemy
+from src.base import Point, PointOffset
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE, AttackType
@@ -37,10 +32,20 @@ class Game:
     def launch(self):
         self._init_players(self.dungeon.start_point)
 
-    def send_sound_event(self, event_name: str):
-        Queues.SOUND_QUEUE.put(SoundEvent(name=event_name))
+        # ставим ход первому игроку
+        self.turn.next()
+        self.pass_turn_to_next_actor()
 
-    def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
+    def prepare_actor_turn(self, actor: Actor):
+        print(f"turn - actor {actor}")
+        self.turn.set_current_actor(actor)
+        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
+        # в начале хода задаем базовое количество AP игроку
+        actor.current_action_points = actor.stats.action_points
+        # в начале хода еще не прошел ни одной клетки
+        actor.current_speed_spent = 0
+
+    def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         # возвращает action_performed (bool), AP cost (int)
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != actor:
@@ -82,7 +87,6 @@ class Game:
                     )
                     return ActionResult(performed=False, action=action)
                 self.move_actor(actor, action.cell)
-                self.send_sound_event("move")
                 return ActionResult(
                     action=action,
                     action_cost=action_ap_cost,
@@ -110,12 +114,11 @@ class Game:
                     player = next(x for x in self.players if x.position == action.cell)
                     player.apply_damage(damage)
                     if player.is_dead():
-                        self.send_sound_event("kill")
                         self.dungeon.remove_dead_player(player)
                         print("[!] player", player, "is dead")
                         self.players.remove(player)
                     else:
-                        self.send_sound_event("hit")
+                        print("attacked player")
                     return ActionResult(action=action)
                 elif (
                     actor_cell_type == CELL_TYPE.PLAYER.value
@@ -130,10 +133,9 @@ class Game:
                         f"     Attacked enemy at {action.cell}, DMG {damage}, enemy health: {enemy.stats.health}"
                     )
                     if enemy.is_dead():
-                        self.send_sound_event("kill")
                         self.dungeon.remove_dead_enemy(enemy=enemy)
                     else:
-                        self.send_sound_event("hit")
+                        print("attacked enemy")
                     return ActionResult(action=action, action_cost=action_ap_cost)
                 else:
                     raise ValueError(
@@ -161,83 +163,45 @@ class Game:
         return self.to_dict()
         # Queues.RENDER_QUEUE.put(self.to_dict())
 
-    def run_actor_turn(self, actor: Actor):
-        print(f"turn - actor {actor}")
-        # в начале хода задаем базовое количество AP игроку
-        actor.current_action_points = actor.stats.action_points
-        # в начале хода еще не прошел ни одной клетки
-        actor.current_speed_spent = 0
-        if isinstance(actor, Enemy):
-            ai = SimpleEnemyAI(actor=actor, game=self)
+    def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
+        # TODO check if actor same as current_actor
+        action_result = self._perform_actor_action(actor, action)
+        if action_result.performed:
+            actor.current_action_points = max(
+                actor.current_action_points - action_result.action_cost, 0
+            )
+            actor.current_speed_spent += action_result.speed_spent
+        if action.type == ActionType.END_TURN:
+            self.pass_turn_to_next_actor()
+        self.check_game_end()
+        return action_result
+
+    def pass_turn_to_next_actor(self):
+        if self.turn.phase == GamePhase.PLAYER_PHASE:
+            actors = self.players
         else:
-            ai = None
-        while True:
-            self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
-            self.dump_state()
-            if ai:
-                ai.generate_action()
-            action = self._get_actor_action(actor)
-            action_result = self.perform_actor_action(actor, action)
-            if action_result.performed:
-                actor.current_action_points = max(
-                    actor.current_action_points - action_result.action_cost, 0
-                )
-                actor.current_speed_spent += action_result.speed_spent
-            self.dump_state()
-            if action.type == ActionType.END_TURN:
+            actors = self.dungeon.enemies
+        # находим игрока/врага который еще не ходил
+        # пока просто по очереди
+        next_actor = None
+        for actor in actors:
+            if actor.id in self.turn.actor_ids_passed_turn:
+                continue
+            else:
+                next_actor = actor
                 break
-
-    def run_turn(self):
-        self.turn.next()
-        print(f"===================== TURN {self.turn.number} ===")
-        self.turn.phase = GamePhase.PLAYER_PHASE
-        print("==       Player phase")
-
-        for player in self.players:
-            self.turn.current_actor = player
-            self.run_actor_turn(player)
-
-        self.turn.phase = GamePhase.ENEMY_PHASE
-        print("==       Enemy phase")
-        for enemy in self.dungeon.enemies:
-            self.turn.current_actor = enemy
-            self.run_actor_turn(enemy)
-
-        self.send_sound_event("turn")
-        print()
-        print()
-        print()
-
-    def loop(self):
-        while True:
-            self.run_turn()
-            if self.check_game_end():
-                break
-        print("Game end")
+        if not next_actor:
+            if self.turn.has_next_phase:
+                self.turn.switch_phase()
+            else:
+                self.turn.next()
+            self.pass_turn_to_next_actor()
+        self.prepare_actor_turn(next_actor)
 
     def check_game_end(self) -> bool:
         return all(p.is_dead() for p in self.players) or all(
             e.is_dead() for e in self.dungeon.enemies
         )
-
-    def _get_actor_action(self, actor: Actor):
-        while True:
-            try:
-                action: Action = Queues.COMMAND_QUEUE.get_nowait()
-                print("got action", action.type.name, "from", action.actor.name)
-                if action.actor != actor:
-                    print(
-                        "actor mismatch",
-                        "current",
-                        actor.id,
-                        "action from",
-                        action.actor.id,
-                    )
-                    continue
-                return action
-            except queue.Empty:
-                pass
-            time.sleep(0.05)
 
     def _init_players(self, point: Point):
         point_choices = [

@@ -106,20 +106,27 @@ class Visualization:
     async def websocket_listener(self, ws_url):
         async with websockets.connect(ws_url) as websocket:
             print("Connected to server")
-            while True:
-                message = await websocket.recv()
-                data = json.loads(message)
-                if data["type"] == "state_update":
-                    new_state = data["payload"]
-                    self.state_queue.put(new_state)
+            receiver_task = asyncio.create_task(
+                self.receiver(websocket)
+            )
+            sender_task = asyncio.create_task(
+                self.sender(websocket)
+            )
+            await asyncio.gather(receiver_task, sender_task)
 
-    def read_new_game_state(self):
-        while not Queues.RENDER_QUEUE.empty():
-            try:
-                new_game_dump = Queues.RENDER_QUEUE.get_nowait()
-                self.game = Game.from_dict(new_game_dump)
-            except queue.Empty:
-                break
+    async def receiver(self, websocket):
+        while True:
+            message = await websocket.recv()
+            data = json.loads(message)
+
+            if data["type"] == "state_update":
+                self.state_queue.put(data["payload"])
+
+    async def sender(self, websocket):
+        while True:
+            # ждём сообщение из обычной queue в отдельном потоке
+            message_dict = await asyncio.to_thread(Queues.COMMAND_QUEUE.get)
+            await websocket.send(json.dumps(message_dict))
 
     def loop(self):
         plt.show(block=False)
