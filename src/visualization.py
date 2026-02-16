@@ -4,7 +4,6 @@ import json
 import queue
 import time
 import uuid
-import queue
 import requests
 import websockets
 
@@ -113,9 +112,6 @@ class Visualization:
                 if data["type"] == "state_update":
                     new_state = data["payload"]
                     self.state_queue.put(new_state)
-
-    def read_new_game_state_ws(self, state_dict):
-        self.game = Game.from_dict(state_dict)
 
     def read_new_game_state(self):
         while not Queues.RENDER_QUEUE.empty():
@@ -250,13 +246,13 @@ PLAYERS = [
     }
 ]
 
+
 def create_lobby() -> str:
     response = requests.post(
         f"{BASE_URL}/lobbies",
         json={"players": PLAYERS},
     )
     return response.json()["lobby_id"]
-
 
 
 def start_render(*args, **kwargs):

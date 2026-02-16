@@ -154,11 +154,12 @@ class Game:
         actor.position = cell
         self.dungeon.map.set(cell, actor_cell_type)
 
-    def dump_state(self):
+    def dump_state(self) -> dict:
         if not self.is_server:
             raise ValueError("Can't dump not server instance of Game")
         # положить состояние в очередь
-        Queues.RENDER_QUEUE.put(self.to_dict())
+        return self.to_dict()
+        # Queues.RENDER_QUEUE.put(self.to_dict())
 
     def run_actor_turn(self, actor: Actor):
         print(f"turn - actor {actor}")
