@@ -7,6 +7,7 @@ from src.dungeon import Dungeon
 from src.entities.player import Player
 from src.entities.base import CharacterStats
 from src.action import Action
+from src.turn import GamePhase
 
 
 class Lobby:
@@ -42,11 +43,14 @@ class Lobby:
     def disconnect(self, player: PlayerDTO):
         self.connections.pop(player.id, None)
 
-    async def handle_action(self, player: PlayerDTO, payload: dict) -> bool:
+    async def handle_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
-            player = self.players[player.id]
+            if self.game.turn.phase == GamePhase.PLAYER_PHASE:
+                actor = self.players[_actor.id]
+            else:
+                actor = next(e for e in self.game.dungeon.enemies if e.id == _actor.id)
             action = Action(**payload)
-            action_result = self.game.perform_actor_action(player, action)
+            action_result = self.game.perform_actor_action(actor, action)
             if action_result.performed:
                 await self.broadcast_state()
             else:

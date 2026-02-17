@@ -3,6 +3,7 @@ from uuid import UUID
 
 from models import CreateLobbyRequest, PlayerDTO, LobbyDTO
 from lobby_manager import LobbyManager
+from src.turn import GamePhase
 
 
 app = FastAPI()
@@ -37,6 +38,16 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             data = await websocket.receive_json()
             performed = await lobby.handle_action(player, data)
             if performed:
+                await lobby.broadcast_state()
+                # проверить ход врагов, и если да - выполнить их ходы
+                if lobby.game.turn.phase == GamePhase.ENEMY_PHASE:
+                    print("NOW ENEMY PHASE")
+                    while lobby.game.turn.phase != GamePhase.PLAYER_PHASE:
+                        action = lobby.game.generate_enemy_action()
+                        performed = await lobby.handle_action(action.actor, data)
+                        if not performed:
+                            raise ValueError(f"enemy action was not performed: {action}")
+                        await lobby.broadcast_state()
                 await lobby.broadcast_state()
 
     except WebSocketDisconnect:
