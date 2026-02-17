@@ -130,6 +130,7 @@ class Visualization:
         while True:
             while not self.state_queue.empty():
                 state_dict = self.state_queue.get()
+                print("Got new game version:", state_dict["version"])
                 self.game = Game.from_dict(state_dict)
             if self.game is None:
                 plt.pause(0.1)

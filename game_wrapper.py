@@ -51,10 +51,7 @@ class Lobby:
                 actor = next(e for e in self.game.dungeon.enemies if e.id == _actor.id)
             action = Action(**payload)
             action_result = self.game.perform_actor_action(actor, action)
-            if action_result.performed:
-                await self.broadcast_state()
-            else:
-                print(action_result)
+            self.game.version += 1
             return action_result.performed
 
     async def broadcast_state(self):

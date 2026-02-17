@@ -17,7 +17,9 @@ class Game:
         players: list[Player],
         turn: Turn = None,
         is_server: bool = True,
+        version: int = 0,
     ):
+        self.version = version
         self.is_server = is_server
         self.dungeon = dungeon
         self.players = players
@@ -39,7 +41,7 @@ class Game:
         self.pass_turn_to_next_actor()
 
     def prepare_actor_turn(self, actor: Actor):
-        print(f"turn - actor {actor}")
+        print(f"turn - {type(actor)} [{actor.name}]")
         self.turn.set_current_actor(actor)
         self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
         # в начале хода задаем базовое количество AP игроку
@@ -49,6 +51,7 @@ class Game:
 
     def generate_enemy_action(self) -> Action:
         actor = self.turn.current_actor
+        print("generating action for actor", str(actor.name))
         if not isinstance(actor, Enemy):
             raise ValueError(f"Can't handle action of {type(actor)}, should be {type(Enemy)}")
         # пропускаем пока что
@@ -243,6 +246,7 @@ class Game:
             "dungeon": self.dungeon.to_dict(),
             "players": [p.to_dict() for p in self.players],
             "turn": self.turn.to_dict(),
+            "version": self.version,
         }
         if self.turn.phase == GamePhase.ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
@@ -262,5 +266,6 @@ class Game:
             players=players,
             turn=turn,
             is_server=_dict.get("is_server", False),
+            version=_dict.get("version"),
         )
         return game

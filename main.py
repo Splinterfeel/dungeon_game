@@ -44,7 +44,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                     print("NOW ENEMY PHASE")
                     while lobby.game.turn.phase != GamePhase.PLAYER_PHASE:
                         action = lobby.game.generate_enemy_action()
-                        performed = await lobby.handle_action(action.actor, data)
+                        performed = await lobby.handle_action(action.actor, action.model_dump(mode="json"))
                         if not performed:
                             raise ValueError(f"enemy action was not performed: {action}")
                         await lobby.broadcast_state()

@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+import uuid
+from pydantic import BaseModel, Field
 
 from enum import Enum, auto
 from src.base import Point
@@ -16,6 +17,7 @@ class ActionType(Enum):
 
 
 class Action(BaseModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
     actor: Actor
     type: ActionType
     cell: Point
