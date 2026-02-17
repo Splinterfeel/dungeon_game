@@ -3,6 +3,7 @@ from uuid import UUID
 
 from models import CreateLobbyRequest, PlayerDTO, LobbyDTO
 from lobby_manager import LobbyManager
+from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
 
 
@@ -43,11 +44,14 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 if lobby.game.turn.phase == GamePhase.ENEMY_PHASE:
                     print("NOW ENEMY PHASE")
                     while lobby.game.turn.phase != GamePhase.PLAYER_PHASE:
-                        action = lobby.game.generate_enemy_action()
-                        performed = await lobby.handle_action(action.actor, action.model_dump(mode="json"))
-                        if not performed:
-                            raise ValueError(f"enemy action was not performed: {action}")
-                        await lobby.broadcast_state()
+                        actor = lobby.game.turn.current_actor
+                        ai = SimpleEnemyAI(actor, lobby.game)
+                        while lobby.game.turn.current_actor == actor:
+                            action = ai.decide()
+                            performed = await lobby.handle_action(action.actor, action.model_dump(mode="json"))
+                            if not performed:
+                                raise ValueError(f"enemy action was not performed: {action}")
+                            await lobby.broadcast_state()
                 await lobby.broadcast_state()
 
     except WebSocketDisconnect:

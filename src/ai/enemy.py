@@ -2,7 +2,7 @@ import time
 
 from src.action import Action, ActionType
 from src.ai.base import AI
-from src.base import Point, Queues
+from src.base import Point
 from src.constants import Attack
 
 
@@ -14,7 +14,7 @@ class SimpleEnemyAI(AI):
         self.tried_to_walk_on_turn = False
         self.attacked_on_turn = False
 
-    def generate_action(self):
+    def decide(self) -> Action:
         time.sleep(1)
         players_distances = []
         for player in self.game.players:
@@ -29,8 +29,7 @@ class SimpleEnemyAI(AI):
             )
         if not players_distances:
             print("ENEMY AI - can't find any player path")
-            self.end_turn()
-            return
+            return self.end_turn()
         else:
             # если еще есть возможность двигаться
             if self.actor.stats.speed - self.actor.current_speed_spent > 0:
@@ -51,12 +50,7 @@ class SimpleEnemyAI(AI):
                     for step in rev_path:
                         if step in available_moves:
                             print(f"         ENEMY {self.actor.name} - MOVING")
-                            Queues.COMMAND_QUEUE.put(
-                                Action(
-                                    actor=self.actor, type=ActionType.MOVE, cell=step
-                                )
-                            )
-                            return
+                            return Action(actor=self.actor, type=ActionType.MOVE, cell=step)
 
         # после фазы движения смотрим можем ли атаковать
         nearest_player_for_attack = None
@@ -70,19 +64,11 @@ class SimpleEnemyAI(AI):
             print(f"         ENEMY {self.actor.name} - ATTACKING")
             # пытаемся атаковать (пока не проверяем action points)
             self.attacked_on_turn = True
-            Queues.COMMAND_QUEUE.put(
-                Action(
-                    actor=self.actor,
-                    type=ActionType.ATTACK,
-                    cell=nearest_player_for_attack.position,
-                    params=Attack.SIMPLE.to_dict(),
-                )
+            return Action(
+                actor=self.actor,
+                type=ActionType.ATTACK,
+                cell=nearest_player_for_attack.position,
+                params=Attack.SIMPLE.to_dict(),
             )
-            return
         print(f"         ENEMY {self.actor.name} - ENDING TURN")
-        self.end_turn()
-
-    def end_turn(self):
-        Queues.COMMAND_QUEUE.put(
-            Action(actor=self.actor, type=ActionType.END_TURN, cell=self.actor.position)
-        )
+        return self.end_turn()

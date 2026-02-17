@@ -1,9 +1,7 @@
 import random
-import time
 from src.action import Action, ActionResult, ActionType
 from src.entities.base import Actor
 from src.base import Point, PointOffset
-from src.entities.enemy import Enemy
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE, AttackType
@@ -48,16 +46,6 @@ class Game:
         actor.current_action_points = actor.stats.action_points
         # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
-
-    def generate_enemy_action(self) -> Action:
-        actor = self.turn.current_actor
-        print("generating action for actor", str(actor.name))
-        if not isinstance(actor, Enemy):
-            raise ValueError(f"Can't handle action of {type(actor)}, should be {type(Enemy)}")
-        # пропускаем пока что
-        time.sleep(1)
-        print(actor, "ends turn")
-        return Action(actor=actor, type=ActionType.END_TURN, cell=actor.position)
 
     def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         # возвращает action_performed (bool), AP cost (int)

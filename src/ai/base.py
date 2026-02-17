@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from src.action import Action, ActionType
 from src.entities.base import Actor
 import typing_extensions
 
@@ -13,5 +14,8 @@ class AI(ABC):
         self.game = game
 
     @abstractmethod
-    def generate_action(self):
+    def decide(self):
         pass
+
+    def end_turn(self) -> Action:
+        return Action(actor=self.actor, type=ActionType.END_TURN, cell=self.actor.position)
