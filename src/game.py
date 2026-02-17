@@ -197,7 +197,8 @@ class Game:
             else:
                 self.turn.next()
             self.pass_turn_to_next_actor()
-        self.prepare_actor_turn(next_actor)
+        else:
+            self.prepare_actor_turn(next_actor)
 
     def check_game_end(self) -> bool:
         return all(p.is_dead() for p in self.players) or all(
