@@ -17,6 +17,7 @@ class Game:
         is_server: bool = True,
         version: int = 0,
     ):
+        self.ended = False
         self.version = version
         self.is_server = is_server
         self.dungeon = dungeon
@@ -39,13 +40,13 @@ class Game:
         self.pass_turn_to_next_actor()
 
     def prepare_actor_turn(self, actor: Actor):
-        print(f"turn - {type(actor)} [{actor.name}]")
-        self.turn.set_current_actor(actor)
+        print(f"turn - {str(type(actor)).split(".")} [{actor.name}]")
         self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
         # в начале хода задаем базовое количество AP игроку
         actor.current_action_points = actor.stats.action_points
         # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
+        self.turn.set_current_actor(actor)
 
     def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         # возвращает action_performed (bool), AP cost (int)
@@ -166,17 +167,18 @@ class Game:
         # Queues.RENDER_QUEUE.put(self.to_dict())
 
     def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
-        # TODO check if actor same as current_actor
         action_result = self._perform_actor_action(actor, action)
         if action_result.performed:
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0
             )
             actor.current_speed_spent += action_result.speed_spent
-        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
         if action.type == ActionType.END_TURN:
             self.pass_turn_to_next_actor()
         self.check_game_end()
+        self.turn.available_moves = self.dungeon.map.get_available_moves(
+            self.turn.current_actor
+        )
         return action_result
 
     def pass_turn_to_next_actor(self):
@@ -203,9 +205,19 @@ class Game:
             self.prepare_actor_turn(next_actor)
 
     def check_game_end(self) -> bool:
-        return all(p.is_dead() for p in self.players) or all(
-            e.is_dead() for e in self.dungeon.enemies
-        )
+        if all(p.is_dead() for p in self.players):
+            self.ended = True
+            return True
+        if all(e.is_dead() for e in self.dungeon.enemies):
+            self.ended = True
+            return True
+        if not self.players:
+            self.ended = True
+            return True
+        if not self.dungeon.enemies:
+            self.ended = True
+            return True
+        return False
 
     def _init_players(self, point: Point):
         point_choices = [

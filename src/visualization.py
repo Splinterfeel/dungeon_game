@@ -105,7 +105,9 @@ class Visualization:
         thread.start()
 
     async def websocket_listener(self, ws_url):
-        async with websockets.connect(ws_url) as websocket:
+        async with websockets.connect(
+            ws_url, ping_interval=None, close_timeout=600
+        ) as websocket:
             print("Connected to server")
             receiver_task = asyncio.create_task(self.receiver(websocket))
             sender_task = asyncio.create_task(self.sender(websocket))

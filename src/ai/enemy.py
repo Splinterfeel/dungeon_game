@@ -41,16 +41,17 @@ class SimpleEnemyAI(AI):
                     print(f"ENEMY AI - player {player} already near. no need to walk")
                 else:
                     # пытаемся подойти ближе
-                    available_moves = self.game.dungeon.map.get_available_moves(
-                        self.actor
-                    )
                     # получаем путь в обратном направлении, отбрасываем последний элемент (наша позиция)
                     rev_path = path[::-1][:-1]
                     # идем настолько далеко от текущей позиции к игроку, насколько можем
+                    if not self.game.turn.available_moves:
+                        print(" ===== no available moves!")
                     for step in rev_path:
-                        if step in available_moves:
+                        if step in self.game.turn.available_moves:
                             print(f"         ENEMY {self.actor.name} - MOVING")
-                            return Action(actor=self.actor, type=ActionType.MOVE, cell=step)
+                            return Action(
+                                actor=self.actor, type=ActionType.MOVE, cell=step
+                            )
 
         # после фазы движения смотрим можем ли атаковать
         nearest_player_for_attack = None

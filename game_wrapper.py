@@ -2,6 +2,7 @@ import asyncio
 from fastapi import WebSocket
 
 from models import PlayerDTO, LobbyDTO
+from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
 from src.entities.player import Player
@@ -50,6 +51,8 @@ class Lobby:
             else:
                 actor = next(e for e in self.game.dungeon.enemies if e.id == _actor.id)
             action = Action(**payload)
+            if isinstance(actor, Enemy):
+                pass
             action_result = self.game.perform_actor_action(actor, action)
             self.game.version += 1
             return action_result.performed

@@ -18,4 +18,6 @@ class AI(ABC):
         pass
 
     def end_turn(self) -> Action:
-        return Action(actor=self.actor, type=ActionType.END_TURN, cell=self.actor.position)
+        return Action(
+            actor=self.actor, type=ActionType.END_TURN, cell=self.actor.position
+        )

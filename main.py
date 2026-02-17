@@ -35,24 +35,33 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
         await lobby.broadcast_state()
 
     try:
-        while True:
+        while not lobby.game.ended:
             data = await websocket.receive_json()
             performed = await lobby.handle_action(player, data)
             if performed:
                 await lobby.broadcast_state()
                 # проверить ход врагов, и если да - выполнить их ходы
                 if lobby.game.turn.phase == GamePhase.ENEMY_PHASE:
-                    print("NOW ENEMY PHASE")
-                    while lobby.game.turn.phase != GamePhase.PLAYER_PHASE:
+                    while (
+                        lobby.game.turn.phase != GamePhase.PLAYER_PHASE
+                        and not lobby.game.ended
+                    ):
                         actor = lobby.game.turn.current_actor
                         ai = SimpleEnemyAI(actor, lobby.game)
-                        while lobby.game.turn.current_actor == actor:
+                        while (
+                            lobby.game.turn.current_actor == actor
+                            and not lobby.game.ended
+                        ):
                             action = ai.decide()
-                            performed = await lobby.handle_action(action.actor, action.model_dump(mode="json"))
+                            performed = await lobby.handle_action(
+                                action.actor, action.model_dump(mode="json")
+                            )
                             if not performed:
-                                raise ValueError(f"enemy action was not performed: {action}")
+                                print(f"enemy action was not performed: {action.type}")
                             await lobby.broadcast_state()
+                        await lobby.broadcast_state()
                 await lobby.broadcast_state()
+        print("GAME END")
 
     except WebSocketDisconnect:
         lobby.disconnect(player)
