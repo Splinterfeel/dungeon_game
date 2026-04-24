@@ -1,13 +1,22 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from uuid import UUID
-
+from fastapi.middleware.cors import CORSMiddleware
 from models import CreateLobbyRequest, PlayerDTO, LobbyDTO
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # для дебага
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 lobby_manager = LobbyManager()
 
 

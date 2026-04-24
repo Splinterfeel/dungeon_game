@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dungeon Debug</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #111;
+            color: #eee;
+        }
+        #map {
+            display: grid;
+            grid-template-columns: repeat(20, 24px);
+            gap: 1px;
+            margin-top: 20px;
+        }
+        .cell {
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            font-size: 14px;
+        }
+
+        .wall { background: #222; }
+        .floor { background: #444; }
+        .player { background: #4caf50; }
+        .enemy { background: #f44336; }
+        .chest { background: gold; color: black; }
+        .exit { background: #2196f3; }
+    </style>
+</head>
+<body>
+
+<h2>Dungeon Debug Viewer</h2>
+<button onclick="start()">Start</button>
+
+<div id="map"></div>
+
+<script>
+let socket;
+
+async function start() {
+    // 1. создаём лобби
+    const response = await fetch("http://localhost:8000/lobbies", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            players: [{ id: crypto.randomUUID() }]
+        })
+    });
+
+    const data = await response.json();
+    const lobbyId = data.lobby_id;
+
+    const playerId = crypto.randomUUID();
+
+    // 2. подключаемся к WS
+    socket = new WebSocket(`ws://localhost:8000/ws/${lobbyId}/${playerId}`);
+
+    socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === "state_update") {
+            render(msg.payload);
+        }
+    };
+}
+function render(state) {
+    const map = state.dungeon.map.tiles;
+    const width = state.dungeon.width;
+
+    const container = document.getElementById("map");
+    container.innerHTML = "";  // очищаем контейнер перед отрисовкой
+
+    container.style.gridTemplateColumns = `repeat(${width}, 24px)`;  // устанавливаем ширину карты
+
+    // Проходим по всем клеткам карты
+    for (let y = 0; y < map.length; y++) {
+        for (let x = 0; x < map[y].length; x++) {
+            const value = map[y][x].trim();  // убираем лишние пробелы, чтобы сравнивать только содержимое
+
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+
+            // Присваиваем стиль в зависимости от содержимого клетки
+            switch (value) {
+                case "#":  // стена
+                    cell.classList.add("wall");
+                    break;
+                case "P":  // игрок
+                    cell.classList.add("player");
+                    cell.innerText = "P";
+                    break;
+                case "E":  // враг
+                    cell.classList.add("enemy");
+                    cell.innerText = "E";
+                    break;
+                case "C":  // сундук
+                    cell.classList.add("chest");
+                    cell.innerText = "C";
+                    break;
+                case "X":  // выход
+                    cell.classList.add("exit");
+                    cell.innerText = "X";
+                    break;
+                default:  // пол
+                    cell.classList.add("floor");
+            }
+
+            // Добавляем ячейку в контейнер
+            container.appendChild(cell);
+        }
+    }
+}
+</script>
+
+</body>
+</html>
