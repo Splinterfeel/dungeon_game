@@ -1,36 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Dungeon Debug</title>
-    <style>
-        body {
-            font-family: monospace;
-            background: #111;
-            color: #eee;
-        }
-        #map {
-            display: grid;
-            grid-template-columns: repeat(20, 24px);
-            gap: 1px;
-            margin-top: 20px;
-        }
-        .cell {
-            width: 24px;
-            height: 24px;
-            text-align: center;
-            line-height: 24px;
-            font-size: 14px;
-        }
+<meta charset="UTF-8">
+<title>Dungeon Debug</title>
 
-        .wall { background: #222; }
-        .floor { background: #444; }
-        .player { background: #4caf50; }
-        .enemy { background: #f44336; }
-        .chest { background: gold; color: black; }
-        .exit { background: #2196f3; }
-    </style>
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: monospace;
+    background: #111;
+    color: #eee;
+}
+
+#map {
+    display: grid;
+    gap: 2px;
+    margin-top: 20px;
+    width: fit-content;
+}
+
+.cell {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+/* base */
+.wall { background: #222; }
+.floor { background: #444; }
+
+/* entities */
+.player { background: #4caf50; }
+.enemy { background: #f44336; }
+.chest { background: gold; color: black; }
+.exit { background: #2196f3; }
+
+/* debug */
+.move { outline: 2px solid #00ffff; }
+
+</style>
 </head>
+
 <body>
 
 <h2>Dungeon Debug Viewer</h2>
@@ -42,7 +58,6 @@
 let socket;
 
 async function start() {
-    // 1. создаём лобби
     const response = await fetch("http://localhost:8000/lobbies", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -53,10 +68,8 @@ async function start() {
 
     const data = await response.json();
     const lobbyId = data.lobby_id;
-
     const playerId = crypto.randomUUID();
 
-    // 2. подключаемся к WS
     socket = new WebSocket(`ws://localhost:8000/ws/${lobbyId}/${playerId}`);
 
     socket.onmessage = (event) => {
@@ -67,53 +80,79 @@ async function start() {
         }
     };
 }
+
+function normalize(value) {
+    if (typeof value !== "string") return "";
+    return value.trim();
+}
 function render(state) {
-    const map = state.dungeon.map.tiles;
-    const width = state.dungeon.width;
+    console.log(state);
+    const dungeon = state.dungeon;
+    const tiles = dungeon.map.tiles;
+    const width = dungeon.map.width;
+    const height = dungeon.map.height;
 
     const container = document.getElementById("map");
-    container.innerHTML = "";  // очищаем контейнер перед отрисовкой
+    container.innerHTML = "";
+    container.style.gridTemplateColumns = `repeat(${width}, 32px)`;
 
-    container.style.gridTemplateColumns = `repeat(${width}, 24px)`;  // устанавливаем ширину карты
+    // === создаём базовую карту (логика остается прежней) ===
+    let visual = [];
+    for (let x = 0; x < width; x++) {
+        visual[x] = [];
+        for (let y = 0; y < height; y++) {
+            visual[x][y] = { base: normalize(tiles[x][y]), entity: null };
+        }
+    }
 
-    // Проходим по всем клеткам карты
-    for (let y = 0; y < map.length; y++) {
-        for (let x = 0; x < map[y].length; x++) {
-            const value = map[y][x].trim();  // убираем лишние пробелы, чтобы сравнивать только содержимое
+    // === накладываем сущности ===
 
+    // игроки
+    for (const p of state.players) {
+        visual[p.position.x][p.position.y].entity = "P";
+    }
+
+    // враги
+    for (const e of dungeon.enemies) {
+        visual[e.position.x][e.position.y].entity = "E";
+    }
+
+    // // сундуки
+    for (const c of dungeon.chests) {
+        visual[c.position.x][c.position.y].entity = "C";
+    }
+
+    // // выход
+    visual[dungeon.exit.x][dungeon.exit.y].entity = "X";
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const cellData = visual[x][y];
             const cell = document.createElement("div");
             cell.classList.add("cell");
 
-            // Присваиваем стиль в зависимости от содержимого клетки
-            switch (value) {
-                case "#":  // стена
-                    cell.classList.add("wall");
-                    break;
-                case "P":  // игрок
-                    cell.classList.add("player");
-                    cell.innerText = "P";
-                    break;
-                case "E":  // враг
-                    cell.classList.add("enemy");
-                    cell.innerText = "E";
-                    break;
-                case "C":  // сундук
-                    cell.classList.add("chest");
-                    cell.innerText = "C";
-                    break;
-                case "X":  // выход
-                    cell.classList.add("exit");
-                    cell.innerText = "X";
-                    break;
-                default:  // пол
-                    cell.classList.add("floor");
+            // base
+            cell.classList.add(cellData.base === "#" ? "wall" : "floor");
+
+            // entity overlay
+            if (cellData.entity) {
+                const entityMap = { "P": "player", "E": "enemy", "C": "chest", "X": "exit" };
+                const className = entityMap[cellData.entity];
+                if (className) {
+                    cell.classList.add(className);
+                    cell.innerText = cellData.entity;
+                }
             }
 
-            // Добавляем ячейку в контейнер
             container.appendChild(cell);
         }
     }
 }
+
+function inBounds(pos, w, h) {
+    return pos.x >= 0 && pos.y >= 0 && pos.x < w && pos.y < h;
+}
+
 </script>
 
 </body>

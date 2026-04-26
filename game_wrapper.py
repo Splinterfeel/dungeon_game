@@ -8,7 +8,9 @@ from src.dungeon import Dungeon
 from src.entities.player import Player
 from src.entities.base import CharacterStats
 from src.action import Action
+from src.map import DungeonMap
 from src.turn import GamePhase
+from src.maps import for_1_team
 
 
 class Lobby:
@@ -23,15 +25,25 @@ class Lobby:
         }
         self.connections: dict[str, WebSocket] = {}
 
+        # dungeon = Dungeon(
+        #     max_chests=3,
+        #     enemies_num=2,
+        #     width=20,
+        #     height=20,
+        #     min_rooms=3,
+        #     max_rooms=4,
+        #     min_room_size=4,
+        #     max_room_size=5,
+        # )
+        dungeon_map = DungeonMap(
+            width=for_1_team.map_1["width"],
+            height=for_1_team.map_1["height"],
+            tiles=for_1_team.map_1["tiles"],
+        )
         dungeon = Dungeon(
-            width=20,
-            height=20,
-            min_rooms=3,
-            max_rooms=4,
-            min_room_size=4,
-            max_room_size=5,
             max_chests=3,
             enemies_num=2,
+            map=dungeon_map
         )
         self.game = Game(dungeon=dungeon, players=list(self.players.values()))
         self.game.launch()
@@ -59,6 +71,7 @@ class Lobby:
 
     async def broadcast_state(self):
         state = self.game.dump_state()
-
+        for x in state["dungeon"]["map"]["tiles"]:
+            print(x)
         for ws in self.connections.values():
             await ws.send_json({"type": "state_update", "payload": state})

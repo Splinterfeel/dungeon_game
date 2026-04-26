@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Dungeon Map Editor</title>
+<style>
+    body {
+        font-family: sans-serif;
+        background: #1e1e1e;
+        color: #ddd;
+    }
+
+    #controls {
+        margin-bottom: 10px;
+    }
+
+    input {
+        width: 60px;
+    }
+
+    button {
+        margin-left: 5px;
+        padding: 5px 10px;
+    }
+
+    #grid {
+        display: grid;
+        gap: 1px;
+        background: #444;
+        width: fit-content;
+    }
+
+    .cell {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .wall { background: #333; }
+    .floor { background: #777; }
+    .start { background: #2ecc71; }
+    .enemy { background: #e74c3c; }
+    .chest { background: #f1c40f; color: #000; }
+    .exit { background: #3498db; }
+    .player { background: #9b59b6; }
+
+    textarea {
+        width: 100%;
+        height: 200px;
+        margin-top: 10px;
+        background: #111;
+        color: #0f0;
+    }
+</style>
+</head>
+<body>
+
+<div id="controls">
+    Width: <input type="number" id="width" value="20">
+    Height: <input type="number" id="height" value="15">
+    <button onclick="createGrid()">Создать</button>
+    <button onclick="exportJSON()">Экспорт JSON</button>
+</div>
+
+<div id="grid"></div>
+
+<textarea id="output" placeholder="JSON появится здесь..."></textarea>
+
+<script>
+// === ТВОИ ЗНАЧЕНИЯ ИЗ CELL_TYPE ===
+const CELL_TYPES = [
+    { key: "WALL", value: " # ", class: "wall", label: "#" },
+    { key: "FLOOR", value: "   ", class: "floor", label: "" },
+    { key: "START", value: " S ", class: "start", label: "S" },
+    { key: "ENEMY", value: " E ", class: "enemy", label: "E" },
+    { key: "CHEST", value: " C ", class: "chest", label: "C" },
+    { key: "EXIT", value: " X ", class: "exit", label: "X" },
+    { key: "PLAYER", value: " P ", class: "player", label: "P" }
+];
+
+let gridData = [];
+let width = 20;
+let height = 15;
+
+function createGrid() {
+    width = parseInt(document.getElementById("width").value);
+    height = parseInt(document.getElementById("height").value);
+
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    grid.style.gridTemplateColumns = `repeat(${width}, 24px)`;
+
+    // Инициализируем массив как [width][height]
+    gridData = Array.from({ length: width }, () => Array(height).fill(0));
+
+    // Важно: Чтобы CSS Grid заполнил сетку правильно (строка за строкой),
+    // внешний цикл должен идти по Y, а внутренний по X.
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const div = document.createElement("div");
+            div.classList.add("cell");
+            updateCell(div, 0);
+
+            div.addEventListener("click", () => {
+                // Теперь мы можем безопасно использовать gridData[x][y]
+                gridData[x][y] = (gridData[x][y] + 1) % CELL_TYPES.length;
+                updateCell(div, gridData[x][y]);
+            });
+
+            grid.appendChild(div);
+        }
+    }
+}
+
+function updateCell(div, typeIndex) {
+    div.className = "cell " + CELL_TYPES[typeIndex].class;
+    div.textContent = CELL_TYPES[typeIndex].label;
+}
+
+function exportJSON() {
+    // Формируем массив для экспорта в соответствии с вашей логикой [x][y]
+    const map = [];
+    for (let x = 0; x < width; x++) {
+        let col = [];
+        for (let y = 0; y < height; y++) {
+            const typeIndex = gridData[x][y];
+            col.push(CELL_TYPES[typeIndex].value);
+        }
+        map.push(col);
+    }
+
+    const result = {
+        width: width,
+        height: height,
+        tiles: map
+    };
+
+    document.getElementById("output").value = JSON.stringify(result, null, 2);
+}
+// init
+createGrid();
+</script>
+
+</body>
+</html>

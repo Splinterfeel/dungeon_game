@@ -12,14 +12,14 @@ from src.map import DungeonMap
 class Dungeon:
     def __init__(
         self,
-        width: int,
-        height: int,
-        min_rooms: int,
-        max_rooms: int,
-        min_room_size: int,
-        max_room_size: int,
         max_chests: int,
         enemies_num: int,
+        width: int = None,
+        height: int = None,
+        min_rooms: int = None,
+        max_rooms: int = None,
+        min_room_size: int = None,
+        max_room_size: int = None,
         map: DungeonMap = None,
         start_room: Room = None,
         rooms: list[Room] = None,
@@ -39,41 +39,102 @@ class Dungeon:
         self.enemies_num = enemies_num
         self.min_enemy_ap = min_enemy_ap
         self.max_enemy_ap = max_enemy_ap
+        self.map = map
+        self.rooms = rooms
+        self.start_room = start_room
+        self.chests = chests
+        self.enemies = enemies
+        self.exit = exit
 
-        if map is None:
-            self.map = DungeonMap(self.width, self.height)
+        if self.map is not None:
+            pass
+            self._init_from_map()
         else:
-            self.map = map
+            for attr_name in [
+                "width",
+                "height",
+                "min_rooms",
+                "max_rooms",
+                "min_room_size",
+                "max_room_size",
+            ]:
+                if getattr(self, attr_name) is None:
+                    raise ValueError(f"Can't procedural generate without {attr_name}")
+            self._procedural_generate()
 
-        if rooms is None:
+    def _init_from_map(self):
+        self.enemies = []
+        self.chests = []
+        self.rooms = []  # пока непонятно нужно ли, считаем что пока нет
+        self.start_room = None
+        self.start_point = None
+        for x in range(self.map.width):
+            for y in range(self.map.height):
+                _point = Point(x, y)
+                if self.map.get(_point) == CELL_TYPE.START.value:
+                    self.start_point = _point
+                elif self.map.get(_point) == CELL_TYPE.EXIT.value:
+                    self.exit = _point
+            if self.start_point and self.exit:
+                break
+        else:
+            raise ValueError("Can't find start point or exit")
+        # find possible chests and enemies positions
+        possible_chest_points: list[Point] = []
+        possible_enemy_points: list[Point] = []
+        for x in range(self.map.width):
+            for y in range(self.map.height):
+                _point = Point(x, y)
+                if self.map.get(_point) == CELL_TYPE.CHEST.value:
+                    possible_chest_points.append(_point)
+                elif self.map.get(_point) == CELL_TYPE.ENEMY.value:
+                    possible_enemy_points.append(_point)
+        # here can set difficulty of dungeon - min and max enemies
+
+        chests_count = min(random.randint(1, self.max_chests), len(possible_chest_points))
+        if self.enemies_num > len(possible_enemy_points):
+            raise ValueError(f"enemies num > possible_enemy_points: {self.enemies_num} / {len(possible_enemy_points)}")
+        random.shuffle(possible_chest_points)
+        random.shuffle(possible_enemy_points)
+        for i in range(chests_count):
+            point = possible_chest_points[i]
+            self.chests.append(
+                Chest(position=point, gold=random.randint(10, 500))
+            )
+        for i in range(self.enemies_num):
+            point = possible_enemy_points[i]
+            self.enemies.append(
+                Enemy(
+                    position=point,
+                    stats=CharacterStats(
+                        health=random.randint(10, 20),
+                        damage=random.randint(3, 5),
+                        speed=2,
+                        action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
+                    ),
+                )
+            )
+
+    def _procedural_generate(self):
+        self.map = DungeonMap(self.width, self.height)
+        if self.rooms is None:
             self.rooms = []
             self._generate_rooms()
-        else:
-            self.rooms = rooms
 
-        if start_room is None:
+        if self.start_room is None:
             self._generate_start_room()
-        else:
-            self.start_room: Room = start_room
-        # 3. Размещаем стартовую точку в центре этой комнаты
         self.start_point = self.start_room.center()
 
-        if chests is None:
+        if self.chests is None:
             self.chests = []
             self._generate_chests()
-        else:
-            self.chests = chests
 
-        if enemies is None:
+        if self.enemies is None:
             self.enemies = []
             self._generate_enemies()
-        else:
-            self.enemies = enemies
 
-        if exit is None:
+        if self.exit is None:
             self._generate_exit()
-        else:
-            self.exit = exit
 
     def to_dict(self):
         return {
@@ -85,7 +146,7 @@ class Dungeon:
             "max_room_size": self.max_room_size,
             "max_chests": self.max_chests,
             "enemies_num": self.enemies_num,
-            "start_room": self.start_room.to_dict(),
+            "start_room": self.start_room.to_dict() if self.start_room else None,
             "rooms": [room.to_dict() for room in self.rooms],
             "chests": [c.to_dict() for c in self.chests],
             "enemies": [e.to_dict() for e in self.enemies],
