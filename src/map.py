@@ -34,7 +34,7 @@ class DungeonMap:
         self.tiles[point.x][point.y] = value
 
     def is_free(self, point: Point) -> bool:
-        if self.get(point) == CELL_TYPE.FLOOR.value:
+        if self.get(point) == CELL_TYPE.EMPTY.value:
             return True
         return False
 

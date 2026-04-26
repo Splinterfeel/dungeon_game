@@ -67,18 +67,20 @@ class Dungeon:
         self.chests = []
         self.rooms = []  # пока непонятно нужно ли, считаем что пока нет
         self.start_room = None
-        self.start_point = None
+        self.start_points_team_1: list[Point] = []
+        self.start_points_team_2: list[Point] = []
         for x in range(self.map.width):
             for y in range(self.map.height):
                 _point = Point(x, y)
-                if self.map.get(_point) == CELL_TYPE.START.value:
-                    self.start_point = _point
+                if self.map.get(_point) == CELL_TYPE.START_TEAM_1.value:
+                    self.start_points_team_1.append(_point)
+                elif self.map.get(_point) == CELL_TYPE.START_TEAM_2.value:
+                    self.start_points_team_2.append(_point)
                 elif self.map.get(_point) == CELL_TYPE.EXIT.value:
                     self.exit = _point
-            if self.start_point and self.exit:
-                break
-        else:
-            raise ValueError("Can't find start point or exit")
+        if not self.start_points_team_1:
+            raise ValueError("Can't find start points or exit")
+        # TODO вторую команду пока не проверяем, еще нет логики под 2 команды
         # find possible chests and enemies positions
         possible_chest_points: list[Point] = []
         possible_enemy_points: list[Point] = []
@@ -123,7 +125,9 @@ class Dungeon:
 
         if self.start_room is None:
             self._generate_start_room()
-        self.start_point = self.start_room.center()
+        self.start_points_team_1 = [self.start_room.center()]
+        # пока генерация работает только для 1 команды, и по сути для 1 игрока
+        self.start_points_team_2 = []
 
         if self.chests is None:
             self.chests = []
@@ -177,10 +181,10 @@ class Dungeon:
 
     def remove_dead_enemy(self, enemy: Enemy):
         self.enemies.remove(enemy)
-        self.map.set(enemy.position, CELL_TYPE.FLOOR.value)
+        self.map.set(enemy.position, CELL_TYPE.EMPTY.value)
 
     def remove_dead_player(self, player: Player):
-        self.map.set(player.position, CELL_TYPE.FLOOR.value)
+        self.map.set(player.position, CELL_TYPE.EMPTY.value)
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
@@ -229,7 +233,7 @@ class Dungeon:
             # We iterate over the room's area and set the tiles to 0 (floor).
             for i in range(new_room.x, new_room.x + new_room.width):
                 for j in range(new_room.y, new_room.y + new_room.height):
-                    self.map.set(Point(i, j), CELL_TYPE.FLOOR.value)
+                    self.map.set(Point(i, j), CELL_TYPE.EMPTY.value)
 
             # make corridors
             for i in range(len(self.rooms) - 1):
@@ -311,14 +315,14 @@ class Dungeon:
         # исключить тайлы, которые находятся на проходе
         result_choices = []
         for point in _point_choices:
-            if self.map.get(point) != CELL_TYPE.FLOOR.value:
+            if self.map.get(point) != CELL_TYPE.EMPTY.value:
                 continue
             point_left = self.map.get(point.on(PointOffset.LEFT))
             point_right = self.map.get(point.on(PointOffset.RIGHT))
             point_up = self.map.get(point.on(PointOffset.TOP))
             point_down = self.map.get(point.on(PointOffset.BOTTOM))
             if all(
-                t == CELL_TYPE.FLOOR.value
+                t == CELL_TYPE.EMPTY.value
                 for t in [point_left, point_right, point_up, point_down]
             ):
                 continue
@@ -337,11 +341,11 @@ class Dungeon:
 
     def _make_h_tunnel(self, x1: int, x2: int, y: int):
         for x in range(min(x1, x2), max(x1, x2) + 1):
-            self.map.set(Point(x, y), CELL_TYPE.FLOOR.value)
+            self.map.set(Point(x, y), CELL_TYPE.EMPTY.value)
 
     def _make_v_tunnel(self, y1: int, y2: int, x: int):
         for y in range(min(y1, y2), max(y1, y2) + 1):
-            self.map.set(Point(x, y), CELL_TYPE.FLOOR.value)
+            self.map.set(Point(x, y), CELL_TYPE.EMPTY.value)
 
     def _generate_exit(self):
         # найдем самую дальнюю комнату от старта

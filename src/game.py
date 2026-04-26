@@ -1,7 +1,8 @@
+import copy
 import random
 from src.action import Action, ActionResult, ActionType
 from src.entities.base import Actor
-from src.base import Point, PointOffset
+from src.base import Point
 from src.entities.player import Player
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE, AttackType
@@ -33,7 +34,7 @@ class Game:
             self.dump_state()
 
     def launch(self):
-        self._init_players(self.dungeon.start_point)
+        self._init_players()
 
         # ставим ход первому игроку
         self.turn.next()
@@ -155,7 +156,7 @@ class Game:
 
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.dungeon.map.get(actor.position)
-        self.dungeon.map.set(actor.position, CELL_TYPE.FLOOR.value)
+        self.dungeon.map.set(actor.position, CELL_TYPE.EMPTY.value)
         actor.position = cell
         self.dungeon.map.set(cell, actor_cell_type)
 
@@ -219,26 +220,28 @@ class Game:
             return True
         return False
 
-    def _init_players(self, point: Point):
-        point_choices = [
-            point,
-            point.on(PointOffset.LEFT),
-            point.on(PointOffset.LEFT).on(PointOffset.TOP),
-            point.on(PointOffset.TOP),
-            point.on(PointOffset.TOP).on(PointOffset.RIGHT),
-            point.on(PointOffset.RIGHT),
-            point.on(PointOffset.RIGHT).on(PointOffset.BOTTOM),
-            point.on(PointOffset.BOTTOM),
-            point.on(PointOffset.BOTTOM).on(PointOffset.LEFT),
-        ]
-        choices = [c for c in point_choices if self.dungeon.map.is_free(c)]
-        if len(choices) < len(self.players):
-            raise ValueError("Not enough place choices for all players")
+    def _init_players(self):
+        point_choices = {
+            1: copy.deepcopy(self.dungeon.start_points_team_1),
+            2: copy.deepcopy(self.dungeon.start_points_team_2),
+        }
+
+        players_team_1 = [p for p in self.players if p.team == 1]
+        players_team_2 = [p for p in self.players if p.team == 2]
+        if len(point_choices[1]) < len(players_team_1):
+            raise ValueError("Not enough place choices for all players in team 1")
+        if len(point_choices[2]) < len(players_team_2):
+            raise ValueError("Not enough place choices for all players in team 2")
         for player in self.players:
-            position = random.choice(choices)
-            choices.remove(position)
+            position = random.choice(point_choices[player.team])
+            point_choices[player.team].remove(position)
             player.position = position
             self.dungeon.map.set(player.position, CELL_TYPE.PLAYER.value)
+        # убираем лишние старт-поинты, которые не пригодились
+        for point in point_choices[1]:
+            self.dungeon.map.set(point, CELL_TYPE.EMPTY.value)
+        for point in point_choices[2]:
+            self.dungeon.map.set(point, CELL_TYPE.EMPTY.value)
 
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""

@@ -21,20 +21,23 @@ class Lobby:
             health=8, damage=3, speed=5, action_points=10
         )
         self.players = {
-            p.id: Player(id=p.id, stats=std_character_stats) for p in players
+            p.id: Player(id=p.id, team=p.team, stats=std_character_stats) for p in players
         }
         self.connections: dict[str, WebSocket] = {}
 
+        # генерация
         # dungeon = Dungeon(
         #     max_chests=3,
         #     enemies_num=2,
         #     width=20,
-        #     height=20,
+        #     height=15,
         #     min_rooms=3,
         #     max_rooms=4,
-        #     min_room_size=4,
+        #     min_room_size=3,
         #     max_room_size=5,
         # )
+
+        # готовые карты
         dungeon_map = DungeonMap(
             width=for_1_team.map_1["width"],
             height=for_1_team.map_1["height"],
@@ -45,6 +48,7 @@ class Lobby:
             enemies_num=2,
             map=dungeon_map
         )
+
         self.game = Game(dungeon=dungeon, players=list(self.players.values()))
         self.game.launch()
 

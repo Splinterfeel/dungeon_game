@@ -4,8 +4,9 @@ from enum import Enum
 
 class CELL_TYPE(Enum):
     WALL = " # "
-    FLOOR = "   "
-    START = " S "
+    EMPTY = "   "
+    START_TEAM_1 = " S1 "
+    START_TEAM_2 = " S2 "
     CHEST = " C "
     ENEMY = " E "
     EXIT = " X "
@@ -25,11 +26,11 @@ class MapEntity:
 
 MapEntities = {
     CELL_TYPE.WALL.value: MapEntity(color="blue", text=""),
-    CELL_TYPE.FLOOR.value: MapEntity(color="black", text=""),
+    CELL_TYPE.EMPTY.value: MapEntity(color="black", text=""),
     CELL_TYPE.CHEST.value: MapEntity(color="yellow", text="C"),
     CELL_TYPE.PLAYER.value: MapEntity(color="white", text="P"),
     CELL_TYPE.ENEMY.value: MapEntity(color="red", text="E"),
-    CELL_TYPE.START.value: MapEntity(color="green", text="Start"),
+    CELL_TYPE.START_TEAM_1.value: MapEntity(color="green", text="Start"),
     CELL_TYPE.EXIT.value: MapEntity(color="green", text="Exit"),
 }
 

@@ -14,7 +14,7 @@ class InteractionHandlers:
             ("Завершить ход", InteractionHandlers._end_turn, None),
         ]
         match cell_type:
-            case CELL_TYPE.FLOOR:
+            case CELL_TYPE.EMPTY:
                 return [
                     ("Идти сюда", InteractionHandlers._go_to, None)
                 ] + default_options
