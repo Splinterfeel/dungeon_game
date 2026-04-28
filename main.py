@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, status, WebSocket, WebSocketDisconnect
 from uuid import UUID
 from fastapi.middleware.cors import CORSMiddleware
 from models import CreateLobbyRequest, PlayerDTO, LobbyDTO
@@ -6,6 +6,8 @@ from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
 from fastapi.staticfiles import StaticFiles
+
+from ws_utils import WSCloseCodes
 
 
 app = FastAPI()
@@ -33,10 +35,15 @@ def create_lobby(request: CreateLobbyRequest) -> dict[str, UUID]:
 
 @app.websocket("/ws/{lobby_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str):
-    await websocket.accept()
     lobby_dto = LobbyDTO(id=lobby_id)
     player = PlayerDTO(id=player_id)
     lobby = lobby_manager.get_lobby(lobby_dto.id)
+    if not lobby:
+            # Сначала принимаем, чтобы иметь возможность отправить код закрытия
+            await websocket.accept()
+            await websocket.close(code=WSCloseCodes.LOBBY_NOT_FOUND, reason="Lobby not found")
+            return
+    await websocket.accept()
     lobby.connect(player, websocket)
 
     # --- отправляем текущее состояние игры сразу после подключения ---

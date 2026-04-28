@@ -11,5 +11,5 @@ class LobbyManager:
         self.lobbies[lobby.id] = lobby
         return lobby
 
-    def get_lobby(self, lobby_id: str) -> Lobby:
-        return self.lobbies[lobby_id]
+    def get_lobby(self, lobby_id: str) -> Lobby | None:
+        return self.lobbies.get(lobby_id)

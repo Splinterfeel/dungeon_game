@@ -51,26 +51,63 @@ body {
 
 <h2>Dungeon Debug Viewer</h2>
 <button onclick="start()">Start</button>
-
+<br>
+<label for="player_id_input">Player ID</label>
+<input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input"  style="width: 40%;"/>
+<button onclick="generate_new_player_id()">Сгенерить новый</button>
+<br>
+<label for="lobby_id_input">Lobby ID</label>
+<input type="text" value="" id="lobby_id_input" style="width: 40%;"/>
+<button onclick="generate_new_lobby_id()">Сгенерить новый</button>
+<br>
 <div id="map"></div>
 
 <script>
 let socket;
 
-async function start() {
-    const response = await fetch("http://localhost:8000/lobbies", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            players: [{ id: crypto.randomUUID() }]
-        })
-    });
+function generate_new_player_id(){
+    const _input = document.getElementById("player_id_input");
+    _input.value = crypto.randomUUID();
+}
 
-    const data = await response.json();
-    const lobbyId = data.lobby_id;
-    const playerId = crypto.randomUUID();
+function generate_new_lobby_id(){
+    const _input = document.getElementById("lobby_id_input");
+    _input.value = crypto.randomUUID();
+}
+
+async function start() {
+    const _input_player_id = document.getElementById("player_id_input");
+    const _input_lobby_id = document.getElementById("lobby_id_input");
+    const playerId = _input_player_id.value;
+    let lobbyId = _input_lobby_id.value;
+    if (lobbyId === ""){
+        // создаём новый
+        const response = await fetch("http://localhost:8000/lobbies", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                players: [
+                    { id: playerId }
+                ]
+            })
+        });
+        const data = await response.json();
+        lobbyId = data.lobby_id;
+        _input_lobby_id.value = lobbyId;
+    }
+    else {
+        console.log("using lobby uuid from input");
+    }
 
     socket = new WebSocket(`ws://localhost:8000/ws/${lobbyId}/${playerId}`);
+    socket.onclose = (event) => {
+        console.log(`Код: ${event.code}`);
+        console.log(`Причина: ${event.reason}`); // "Lobby not found"
+        
+        if (event.reason === "Lobby not found") {
+            alert("Лобби не существует!");
+        }
+    };
 
     socket.onmessage = (event) => {
         const msg = JSON.parse(event.data);

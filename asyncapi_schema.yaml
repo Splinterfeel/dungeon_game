@@ -1,0 +1,51 @@
+# расширение AsyncAPI Preview
+# Ctrl + Snift + P > AsyncAPI: Preview
+
+asyncapi: 3.1.0
+info:
+  title: Dungeon Game
+  version: 0.0.1
+channels:
+  ConnectToLobby:
+    address: '/ws/{lobbyId}/{playerId}'
+    parameters:
+      lobbyId:
+        description: "Уникальный идентификатор игровой комнаты (UUID)."
+        examples: 
+          - "45f613c8-df18-48ae-8b85-852a0beb9ca9"
+      playerId:
+        description: "Уникальный идентификатор игрока (UUID)."
+        examples: 
+          - "45f613c8-df18-48ae-8b85-852a0beb9ca9"
+    messages:
+      stateUpdate:
+        payload:
+          $ref: '#/components/schemas/StateUpdate'
+      playerAction:
+        payload:
+          $ref: '#/components/schemas/PlayerAction'
+operations:
+  updatePlayerState:
+    action: send
+    channel:
+      $ref: '#/channels/ConnectToLobby'
+    messages:
+      - $ref: '#/channels/ConnectToLobby/messages/stateUpdate'
+  sendPlayerAction:
+    action: receive
+    channel:
+      $ref: '#/channels/ConnectToLobby'
+    messages:
+      - $ref: '#/channels/ConnectToLobby/messages/playerAction'
+components:
+  schemas:
+    StateUpdate:
+      type: object
+      properties:
+        version:
+          type: string
+    PlayerAction:
+      type: object
+      properties:
+        action_type:
+          typee: string
