@@ -12,4 +12,19 @@ class LobbyDTO(BaseModel):
 
 
 class CreateLobbyRequest(BaseModel):
-    players: list[PlayerDTO]
+    players_num: int
+
+
+class ConnectLobbyRequest(BaseModel):
+    lobby_id: UUID
+    player: PlayerDTO
+
+
+class StartGameRequest(BaseModel):
+    lobby_id: UUID
+
+
+class StartGameResponse(BaseModel):
+    lobby_id: UUID
+    result: bool
+    detail: str

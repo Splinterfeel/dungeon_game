@@ -14,17 +14,33 @@ from src.maps import for_1_team
 
 
 class Lobby:
-    def __init__(self, lobby: LobbyDTO, players: list[PlayerDTO]):
-        self.id = lobby.id
-        self.lobby = lobby
-        std_character_stats = CharacterStats(
+    def __init__(self, lobby_dto: LobbyDTO, players_num: int = 2):
+        self.id = lobby_dto.id
+        self.lobby = lobby_dto
+        self.players_num = players_num
+        self.std_character_stats = CharacterStats(
             health=8, damage=3, speed=5, action_points=10
         )
-        self.players = {
-            p.id: Player(id=p.id, team=p.team, stats=std_character_stats) for p in players
-        }
+        self.players: list[Player] = {}
         self.connections: dict[str, WebSocket] = {}
 
+        self.lock = asyncio.Lock()
+        self.game = None  # до момента старта игры нет
+
+    def connect_player(self, player: PlayerDTO) -> bool:
+        if len(self.players) == self.players_num:
+            print(f"Can't connect player {player}, lobby full")
+            return False
+        self.players[player.id] = Player(id=player.id, team=player.team, stats=self.std_character_stats)
+        return True
+
+    def start_game(self) -> tuple[bool, str]:
+        if self.game is not None:
+            return False, "Game already started"
+        if len(self.players) != self.players_num:
+            detail = f"Can't start game, players: {len(self.players)} / {self.players_num}"
+            print(f"Can't start game, players: {len(self.players)} / {self.players_num}")
+            return False, detail
         # генерация
         # dungeon = Dungeon(
         #     max_chests=3,
@@ -48,11 +64,9 @@ class Lobby:
             enemies_num=2,
             map=dungeon_map
         )
-
         self.game = Game(dungeon=dungeon, players=list(self.players.values()))
         self.game.launch()
-
-        self.lock = asyncio.Lock()
+        return True, "Game started"
 
     def connect(self, player: PlayerDTO, websocket: WebSocket):
         self.connections[player.id] = websocket
@@ -78,4 +92,5 @@ class Lobby:
         for x in state["dungeon"]["map"]["tiles"]:
             print(x)
         for ws in self.connections.values():
+            print("sending to ws", ws)
             await ws.send_json({"type": "state_update", "payload": state})
