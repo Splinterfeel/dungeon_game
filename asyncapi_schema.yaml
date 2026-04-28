@@ -5,6 +5,7 @@ asyncapi: 3.1.0
 info:
   title: Dungeon Game
   version: 0.0.1
+
 channels:
   ConnectToLobby:
     address: '/ws/{lobbyId}/{playerId}'
@@ -24,19 +25,23 @@ channels:
       playerAction:
         payload:
           $ref: '#/components/schemas/PlayerAction'
+
 operations:
   updatePlayerState:
     action: send
+    description: Обновление состояния игры, рассылаемое игрокам
     channel:
       $ref: '#/channels/ConnectToLobby'
     messages:
       - $ref: '#/channels/ConnectToLobby/messages/stateUpdate'
-  sendPlayerAction:
+  playerAction:
     action: receive
+    description: Действие от игрока, присылаемое игроком
     channel:
       $ref: '#/channels/ConnectToLobby'
     messages:
       - $ref: '#/channels/ConnectToLobby/messages/playerAction'
+
 components:
   schemas:
     StateUpdate:
