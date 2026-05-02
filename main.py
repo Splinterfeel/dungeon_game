@@ -42,10 +42,12 @@ async def connect_lobby(request: ConnectLobbyRequest) -> DetailedBoolResponse:
 
 @app.post("/start_game", description="Стартовать игру")
 async def start_game(request: StartGameRequest) -> StartGameResponse:
+    # TODO проверка что стартует именно тот игрок который указан как создатель в лобби (host)
     lobby = lobby_manager.get_lobby(request.lobby_id)
     if not lobby:
         raise HTTPException(status_code=404, detail="Lobby not found")
     result, detail = lobby.start_game()
+    await lobby.broadcast_lobby_state()
     await lobby.broadcast_game_state()
     return StartGameResponse(
         lobby_id=request.lobby_id,

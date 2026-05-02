@@ -85,7 +85,9 @@ class Lobby:
 
     async def broadcast_lobby_state(self):
         # Формируем структуру для лобби (до старта игры)
-        if self.players_num == len(self.players):
+        if self.game:
+            status = "game started"
+        elif self.players_num == len(self.players):
             status = "Waiting for host to start the game..."
         else:
             status = "Waiting for all players to connect..."

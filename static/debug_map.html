@@ -54,7 +54,7 @@ body {
 <input type="number" id="input_players_num" value="1" style="width: 50px">
 <button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
 <button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
-<button onclick="startGame()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
+<button onclick="start_game()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
 <br>
 <br>
 <label for="player_id_input">Player ID</label>
@@ -102,6 +102,22 @@ async function create_lobby() {
     } catch (e) {
         console.error("Ошибка при создании лобби:", e);
         alert("Не удалось создать лобби");
+    }
+}
+
+async function start_game() {
+    const _input_lobby = document.getElementById("lobby_id_input");
+    try {
+        const response = await fetch("http://localhost:8000/start_game", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                lobby_id: _input_lobby.value,
+            })
+        });
+    } catch (e) {
+        console.error("Ошибка при старте игры", e);
+        alert("Не удалось стартовать игру");
     }
 }
 
