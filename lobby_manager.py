@@ -1,4 +1,4 @@
-from dto.base import LobbyDTO
+from dto.base import CreateLobbyRequest, LobbyDTO
 from game_wrapper import Lobby
 
 
@@ -6,8 +6,8 @@ class LobbyManager:
     def __init__(self):
         self.lobbies: dict[str, Lobby] = {}
 
-    def create_lobby(self, players_num: int) -> Lobby:
-        lobby = Lobby(LobbyDTO(), players_num=players_num)
+    def create_lobby(self, request: CreateLobbyRequest) -> Lobby:
+        lobby = Lobby(LobbyDTO(), players_num=request.players_num, created_by_player_id=request.created_by_player_id)
         self.lobbies[lobby.id] = lobby
         return lobby
 

@@ -84,6 +84,7 @@ function generate_new_lobby_id(){
 }
 
 async function create_lobby() {
+    const _player_id_input = document.getElementById("player_id_input");
     const _input_lobby = document.getElementById("lobby_id_input");
     const _players_num = document.getElementById("input_players_num");
     try {
@@ -91,7 +92,8 @@ async function create_lobby() {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
-                players_num: _players_num.value
+                players_num: _players_num.value,
+                created_by_player_id: _player_id_input.value
             })
         });
         const data = await response.json();

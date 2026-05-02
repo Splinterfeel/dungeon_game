@@ -5,6 +5,7 @@ class LobbyStatePayload(BaseModel):
     status: str
     players_num: int
     connected_players: list[str]
+    created_by_player_id: str
 
 
 class LobbyState(BaseModel):

@@ -18,6 +18,7 @@ class LobbyDTO(BaseModel):
 
 class CreateLobbyRequest(BaseModel):
     players_num: int = Field(gt=0)
+    created_by_player_id: UUID
 
 
 class ConnectLobbyRequest(BaseModel):

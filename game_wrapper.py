@@ -1,4 +1,5 @@
 import asyncio
+from uuid import UUID
 from fastapi import WebSocket
 
 from dto.base import LobbyDTO, PlayerDTO
@@ -15,10 +16,11 @@ from src.maps import for_1_team
 
 
 class Lobby:
-    def __init__(self, lobby_dto: LobbyDTO, players_num: int = 2):
+    def __init__(self, lobby_dto: LobbyDTO, players_num: int, created_by_player_id: UUID):
         self.id = lobby_dto.id
         self.lobby = lobby_dto
         self.players_num = players_num
+        self.created_by_player_id = str(created_by_player_id)
         self.std_character_stats = CharacterStats(
             health=8, damage=3, speed=5, action_points=10
         )
@@ -92,6 +94,7 @@ class Lobby:
                 status=status,
                 players_num=self.players_num,
                 connected_players=[str(p.id) for p in list(self.players.values())],
+                created_by_player_id=self.created_by_player_id,
             )
         )
         for ws in list(self.connections.values()):

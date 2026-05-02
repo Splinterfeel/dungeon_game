@@ -27,7 +27,7 @@ lobby_manager = LobbyManager()
 
 @app.post("/lobbies", description="Создать лобби")
 def create_lobby(request: CreateLobbyRequest) -> dict[str, UUID]:
-    game_lobby = lobby_manager.create_lobby(players_num=request.players_num)
+    game_lobby = lobby_manager.create_lobby(request)
     return {"lobby_id": game_lobby.id}
 
 
