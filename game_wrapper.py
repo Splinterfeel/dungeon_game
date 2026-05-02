@@ -1,7 +1,8 @@
 import asyncio
 from fastapi import WebSocket
 
-from models import PlayerDTO, LobbyDTO
+from dto.base import LobbyDTO, PlayerDTO
+from dto.state import LobbyState, LobbyStatePayload
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
@@ -21,18 +22,21 @@ class Lobby:
         self.std_character_stats = CharacterStats(
             health=8, damage=3, speed=5, action_points=10
         )
-        self.players: list[Player] = {}
+        self.players: dict[str, Player] = {}
         self.connections: dict[str, WebSocket] = {}
 
         self.lock = asyncio.Lock()
         self.game = None  # до момента старта игры нет
 
-    def connect_player(self, player: PlayerDTO) -> bool:
+    async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
+        if str(player.id) in self.players:
+            return False, "player already in lobby"
         if len(self.players) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
-            return False
-        self.players[player.id] = Player(id=player.id, team=player.team, stats=self.std_character_stats)
-        return True
+            return False, "lobby full"
+        self.players[str(player.id)] = Player(id=player.id, team=player.team, stats=self.std_character_stats)
+        await self.broadcast_lobby_state()
+        return True, "player connected"
 
     def start_game(self) -> tuple[bool, str]:
         if self.game is not None:
@@ -74,10 +78,32 @@ class Lobby:
     def disconnect(self, player: PlayerDTO):
         self.connections.pop(player.id, None)
 
-    async def handle_action(self, _actor: PlayerDTO, payload: dict) -> bool:
+    async def handle_lobby_action(self, player, action):
+        print("[LOBBY handle lobby action]", player, action)
+
+    async def broadcast_lobby_state(self):
+        # Формируем структуру для лобби (до старта игры)
+        if self.players_num == len(self.players):
+            status = "Waiting for host to start the game..."
+        else:
+            status = "Waiting for all players to connect..."
+        state = LobbyState(
+            payload=LobbyStatePayload(
+                status=status,
+                players_num=self.players_num,
+                connected_players=[str(p.id) for p in list(self.players.values())],
+            )
+        )
+        for ws in list(self.connections.values()):
+            try:
+                await ws.send_json(state.model_dump())
+            except Exception as e:
+                print("broadcast_lobby_state exception", e)
+
+    async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
             if self.game.turn.phase == GamePhase.PLAYER_PHASE:
-                actor = self.players[_actor.id]
+                actor = self.players[str(_actor.id)]
             else:
                 actor = next(e for e in self.game.dungeon.enemies if e.id == _actor.id)
             action = Action(**payload)
@@ -87,10 +113,13 @@ class Lobby:
             self.game.version += 1
             return action_result.performed
 
-    async def broadcast_state(self):
+    async def broadcast_game_state(self):
         state = self.game.dump_state()
         for x in state["dungeon"]["map"]["tiles"]:
             print(x)
-        for ws in self.connections.values():
-            print("sending to ws", ws)
-            await ws.send_json({"type": "state_update", "payload": state})
+        for ws in list(self.connections.values()):
+            try:
+                print("sending to ws", ws)
+                await ws.send_json({"type": "state_update", "payload": state})
+            except Exception as e:
+                print(f"Error sending to ws {ws}: {e}")

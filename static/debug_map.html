@@ -49,8 +49,13 @@ body {
 
 <body>
 
-<h2>Dungeon Debug Viewer</h2>
-<button onclick="start()">Start</button>
+<br>
+<label for="input_players_num">Кол-во игроков</label>
+<input type="number" id="input_players_num" value="1" style="width: 50px">
+<button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
+<button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
+<button onclick="startGame()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
+<br>
 <br>
 <label for="player_id_input">Player ID</label>
 <input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input"  style="width: 40%;"/>
@@ -60,10 +65,13 @@ body {
 <input type="text" value="" id="lobby_id_input" style="width: 40%;"/>
 <button onclick="generate_new_lobby_id()">Сгенерить новый</button>
 <br>
+<button onclick="connect_ws()">Connect WS</button>
 <div id="map"></div>
 
 <script>
 let socket;
+const _input = document.getElementById("player_id_input");
+_input.value = crypto.randomUUID();
 
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
@@ -75,28 +83,57 @@ function generate_new_lobby_id(){
     _input.value = crypto.randomUUID();
 }
 
-async function start() {
+async function create_lobby() {
+    const _input_lobby = document.getElementById("lobby_id_input");
+    const _players_num = document.getElementById("input_players_num");
+    try {
+        const response = await fetch("http://localhost:8000/lobbies", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                players_num: _players_num.value
+            })
+        });
+        const data = await response.json();
+        _input_lobby.value = data.lobby_id;
+        return data.lobby_id;
+    } catch (e) {
+        console.error("Ошибка при создании лобби:", e);
+        alert("Не удалось создать лобби");
+    }
+}
+
+async function connect_to_lobby() {
+    const _input_lobby = document.getElementById("lobby_id_input");
+    const _player_id_input = document.getElementById("player_id_input");
+    try {
+        const response = await fetch("http://localhost:8000/connect_lobby", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                lobby_id: _input_lobby.value,
+                player: {
+                    id: _player_id_input.value,
+                    team: 1,
+                }
+            })
+        });
+    } catch (e) {
+        console.error("Ошибка при присоединении к лобби:", e);
+        alert("Не удалось присоединиться к лобби");
+    }
+}
+
+async function connect_ws() {
     const _input_player_id = document.getElementById("player_id_input");
     const _input_lobby_id = document.getElementById("lobby_id_input");
     const playerId = _input_player_id.value;
     let lobbyId = _input_lobby_id.value;
     if (lobbyId === ""){
-        // создаём новый
-        const response = await fetch("http://localhost:8000/lobbies", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                players: [
-                    { id: playerId }
-                ]
-            })
-        });
-        const data = await response.json();
-        lobbyId = data.lobby_id;
-        _input_lobby_id.value = lobbyId;
+        await create_lobby();
     }
     else {
-        console.log("using lobby uuid from input");
+        console.log("connect(): using lobby uuid from input");
     }
 
     socket = new WebSocket(`ws://localhost:8000/ws/${lobbyId}/${playerId}`);
@@ -110,11 +147,9 @@ async function start() {
     };
 
     socket.onmessage = (event) => {
+        console.log("msg WS");
         const msg = JSON.parse(event.data);
-
-        if (msg.type === "state_update") {
-            render(msg.payload);
-        }
+            handle_ws_msg(msg);
     };
 }
 
@@ -122,8 +157,19 @@ function normalize(value) {
     if (typeof value !== "string") return "";
     return value.trim();
 }
-function render(state) {
-    console.log(state);
+
+function handle_ws_msg(msg) {
+    console.log(msg);
+    if (msg.type === "lobby_state") {
+        console.log("lobby msg state");
+    }
+
+    if (msg.type === "state_update") {
+        handle_game_state(msg.payload);
+    }
+}
+
+function handle_game_state(state){
     const dungeon = state.dungeon;
     const tiles = dungeon.map.tiles;
     const width = dungeon.map.width;
@@ -185,6 +231,7 @@ function render(state) {
         }
     }
 }
+
 
 function inBounds(pos, w, h) {
     return pos.x >= 0 && pos.y >= 0 && pos.x < w && pos.y < h;

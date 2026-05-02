@@ -1,5 +1,5 @@
+from dto.base import LobbyDTO
 from game_wrapper import Lobby
-from models import PlayerDTO, LobbyDTO
 
 
 class LobbyManager:

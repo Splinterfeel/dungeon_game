@@ -7,12 +7,17 @@ class PlayerDTO(BaseModel):
     team: int = 1
 
 
+class DetailedBoolResponse(BaseModel):
+    result: bool
+    detail: str
+
+
 class LobbyDTO(BaseModel):
     id: UUID = Field(default_factory=uuid4)
 
 
 class CreateLobbyRequest(BaseModel):
-    players_num: int
+    players_num: int = Field(gt=0)
 
 
 class ConnectLobbyRequest(BaseModel):
@@ -24,7 +29,8 @@ class StartGameRequest(BaseModel):
     lobby_id: UUID
 
 
-class StartGameResponse(BaseModel):
+class StartGameResponse(DetailedBoolResponse):
     lobby_id: UUID
-    result: bool
-    detail: str
+
+
+# class GameState(BaseModel):
