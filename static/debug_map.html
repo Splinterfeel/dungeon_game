@@ -67,10 +67,13 @@ body {
 <button onclick="generate_new_lobby_id()">Сгенерить новый</button>
 <br>
 <button onclick="connect_ws()">Connect WS</button>
+<button onclick="send_end_turn()" style="background: #ff9800; color: white; font-weight: bold;">END TURN</button>
+
 <div id="map"></div>
 
 <script>
 let selectedCell = null;
+let lastPlayerState = null;
 
 function selectCell(x, y, cellEl) {
     document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
@@ -198,6 +201,8 @@ function handle_ws_msg(msg) {
 }
 
 function handle_game_state(state){
+    const playerId = document.getElementById("player_id_input").value;
+    lastPlayerState = state.players.find(p => p.id === playerId);
     const dungeon = state.dungeon;
     const tiles = dungeon.map.tiles;
     const width = dungeon.map.width;
@@ -262,6 +267,32 @@ function handle_game_state(state){
             container.appendChild(cell);
         }
     }
+}
+
+
+async function send_end_turn() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("WebSocket не подключен!");
+        return;
+    }
+
+    if (!lastPlayerState) {
+        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
+        return;
+    }
+    const action = {
+        id: crypto.randomUUID(), // uuid.UUID
+        actor: lastPlayerState,  // ActorState (объект из последнего state_update)
+        type: "END_TURN",        // Literal
+        cell: {                  // PointState
+            x: lastPlayerState.position.x,
+            y: lastPlayerState.position.y
+        },
+        params: null             // dict | None
+    };
+
+    console.log("Sending END_TURN action:", action);
+    socket.send(JSON.stringify(action));
 }
 
 

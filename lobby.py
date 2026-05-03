@@ -119,7 +119,10 @@ class Lobby:
             return action_result.performed
 
     async def broadcast_game_state(self):
-        state = GameState.model_validate(self.game.dump_state())
+        try:
+            state = GameState.model_validate(self.game.dump_state())
+        except Exception as e:
+            print(e)
         for ws in list(self.connections.values()):
             try:
                 print("sending to ws", ws)

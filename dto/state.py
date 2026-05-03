@@ -1,6 +1,8 @@
 from typing import List
 from pydantic import BaseModel
 
+from dto.base import PointState
+
 
 class LobbyStatePayload(BaseModel):
     status: str
@@ -12,11 +14,6 @@ class LobbyStatePayload(BaseModel):
 class LobbyState(BaseModel):
     type: str = "lobby_state"
     payload: LobbyStatePayload
-
-
-class PointState(BaseModel):
-    x: int
-    y: int
 
 
 class StatsState(BaseModel):
@@ -38,7 +35,8 @@ class ActorState(BaseModel):
 class TurnState(BaseModel):
     number: int
     phase: int
-    current_actor: ActorState
+    # current_actor ставим в None если это враг
+    current_actor: ActorState | None
     available_moves: list[PointState]
 
 
@@ -64,3 +62,4 @@ class GameState(BaseModel):
     dungeon: DungeonState
     players: list[ActorState]
     turn: TurnState
+    version: int

@@ -199,6 +199,7 @@ class Game:
         if not next_actor:
             if self.turn.has_next_phase():
                 self.turn.switch_phase()
+                print()
             else:
                 self.turn.next()
             self.pass_turn_to_next_actor()

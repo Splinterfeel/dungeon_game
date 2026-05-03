@@ -1,5 +1,5 @@
 import uuid
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from enum import Enum, auto
 from src.base import Point
@@ -22,6 +22,18 @@ class Action(BaseModel):
     type: ActionType
     cell: Point
     params: dict | None = None
+
+
+    @field_validator('type', mode='before')
+    @classmethod
+    def decode_action_type(cls, value):
+        # Если пришла строка (например, с фронта), ищем её в именах ActionType
+        if isinstance(value, str):
+            try:
+                return ActionType[value]
+            except KeyError:
+                raise ValueError(f"Unknown action type: {value}")
+        return value
 
 
 class ActionResult(BaseModel):

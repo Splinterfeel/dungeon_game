@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from uuid import UUID
 from fastapi.middleware.cors import CORSMiddleware
+from dto.action import GameActionState
 from dto.base import (
     ConnectLobbyRequest, CreateLobbyRequest, DetailedBoolResponse,
     LobbyDTO, PlayerDTO, StartGameRequest, StartGameResponse
@@ -97,7 +98,8 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 print("await lobby.broadcast_lobby_state()")
                 await lobby.broadcast_lobby_state()
             else:
-                performed = await lobby.handle_game_action(player, data)
+                game_action_state = GameActionState.model_validate(data)
+                performed = await lobby.handle_game_action(player, game_action_state.model_dump())
                 if performed:
                     await lobby.broadcast_game_state()
                     # проверить ход врагов, и если да - выполнить их ходы

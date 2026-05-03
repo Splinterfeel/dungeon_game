@@ -34,4 +34,6 @@ class StartGameResponse(DetailedBoolResponse):
     lobby_id: UUID
 
 
-# class GameState(BaseModel):
+class PointState(BaseModel):
+    x: int
+    y: int
