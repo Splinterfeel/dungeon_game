@@ -89,8 +89,10 @@ class Dungeon:
                 _point = Point(x, y)
                 if self.map.get(_point) == CELL_TYPE.CHEST.value:
                     possible_chest_points.append(_point)
+                    self.map.set(_point, CELL_TYPE.EMPTY.value)
                 elif self.map.get(_point) == CELL_TYPE.ENEMY.value:
                     possible_enemy_points.append(_point)
+                    self.map.set(_point, CELL_TYPE.EMPTY.value)
         # here can set difficulty of dungeon - min and max enemies
 
         chests_count = min(random.randint(1, self.max_chests), len(possible_chest_points))
@@ -103,6 +105,8 @@ class Dungeon:
             self.chests.append(
                 Chest(position=point, gold=random.randint(10, 500))
             )
+            self.map.set(point, CELL_TYPE.CHEST.value)
+
         for i in range(self.enemies_num):
             point = possible_enemy_points[i]
             self.enemies.append(
@@ -116,6 +120,7 @@ class Dungeon:
                     ),
                 )
             )
+            self.map.set(point, CELL_TYPE.ENEMY.value)
 
     def _procedural_generate(self):
         self.map = DungeonMap(self.width, self.height)
