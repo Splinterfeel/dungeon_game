@@ -43,6 +43,7 @@ body {
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
+.selected { outline: 3px solid #ff00ff; }
 
 </style>
 </head>
@@ -69,6 +70,15 @@ body {
 <div id="map"></div>
 
 <script>
+let selectedCell = null;
+
+function selectCell(x, y, cellEl) {
+    document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
+    cellEl.classList.add("selected");
+    selectedCell = { x, y };
+    console.log("Selected cell:", selectedCell);
+}
+
 let socket;
 const _input = document.getElementById("player_id_input");
 _input.value = crypto.randomUUID();
@@ -245,6 +255,10 @@ function handle_game_state(state){
                 }
             }
 
+            cell.addEventListener("click", () => selectCell(x, y, cell));
+            if (selectedCell && selectedCell.x === x && selectedCell.y === y) {
+                cell.classList.add("selected");
+            }
             container.appendChild(cell);
         }
     }
