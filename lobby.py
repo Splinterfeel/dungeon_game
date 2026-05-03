@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from uuid import UUID
 from fastapi import WebSocket
 
@@ -61,9 +62,9 @@ class Lobby:
 
         # готовые карты
         dungeon_map = DungeonMap(
-            width=for_1_team.map_1["width"],
-            height=for_1_team.map_1["height"],
-            tiles=for_1_team.map_1["tiles"],
+            width=copy.deepcopy(for_1_team.map_1["width"]),
+            height=copy.deepcopy(for_1_team.map_1["height"]),
+            tiles=copy.deepcopy(for_1_team.map_1["tiles"]),
         )
         dungeon = Dungeon(
             max_chests=3,
