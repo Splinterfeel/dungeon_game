@@ -198,8 +198,10 @@ function handle_ws_msg(msg) {
     if (msg.type === "lobby_state") {
         console.log("lobby msg state");
     }
-
-    if (msg.type === "state_update") {
+    else if (msg.type === "game_event") {
+        alert(msg.message);
+    }
+    else if (msg.type === "state_update") {
         handle_game_state(msg.payload);
     }
 }

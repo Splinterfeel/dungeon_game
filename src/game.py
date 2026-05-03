@@ -1,5 +1,10 @@
 import copy
 import random
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from lobby import Lobby
+
+from dto.event import GameEvent
 from src.action import Action, ActionResult, ActionType
 from src.entities.base import Actor
 from src.base import Point
@@ -12,12 +17,14 @@ from src.turn import GamePhase, Turn
 class Game:
     def __init__(
         self,
+        lobby: "Lobby",
         dungeon: Dungeon,
         players: list[Player],
         turn: Turn = None,
         is_server: bool = True,
         version: int = 0,
     ):
+        self.lobby = lobby
         self.ended = False
         self.version = version
         self.is_server = is_server
@@ -49,7 +56,7 @@ class Game:
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
 
-    def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
+    async def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         # возвращает action_performed (bool), AP cost (int)
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != actor:
@@ -121,6 +128,7 @@ class Game:
                         self.dungeon.remove_dead_player(player)
                         print("[!] player", player, "is dead")
                         self.players.remove(player)
+                        await self.lobby.broadcast_game_event(GameEvent(message=f"Игрок {player.name} погиб!"))
                     else:
                         print("attacked player")
                     return ActionResult(action=action)
@@ -138,6 +146,7 @@ class Game:
                     )
                     if enemy.is_dead():
                         self.dungeon.remove_dead_enemy(enemy=enemy)
+                        await self.lobby.broadcast_game_event(GameEvent(message=f"Враг {enemy.name} погиб!"))
                     else:
                         print("attacked enemy")
                     return ActionResult(action=action, action_cost=action_ap_cost)
@@ -167,8 +176,8 @@ class Game:
         return self.to_dict()
         # Queues.RENDER_QUEUE.put(self.to_dict())
 
-    def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
-        action_result = self._perform_actor_action(actor, action)
+    async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
+        action_result = await self._perform_actor_action(actor, action)
         if action_result.performed:
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0

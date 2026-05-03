@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import WebSocket
 
 from dto.base import LobbyDTO, PlayerDTO
+from dto.event import GameEvent
 from dto.state import GameState, LobbyState, LobbyStatePayload
 from src.entities.enemy import Enemy
 from src.game import Game
@@ -71,7 +72,11 @@ class Lobby:
             enemies_num=2,
             map=dungeon_map
         )
-        self.game = Game(dungeon=dungeon, players=list(self.players.values()))
+        self.game = Game(
+            lobby=self,
+            dungeon=dungeon,
+            players=list(self.players.values())
+        )
         self.game.launch()
         return True, "Game started"
 
@@ -106,6 +111,14 @@ class Lobby:
             except Exception as e:
                 print("broadcast_lobby_state exception", e)
 
+    async def broadcast_game_event(self, event: GameEvent):
+        "Отправка информационных сообщений - смерть игрока и т д"
+        for ws in list(self.connections.values()):
+            try:
+                await ws.send_json(event.model_dump())
+            except Exception as e:
+                print("broadcast_game_event exception", e)
+
     async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
             if self.game.turn.phase == GamePhase.PLAYER_PHASE:
@@ -115,7 +128,7 @@ class Lobby:
             action = Action(**payload)
             if isinstance(actor, Enemy):
                 pass
-            action_result = self.game.perform_actor_action(actor, action)
+            action_result = await self.game.perform_actor_action(actor, action)
             self.game.version += 1
             return action_result.performed
 
