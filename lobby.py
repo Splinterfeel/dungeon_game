@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import WebSocket
 
 from dto.base import LobbyDTO, PlayerDTO
-from dto.state import LobbyState, LobbyStatePayload
+from dto.state import GameState, LobbyState, LobbyStatePayload
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
@@ -119,12 +119,10 @@ class Lobby:
             return action_result.performed
 
     async def broadcast_game_state(self):
-        state = self.game.dump_state()
-        for x in state["dungeon"]["map"]["tiles"]:
-            print(x)
+        state = GameState.model_validate(self.game.dump_state())
         for ws in list(self.connections.values()):
             try:
                 print("sending to ws", ws)
-                await ws.send_json({"type": "state_update", "payload": state})
+                await ws.send_json({"type": "state_update", "payload": state.model_dump()})
             except Exception as e:
                 print(f"Error sending to ws {ws}: {e}")
