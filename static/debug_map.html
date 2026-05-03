@@ -66,8 +66,9 @@ body {
 <input type="text" value="" id="lobby_id_input" style="width: 40%;"/>
 <button onclick="generate_new_lobby_id()">Сгенерить новый</button>
 <br>
-<button onclick="connect_ws()">Connect WS</button>
-<button onclick="send_end_turn()" style="background: #ff9800; color: white; font-weight: bold;">END TURN</button>
+<button onclick="connect_ws()" style="background: #94941b; color: white; font-weight: bold;">Connect WS</button>
+<button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
+<button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
 
 <div id="map"></div>
 
@@ -78,11 +79,10 @@ body {
 let selectedCell = null;
 let lastPlayerState = null;
 
-function selectCell(x, y, cellEl) {
+function select_cell(x, y, cellEl) {
     document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
     cellEl.classList.add("selected");
     selectedCell = { x, y };
-    console.log("Selected cell:", selectedCell);
 }
 
 let socket;
@@ -211,6 +211,10 @@ function handle_game_state(state){
     const tiles = dungeon.map.tiles;
     const width = dungeon.map.width;
     const height = dungeon.map.height;
+    const currentActor = state.turn.current_actor;
+    if (currentActor && currentActor.id === playerId){
+        showToast("Ваш ход!");
+    }
 
     const container = document.getElementById("map");
     container.innerHTML = "";
@@ -264,7 +268,7 @@ function handle_game_state(state){
                 }
             }
 
-            cell.addEventListener("click", () => selectCell(x, y, cell));
+            cell.addEventListener("click", () => select_cell(x, y, cell));
             if (selectedCell && selectedCell.x === x && selectedCell.y === y) {
                 cell.classList.add("selected");
             }
@@ -273,13 +277,11 @@ function handle_game_state(state){
     }
 }
 
-
 async function send_end_turn() {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
         alert("WebSocket не подключен!");
         return;
     }
-
     if (!lastPlayerState) {
         alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
         return;
@@ -294,11 +296,36 @@ async function send_end_turn() {
         },
         params: null             // dict | None
     };
-
     console.log("Sending END_TURN action:", action);
     socket.send(JSON.stringify(action));
 }
 
+async function send_move() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("WebSocket не подключен!");
+        return;
+    }
+    if (!lastPlayerState) {
+        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
+        return;
+    }
+    if (!selectedCell){
+        showToast("Клетка ещё не выбрана");
+        return;
+    }
+    const action = {
+        id: crypto.randomUUID(), // uuid.UUID
+        actor: lastPlayerState,  // ActorState (объект из последнего state_update)
+        type: "MOVE",        // Literal
+        cell: {                  // PointState
+            x: selectedCell.x,
+            y: selectedCell.y
+        },
+        params: null             // dict | None
+    };
+    console.log("Sending MOVE action:", action);
+    socket.send(JSON.stringify(action));
+}
 </script>
 
 </body>
