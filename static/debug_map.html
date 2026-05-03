@@ -71,6 +71,9 @@ body {
 
 <div id="map"></div>
 
+<script src="/static/utils.js"></script>
+
+
 <script>
 let selectedCell = null;
 let lastPlayerState = null;
@@ -111,6 +114,7 @@ async function create_lobby() {
         });
         const data = await response.json();
         _input_lobby.value = data.lobby_id;
+        showToast("Лобби успешно создано");
         return data.lobby_id;
     } catch (e) {
         console.error("Ошибка при создании лобби:", e);
@@ -128,6 +132,9 @@ async function start_game() {
                 lobby_id: _input_lobby.value,
             })
         });
+        const response_data = await response.json();
+        showToast(JSON.stringify(response_data["detail"]));
+
     } catch (e) {
         console.error("Ошибка при старте игры", e);
         alert("Не удалось стартовать игру");
@@ -149,6 +156,8 @@ async function connect_to_lobby() {
                 }
             })
         });
+        const response_data = await response.json();
+        showToast(JSON.stringify(response_data));
     } catch (e) {
         console.error("Ошибка при присоединении к лобби:", e);
         alert("Не удалось присоединиться к лобби");
@@ -184,11 +193,6 @@ async function connect_ws() {
     };
 }
 
-function normalize(value) {
-    if (typeof value !== "string") return "";
-    return value.trim();
-}
-
 function handle_ws_msg(msg) {
     console.log(msg);
     if (msg.type === "lobby_state") {
@@ -217,7 +221,7 @@ function handle_game_state(state){
     for (let x = 0; x < width; x++) {
         visual[x] = [];
         for (let y = 0; y < height; y++) {
-            visual[x][y] = { base: normalize(tiles[x][y]), entity: null };
+            visual[x][y] = { base: normalize_map_value(tiles[x][y]), entity: null };
         }
     }
 
@@ -293,11 +297,6 @@ async function send_end_turn() {
 
     console.log("Sending END_TURN action:", action);
     socket.send(JSON.stringify(action));
-}
-
-
-function inBounds(pos, w, h) {
-    return pos.x >= 0 && pos.y >= 0 && pos.x < w && pos.y < h;
 }
 
 </script>
