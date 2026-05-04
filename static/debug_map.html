@@ -43,6 +43,7 @@ body {
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
+.available { background: rgba(0, 255, 255, 0.35) !important; }
 .selected { outline: 3px solid #ff00ff; }
 
 </style>
@@ -78,6 +79,7 @@ body {
 <script>
 let selectedCell = null;
 let lastPlayerState = null;
+let availableMoves = [];
 
 function select_cell(x, y, cellEl) {
     document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
@@ -218,6 +220,8 @@ function handle_game_state(state){
         showToast("Ваш ход!");
     }
 
+    availableMoves = state.turn.available_moves || [];
+
     const container = document.getElementById("map");
     container.innerHTML = "";
     container.style.gridTemplateColumns = `repeat(${width}, 32px)`;
@@ -271,6 +275,9 @@ function handle_game_state(state){
             }
 
             cell.addEventListener("click", () => select_cell(x, y, cell));
+            if (availableMoves.some(m => m.x === x && m.y === y)) {
+                cell.classList.add("available");
+            }
             if (selectedCell && selectedCell.x === x && selectedCell.y === y) {
                 cell.classList.add("selected");
             }
