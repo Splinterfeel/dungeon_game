@@ -104,7 +104,10 @@ class Game:
                     speed_spent=action_ap_cost,
                 )
             case ActionType.ATTACK:
-                attack_action = AttackType.from_dict(action.params)
+                if action.params:
+                    attack_action = AttackType.from_dict(action.params)
+                else:
+                    attack_action = AttackType()
                 action_ap_cost = attack_action.cost
                 if self.turn.current_actor.current_action_points < action_ap_cost:
                     print(
@@ -151,11 +154,8 @@ class Game:
                         print("attacked enemy")
                     return ActionResult(action=action, action_cost=action_ap_cost)
                 else:
-                    raise ValueError(
-                        "Unknown actor_type / cell_type:",
-                        actor_cell_type,
-                        action_cell_type,
-                    )
+                    print(f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}")
+                    return ActionResult(performed=False, action=action)
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell, action_cell_type)
                 return ActionResult(action=action)

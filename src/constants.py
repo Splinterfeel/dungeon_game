@@ -44,8 +44,8 @@ class ColorPallette:
 
 @dataclass
 class AttackType:
-    cost: int
-    default_multiplier: float
+    cost: int = 5
+    default_multiplier: float = 1.0
 
     def to_dict(self):
         return {
