@@ -63,3 +63,4 @@ class GameState(BaseModel):
     players: list[ActorState]
     turn: TurnState
     version: int
+    ended: bool

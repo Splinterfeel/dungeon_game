@@ -295,6 +295,7 @@ class Game:
             "players": [p.to_dict() for p in self.players],
             "turn": self.turn.to_dict(),
             "version": self.version,
+            "ended": self.ended,
         }
         if self.turn.phase == GamePhase.ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
