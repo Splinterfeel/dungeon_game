@@ -1,7 +1,7 @@
 import random
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
-from src.entities.base import CharacterStats
+from src.entities.base import CharacterStats, Inventory, Weapon
 from src.entities.chest import Chest
 from src.entities.player import Player
 from src.entities.room import Room
@@ -111,6 +111,12 @@ class Dungeon:
 
         for i in range(self.enemies_num):
             point = possible_enemy_points[i]
+            mock_enemy_inventory = Inventory(
+                weapons=[
+                    Weapon(type="melee", name="Старая сабля", damage=3, cost_ap=5),
+                    Weapon(type="ranged", name="Старый пистолет", damage=4, cost_ap=8),
+                ]
+            )
             self.enemies.append(
                 Enemy(
                     position=point,
@@ -122,6 +128,7 @@ class Dungeon:
                             self.min_enemy_ap, self.max_enemy_ap
                         ),
                     ),
+                    inventory=mock_enemy_inventory,
                 )
             )
             self.map.set(point, CELL_TYPE.ENEMY.value)

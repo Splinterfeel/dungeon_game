@@ -10,7 +10,7 @@ from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
 from src.entities.player import Player
-from src.entities.base import CharacterStats
+from src.entities.base import CharacterStats, Inventory, Weapon
 from src.action import Action
 from src.map import DungeonMap
 from src.turn import GamePhase
@@ -35,13 +35,22 @@ class Lobby:
         self.game = None  # до момента старта игры нет
 
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
+        mock_player_inventory = Inventory(
+            weapons=[
+                Weapon(type="melee", name="Кортик", damage=3, cost_ap=5),
+                Weapon(type="ranged", name="Пистолет", damage=5, cost_ap=8),
+            ]
+        )
         if str(player.id) in self.players:
             return False, "player already in lobby"
         if len(self.players) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
         self.players[str(player.id)] = Player(
-            id=player.id, team=player.team, stats=self.std_character_stats
+            id=player.id,
+            team=player.team,
+            stats=self.std_character_stats,
+            inventory=mock_player_inventory,
         )
         await self.broadcast_lobby_state()
         return True, "player connected"

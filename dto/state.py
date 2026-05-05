@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel
 
 from dto.base import PointState
@@ -23,6 +23,17 @@ class StatsState(BaseModel):
     action_points: int
 
 
+class WeaponState(BaseModel):
+    type: Literal["melee", "ranged"]
+    name: str
+    damage: int
+    cost_ap: int
+
+
+class InventoryState(BaseModel):
+    weapons: list[WeaponState]
+
+
 class ActorState(BaseModel):
     id: str
     position: PointState
@@ -30,6 +41,7 @@ class ActorState(BaseModel):
     name: str
     current_action_points: int
     current_speed_spent: int
+    inventory: InventoryState
 
 
 class TurnState(BaseModel):

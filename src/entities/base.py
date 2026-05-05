@@ -1,8 +1,12 @@
-from typing import ClassVar, Dict
+from typing import Annotated, ClassVar, Dict
 import uuid
 import names
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, model_validator
 from src.base import Point
+from typing import Literal
+
+
+UUIDStr = Annotated[uuid.UUID, PlainSerializer(lambda x: str(x), return_type=str)]
 
 
 class Entity(BaseModel):
@@ -43,10 +47,22 @@ class CharacterStats(BaseModel):
         return cls(**_dict)
 
 
+class Weapon(BaseModel):
+    type: Literal["melee", "ranged"]
+    name: str
+    damage: int
+    cost_ap: int
+
+
+class Inventory(BaseModel):
+    weapons: list[Weapon]
+
+
 class Actor(Entity):
     _registry: ClassVar[Dict[uuid.UUID, "Actor"]] = {}
-    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    id: UUIDStr = Field(default_factory=uuid.uuid4)
     stats: CharacterStats
+    inventory: Inventory
     current_action_points: int = 0
     current_speed_spent: int = 0  # сколько клеток прошел за ход
     name: str = Field(default_factory=names.get_full_name)
@@ -64,14 +80,15 @@ class Actor(Entity):
         return self.stats.health <= 0
 
     def to_dict(self):
-        return {
-            "id": str(self.id),
-            "position": self.position.to_dict() if self.position else None,
-            "stats": self.stats.to_dict(),
-            "name": self.name,
-            "current_action_points": self.current_action_points,
-            "current_speed_spent": self.current_speed_spent,
-        }
+        return self.model_dump()
+        # return {
+        #     "id": str(self.id),
+        #     "position": self.position.to_dict() if self.position else None,
+        #     "stats": self.stats.to_dict(),
+        #     "name": self.name,
+        #     "current_action_points": self.current_action_points,
+        #     "current_speed_spent": self.current_speed_spent,
+        # }
 
     def apply_damage(self, damage: int):
         self.stats.health = max(self.stats.health - damage, 0)
