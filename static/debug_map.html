@@ -72,6 +72,7 @@ body {
 <button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
 <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
 
+<div id="actors" style="margin-top: 20px;"></div>
 <div id="map"></div>
 
 <script src="/static/utils.js"></script>
@@ -222,6 +223,21 @@ function handle_game_state(state){
     }
 
     availableMoves = state.turn.available_moves || [];
+
+    const actorsContainer = document.getElementById("actors");
+    actorsContainer.innerHTML = "";
+    for (const e of dungeon.enemies) {
+        const div = document.createElement("div");
+        div.textContent = `ИИ/Враг ${e.name} — HP: ${e.stats.health} Total AP: ${e.stats.action_points}`;
+        div.style.color = "#AA3344";
+        actorsContainer.appendChild(div);
+    }
+    for (const p of state.players) {
+        const div = document.createElement("div");
+        div.textContent = `Игрок ${p.name} — HP: ${p.stats.health} Total AP: ${p.stats.action_points}`;
+        div.style.color = "#33AA44";
+        actorsContainer.appendChild(div);
+    }
 
     const container = document.getElementById("map");
     container.innerHTML = "";
