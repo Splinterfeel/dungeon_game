@@ -18,7 +18,9 @@ from src.maps import for_1_team
 
 
 class Lobby:
-    def __init__(self, lobby_dto: LobbyDTO, players_num: int, created_by_player_id: UUID):
+    def __init__(
+        self, lobby_dto: LobbyDTO, players_num: int, created_by_player_id: UUID
+    ):
         self.id = lobby_dto.id
         self.lobby = lobby_dto
         self.players_num = players_num
@@ -38,7 +40,9 @@ class Lobby:
         if len(self.players) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
-        self.players[str(player.id)] = Player(id=player.id, team=player.team, stats=self.std_character_stats)
+        self.players[str(player.id)] = Player(
+            id=player.id, team=player.team, stats=self.std_character_stats
+        )
         await self.broadcast_lobby_state()
         return True, "player connected"
 
@@ -46,8 +50,12 @@ class Lobby:
         if self.game is not None:
             return False, "Game already started"
         if len(self.players) != self.players_num:
-            detail = f"Can't start game, players: {len(self.players)} / {self.players_num}"
-            print(f"Can't start game, players: {len(self.players)} / {self.players_num}")
+            detail = (
+                f"Can't start game, players: {len(self.players)} / {self.players_num}"
+            )
+            print(
+                f"Can't start game, players: {len(self.players)} / {self.players_num}"
+            )
             return False, detail
         # генерация
         # dungeon = Dungeon(
@@ -67,15 +75,9 @@ class Lobby:
             height=copy.deepcopy(for_1_team.map_1["height"]),
             tiles=copy.deepcopy(for_1_team.map_1["tiles"]),
         )
-        dungeon = Dungeon(
-            max_chests=3,
-            enemies_num=2,
-            map=dungeon_map
-        )
+        dungeon = Dungeon(max_chests=3, enemies_num=2, map=dungeon_map)
         self.game = Game(
-            lobby=self,
-            dungeon=dungeon,
-            players=list(self.players.values())
+            lobby=self, dungeon=dungeon, players=list(self.players.values())
         )
         self.game.launch()
         return True, "Game started"
@@ -140,6 +142,8 @@ class Lobby:
         for ws in list(self.connections.values()):
             try:
                 print("sending to ws", ws)
-                await ws.send_json({"type": "state_update", "payload": state.model_dump()})
+                await ws.send_json(
+                    {"type": "state_update", "payload": state.model_dump()}
+                )
             except Exception as e:
                 print(f"Error sending to ws {ws}: {e}")

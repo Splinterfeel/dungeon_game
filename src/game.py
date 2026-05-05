@@ -1,6 +1,7 @@
 import copy
 import random
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from lobby import Lobby
 
@@ -80,23 +81,37 @@ class Game:
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
                     print(f"Can't move player {actor} to cell {action.cell}")
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail="Нельзя переместиться, слишком далеко",
+                    )
                 if not self.dungeon.map.is_free(action.cell):
                     print(f"Cell {action.cell} is not free, can't move {actor} here")
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False, action=action, detail="Клетка занята"
+                    )
                 path = self.dungeon.map.bfs_path(
                     action.cell, self.turn.current_actor.position
                 )
                 if not path:
                     print(f"Can't reach point (BFS): {action.cell}")
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail="Не получилось построить путь до точки",
+                    )
                 action_ap_cost = len(path) - 1
                 assert action_ap_cost > 0
                 if self.turn.current_actor.current_action_points < action_ap_cost:
                     print(
                         f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
                     )
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail="Недостаточно очков действия!",
+                    )
                 self.move_actor(actor, action.cell)
                 return ActionResult(
                     action=action,
@@ -113,12 +128,20 @@ class Game:
                     print(
                         f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
                     )
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail="Недостаточно очков действия",
+                    )
                 if Point.distance_chebyshev(actor.position, action.cell) > 1:
                     print(
                         f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(actor.position, action.cell)}"  # noqa
                     )  # noqa
-                    return ActionResult(performed=False, action=action)
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail="Слишком далеко для атаки",
+                    )
                 damage = int(actor.stats.damage * attack_action.default_multiplier)
                 if (
                     actor_cell_type == CELL_TYPE.ENEMY.value
@@ -131,7 +154,9 @@ class Game:
                         self.dungeon.remove_dead_player(player)
                         print("[!] player", player, "is dead")
                         self.players.remove(player)
-                        await self.lobby.broadcast_game_event(GameEvent(message=f"Игрок {player.name} погиб!"))
+                        await self.lobby.broadcast_game_event(
+                            GameEvent(message=f"Игрок {player.name} погиб!")
+                        )
                     else:
                         print("attacked player")
                     return ActionResult(action=action)
@@ -149,13 +174,19 @@ class Game:
                     )
                     if enemy.is_dead():
                         self.dungeon.remove_dead_enemy(enemy=enemy)
-                        await self.lobby.broadcast_game_event(GameEvent(message=f"Враг {enemy.name} погиб!"))
+                        await self.lobby.broadcast_game_event(
+                            GameEvent(message=f"Враг {enemy.name} погиб!")
+                        )
                     else:
                         print("attacked enemy")
                     return ActionResult(action=action, action_cost=action_ap_cost)
                 else:
-                    print(f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}")
-                    return ActionResult(performed=False, action=action)
+                    print(
+                        f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}"
+                    )
+                    return ActionResult(
+                        performed=False, action=action, detail="Нельзя атаковать клетку"
+                    )
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell, action_cell_type)
                 return ActionResult(action=action)
@@ -177,7 +208,11 @@ class Game:
         # Queues.RENDER_QUEUE.put(self.to_dict())
 
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
-        action_result = await self._perform_actor_action(actor, action)
+        action_result: ActionResult = await self._perform_actor_action(actor, action)
+        if not action_result.performed:
+            await self.lobby.broadcast_game_event(
+                GameEvent(message=action_result.detail)
+            )
         if action_result.performed:
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0

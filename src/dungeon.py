@@ -95,16 +95,18 @@ class Dungeon:
                     self.map.set(_point, CELL_TYPE.EMPTY.value)
         # here can set difficulty of dungeon - min and max enemies
 
-        chests_count = min(random.randint(1, self.max_chests), len(possible_chest_points))
+        chests_count = min(
+            random.randint(1, self.max_chests), len(possible_chest_points)
+        )
         if self.enemies_num > len(possible_enemy_points):
-            raise ValueError(f"enemies num > possible_enemy_points: {self.enemies_num} / {len(possible_enemy_points)}")
+            raise ValueError(
+                f"enemies num > possible_enemy_points: {self.enemies_num} / {len(possible_enemy_points)}"
+            )
         random.shuffle(possible_chest_points)
         random.shuffle(possible_enemy_points)
         for i in range(chests_count):
             point = possible_chest_points[i]
-            self.chests.append(
-                Chest(position=point, gold=random.randint(10, 500))
-            )
+            self.chests.append(Chest(position=point, gold=random.randint(10, 500)))
             self.map.set(point, CELL_TYPE.CHEST.value)
 
         for i in range(self.enemies_num):
@@ -116,7 +118,9 @@ class Dungeon:
                         health=random.randint(10, 20),
                         damage=random.randint(3, 5),
                         speed=2,
-                        action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
+                        action_points=random.randint(
+                            self.min_enemy_ap, self.max_enemy_ap
+                        ),
                     ),
                 )
             )

@@ -23,8 +23,7 @@ class Action(BaseModel):
     cell: Point
     params: dict | None = None
 
-
-    @field_validator('type', mode='before')
+    @field_validator("type", mode="before")
     @classmethod
     def decode_action_type(cls, value):
         # Если пришла строка (например, с фронта), ищем её в именах ActionType
@@ -41,3 +40,4 @@ class ActionResult(BaseModel):
     performed: bool = True
     action_cost: int = 0
     speed_spent: int = 0
+    detail: str = "ActionResult: no detail"

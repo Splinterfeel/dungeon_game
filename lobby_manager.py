@@ -7,7 +7,11 @@ class LobbyManager:
         self.lobbies: dict[str, Lobby] = {}
 
     def create_lobby(self, request: CreateLobbyRequest) -> Lobby:
-        lobby = Lobby(LobbyDTO(), players_num=request.players_num, created_by_player_id=request.created_by_player_id)
+        lobby = Lobby(
+            LobbyDTO(),
+            players_num=request.players_num,
+            created_by_player_id=request.created_by_player_id,
+        )
         self.lobbies[lobby.id] = lobby
         return lobby
 

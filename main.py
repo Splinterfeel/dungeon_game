@@ -3,8 +3,13 @@ from uuid import UUID
 from fastapi.middleware.cors import CORSMiddleware
 from dto.action import GameActionState
 from dto.base import (
-    ConnectLobbyRequest, CreateLobbyRequest, DetailedBoolResponse,
-    LobbyDTO, PlayerDTO, StartGameRequest, StartGameResponse
+    ConnectLobbyRequest,
+    CreateLobbyRequest,
+    DetailedBoolResponse,
+    LobbyDTO,
+    PlayerDTO,
+    StartGameRequest,
+    StartGameResponse,
 )
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
@@ -56,6 +61,7 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
         detail=detail,
     )
 
+
 # =========================
 # WebSocket — игра
 # =========================
@@ -69,10 +75,15 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
     lobby = lobby_manager.get_lobby(lobby_dto.id)
     if not lobby:
         # Сначала принимаем, чтобы иметь возможность отправить код закрытия
-        await websocket.close(code=WSCloseCodes.LOBBY_NOT_FOUND, reason="Lobby not found")
+        await websocket.close(
+            code=WSCloseCodes.LOBBY_NOT_FOUND, reason="Lobby not found"
+        )
         return
     if player_id not in lobby.players:
-        await websocket.close(code=WSCloseCodes.PLAYER_NOT_IN_LOBBY, reason="Player not connected to lobby")
+        await websocket.close(
+            code=WSCloseCodes.PLAYER_NOT_IN_LOBBY,
+            reason="Player not connected to lobby",
+        )
         return
     lobby.connect(player, websocket)
     # даже до первого сообщения игрока сразу даём ему состояние лобби и состояние игры
@@ -99,7 +110,9 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 await lobby.broadcast_lobby_state()
             else:
                 game_action_state = GameActionState.model_validate(data)
-                performed = await lobby.handle_game_action(player, game_action_state.model_dump())
+                performed = await lobby.handle_game_action(
+                    player, game_action_state.model_dump()
+                )
                 if performed:
                     await lobby.broadcast_game_state()
                     # проверить ход врагов, и если да - выполнить их ходы
@@ -119,7 +132,9 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                                     action.actor, action.model_dump(mode="json")
                                 )
                                 if not performed:
-                                    print(f"enemy action was not performed: {action.type}")
+                                    print(
+                                        f"enemy action was not performed: {action.type}"
+                                    )
                                 await lobby.broadcast_game_state()
                             await lobby.broadcast_game_state()
                     await lobby.broadcast_game_state()
