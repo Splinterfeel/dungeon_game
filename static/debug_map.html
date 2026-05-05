@@ -228,13 +228,13 @@ function handle_game_state(state){
     actorsContainer.innerHTML = "";
     for (const e of dungeon.enemies) {
         const div = document.createElement("div");
-        div.textContent = `ИИ/Враг ${e.name} — HP: ${e.stats.health} Total AP: ${e.stats.action_points}`;
+        div.textContent = `ИИ/Враг ${e.name} — HP: ${e.stats.health} Total AP: ${e.stats.action_points} Dmg: ${e.stats.damage}`;
         div.style.color = "#AA3344";
         actorsContainer.appendChild(div);
     }
     for (const p of state.players) {
         const div = document.createElement("div");
-        div.textContent = `Игрок ${p.name} — HP: ${p.stats.health} Total AP: ${p.stats.action_points}`;
+        div.textContent = `Игрок ${p.name} — HP: ${p.stats.health} Total AP: ${p.stats.action_points} Dmg: ${p.stats.damage}`;
         div.style.color = "#33AA44";
         actorsContainer.appendChild(div);
     }

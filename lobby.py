@@ -26,7 +26,7 @@ class Lobby:
         self.players_num = players_num
         self.created_by_player_id = str(created_by_player_id)
         self.std_character_stats = CharacterStats(
-            health=8, damage=3, speed=5, action_points=10
+            health=15, damage=5, speed=5, action_points=10
         )
         self.players: dict[str, Player] = {}
         self.connections: dict[str, WebSocket] = {}

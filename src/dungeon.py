@@ -115,7 +115,7 @@ class Dungeon:
                 Enemy(
                     position=point,
                     stats=CharacterStats(
-                        health=random.randint(10, 20),
+                        health=random.randint(8, 12),
                         damage=random.randint(3, 5),
                         speed=2,
                         action_points=random.randint(
