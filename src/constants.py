@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from pydantic import BaseModel
+
 
 class CELL_TYPE(Enum):
     WALL = " # "
@@ -42,20 +44,9 @@ class ColorPallette:
     MOVE_CELL_BG_COLOR = (0.2, 0.2, 0.2)
 
 
-@dataclass
-class AttackType:
+class AttackType(BaseModel):
     cost: int = 5
     default_multiplier: float = 1.0
-
-    def to_dict(self):
-        return {
-            "cost": self.cost,
-            "default_multiplier": self.default_multiplier,
-        }
-
-    @classmethod
-    def from_dict(cls, _dict: dict):
-        return cls(**_dict)
 
 
 class Attack:

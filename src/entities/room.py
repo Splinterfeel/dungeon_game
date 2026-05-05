@@ -1,14 +1,15 @@
 from typing import Self
 
+from pydantic import BaseModel
+
 from src.base import Point
 
 
-class Room:
-    def __init__(self, x: int, y: int, width: int, height: int):
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+class Room(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
 
     # A helper method to get the center point of the room, useful for connecting rooms later.
     def center(self) -> Point:
@@ -29,15 +30,3 @@ class Room:
             return False
         # If none of the non-overlapping conditions are true, they must intersect.
         return True
-
-    def to_dict(self):
-        return {
-            "x": self.x,
-            "y": self.y,
-            "width": self.width,
-            "height": self.height,
-        }
-
-    @classmethod
-    def from_dict(cls, _dict: dict):
-        return cls(**_dict)

@@ -1,8 +1,9 @@
 from enum import Enum, auto
 import math
-from dataclasses import dataclass
 import queue
 from typing import Self
+
+from pydantic import BaseModel
 
 
 class Queues:
@@ -18,21 +19,20 @@ class PointOffset(Enum):
     RIGHT = auto()
 
 
-@dataclass
-class Point:
+class Point(BaseModel):
     x: int
     y: int
 
     def on(self, offset: PointOffset):
         match offset:
             case PointOffset.TOP:
-                return Point(self.x, self.y - 1)
+                return Point(x=self.x, y=self.y - 1)
             case PointOffset.BOTTOM:
-                return Point(self.x, self.y + 1)
+                return Point(x=self.x, y=self.y + 1)
             case PointOffset.LEFT:
-                return Point(self.x - 1, self.y)
+                return Point(x=self.x - 1, y=self.y)
             case PointOffset.RIGHT:
-                return Point(self.x + 1, self.y)
+                return Point(x=self.x + 1, y=self.y)
 
     def __eq__(self, value):
         if not isinstance(value, Point):
@@ -47,16 +47,6 @@ class Point:
         squared_delta_y = delta_y**2
         sum_of_squares = squared_delta_x + squared_delta_y
         return math.sqrt(sum_of_squares)
-
-    def to_dict(self):
-        return {
-            "x": self.x,
-            "y": self.y,
-        }
-
-    @classmethod
-    def from_dict(cls, _dict: dict):
-        return cls(**_dict)
 
     @staticmethod
     def distance_manhattan(point_1: Self, point_2: Self) -> int:

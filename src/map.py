@@ -1,31 +1,26 @@
 from collections import deque
+from typing import List
+
+from pydantic import BaseModel, Field, model_validator
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
 from src.entities.base import Actor
 
 
-class DungeonMap:
-    def __init__(self, width: int, height: int, tiles: list[str] = None):
-        self.width = width
-        self.height = height
-        if tiles:
-            self.tiles = tiles
-        else:
+class DungeonMap(BaseModel):
+    width: int
+    height: int
+    tiles: List[List[str]] = Field(default=None)
+
+    @model_validator(mode="after")
+    def initialize_tiles(self) -> "DungeonMap":
+        # Если tiles не переданы, создаем пустую карту из стен
+        if self.tiles is None:
             self.tiles = [
                 [CELL_TYPE.WALL.value for _ in range(self.height)]
                 for _ in range(self.width)
             ]
-
-    def to_dict(self):
-        return {
-            "width": self.width,
-            "height": self.height,
-            "tiles": self.tiles,
-        }
-
-    @classmethod
-    def from_dict(cls, _dict: dict):
-        return cls(**_dict)
+        return self
 
     def get(self, point: Point):
         return self.tiles[point.x][point.y]

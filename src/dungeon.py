@@ -1,4 +1,7 @@
 import random
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, model_validator
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
 from src.entities.base import CharacterStats, Inventory, Weapon
@@ -9,58 +12,53 @@ from src.entities.enemy import Enemy
 from src.map import DungeonMap
 
 
-class Dungeon:
-    def __init__(
-        self,
-        max_chests: int,
-        enemies_num: int,
-        width: int = None,
-        height: int = None,
-        min_rooms: int = None,
-        max_rooms: int = None,
-        min_room_size: int = None,
-        max_room_size: int = None,
-        map: DungeonMap = None,
-        start_room: Room = None,
-        rooms: list[Room] = None,
-        chests: list[Chest] = None,
-        enemies: list[Enemy] = None,
-        exit: Point = None,
-        min_enemy_ap: int = 8,
-        max_enemy_ap: int = 10,
-    ):
-        self.width = width
-        self.height = height
-        self.min_rooms = min_rooms
-        self.max_rooms = max_rooms
-        self.min_room_size = min_room_size
-        self.max_room_size = max_room_size
-        self.max_chests = max_chests
-        self.enemies_num = enemies_num
-        self.min_enemy_ap = min_enemy_ap
-        self.max_enemy_ap = max_enemy_ap
-        self.map = map
-        self.rooms = rooms
-        self.start_room = start_room
-        self.chests = chests
-        self.enemies = enemies
-        self.exit = exit
+class Dungeon(BaseModel):
+    max_chests: int
+    enemies_num: int
+    width: Optional[int] = None
+    height: Optional[int] = None
+    min_rooms: Optional[int] = None
+    max_rooms: Optional[int] = None
+    min_room_size: Optional[int] = None
+    max_room_size: Optional[int] = None
+    min_enemy_ap: int = 8
+    max_enemy_ap: int = 10
 
+    # Состояние подземелья
+    map: Optional[DungeonMap] = None
+    start_room: Optional[Room] = None
+    rooms: List[Room] = Field(default_factory=list)
+    chests: List[Chest] = Field(default_factory=list)
+    enemies: List[Enemy] = Field(default_factory=list)
+    exit: Optional[Point] = None
+
+    # Списки стартовых точек
+    start_points_team_1: List[Point] = Field(default_factory=list)
+    start_points_team_2: List[Point] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def initialize_dungeon(self) -> "Dungeon":
+        # Если карта уже передана (загрузка), инициализируем из неё
         if self.map is not None:
-            pass
-            self._init_from_map()
+            # Если списки объектов пусты, значит мы загрузили "сырую" карту и надо их вытащить
+            # Если же они полные, значит мы просто восстановили объект из БД/JSON
+            if not self.enemies and not self.chests:
+                self._init_from_map()
         else:
-            for attr_name in [
+            # Процедурная генерация
+            required_gen_fields = [
                 "width",
                 "height",
                 "min_rooms",
                 "max_rooms",
                 "min_room_size",
                 "max_room_size",
-            ]:
-                if getattr(self, attr_name) is None:
-                    raise ValueError(f"Can't procedural generate without {attr_name}")
+            ]
+            for attr in required_gen_fields:
+                if getattr(self, attr) is None:
+                    raise ValueError(f"Can't procedural generate without {attr}")
             self._procedural_generate()
+        return self
 
     def _init_from_map(self):
         self.enemies = []
@@ -71,7 +69,7 @@ class Dungeon:
         self.start_points_team_2: list[Point] = []
         for x in range(self.map.width):
             for y in range(self.map.height):
-                _point = Point(x, y)
+                _point = Point(x=x, y=y)
                 if self.map.get(_point) == CELL_TYPE.START_TEAM_1.value:
                     self.start_points_team_1.append(_point)
                 elif self.map.get(_point) == CELL_TYPE.START_TEAM_2.value:
@@ -86,7 +84,7 @@ class Dungeon:
         possible_enemy_points: list[Point] = []
         for x in range(self.map.width):
             for y in range(self.map.height):
-                _point = Point(x, y)
+                _point = Point(x=x, y=y)
                 if self.map.get(_point) == CELL_TYPE.CHEST.value:
                     possible_chest_points.append(_point)
                     self.map.set(_point, CELL_TYPE.EMPTY.value)
@@ -155,45 +153,6 @@ class Dungeon:
 
         if self.exit is None:
             self._generate_exit()
-
-    def to_dict(self):
-        return {
-            "width": self.width,
-            "height": self.height,
-            "min_rooms": self.min_rooms,
-            "max_rooms": self.max_rooms,
-            "min_room_size": self.min_room_size,
-            "max_room_size": self.max_room_size,
-            "max_chests": self.max_chests,
-            "enemies_num": self.enemies_num,
-            "start_room": self.start_room.to_dict() if self.start_room else None,
-            "rooms": [room.to_dict() for room in self.rooms],
-            "chests": [c.to_dict() for c in self.chests],
-            "enemies": [e.to_dict() for e in self.enemies],
-            "map": self.map.to_dict(),
-            "exit": self.exit.to_dict(),
-        }
-
-    @classmethod
-    def from_dict(cls, _dict: dict):
-        return cls(
-            **{
-                "width": _dict["width"],
-                "height": _dict["height"],
-                "min_rooms": _dict["min_rooms"],
-                "max_rooms": _dict["max_rooms"],
-                "min_room_size": _dict["min_room_size"],
-                "max_room_size": _dict["max_room_size"],
-                "max_chests": _dict["max_chests"],
-                "enemies_num": _dict["enemies_num"],
-                "start_room": Room.from_dict(_dict["start_room"]),
-                "rooms": [Room.from_dict(r) for r in _dict["rooms"]],
-                "chests": [Chest.from_dict(c) for c in _dict["chests"]],
-                "enemies": [Enemy.from_dict(e) for e in _dict["enemies"]],
-                "map": DungeonMap.from_dict(_dict["map"]),
-                "exit": Point.from_dict(_dict["exit"]),
-            }
-        )
 
     def remove_dead_enemy(self, enemy: Enemy):
         self.enemies.remove(enemy)

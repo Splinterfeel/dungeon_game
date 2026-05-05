@@ -69,7 +69,7 @@ class SimpleEnemyAI(AI):
                 actor=self.actor,
                 type=ActionType.ATTACK,
                 cell=nearest_player_for_attack.position,
-                params=Attack.SIMPLE.to_dict(),
+                params=Attack.SIMPLE.model_dump(),
             )
         print(f"         ENEMY {self.actor.name} - ENDING TURN")
         return self.end_turn()

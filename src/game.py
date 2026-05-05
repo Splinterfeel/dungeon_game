@@ -120,7 +120,7 @@ class Game:
                 )
             case ActionType.ATTACK:
                 if action.params:
-                    attack_action = AttackType.from_dict(action.params)
+                    attack_action = AttackType(**action.params)
                 else:
                     attack_action = AttackType()
                 action_ap_cost = attack_action.cost
@@ -205,7 +205,6 @@ class Game:
             raise ValueError("Can't dump not server instance of Game")
         # положить состояние в очередь
         return self.to_dict()
-        # Queues.RENDER_QUEUE.put(self.to_dict())
 
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         action_result: ActionResult = await self._perform_actor_action(actor, action)
@@ -291,30 +290,12 @@ class Game:
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
         dump = {
-            "dungeon": self.dungeon.to_dict(),
-            "players": [p.to_dict() for p in self.players],
-            "turn": self.turn.to_dict(),
+            "dungeon": self.dungeon.model_dump(),
+            "players": [p.model_dump() for p in self.players],
+            "turn": self.turn.model_dump(),
             "version": self.version,
             "ended": self.ended,
         }
         if self.turn.phase == GamePhase.ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
         return dump
-
-    @classmethod
-    def from_dict(cls, _dict: dict) -> "Game":
-        """Создает Game из сериализованных данных"""
-        dungeon = Dungeon.from_dict(_dict["dungeon"])
-        players = [Player.from_dict(p) for p in _dict.get("players", [])]
-        if "turn" in _dict:
-            turn = Turn.from_dict(_dict["turn"])
-        else:
-            turn = None
-        game = cls(
-            dungeon=dungeon,
-            players=players,
-            turn=turn,
-            is_server=_dict.get("is_server", False),
-            version=_dict.get("version"),
-        )
-        return game
