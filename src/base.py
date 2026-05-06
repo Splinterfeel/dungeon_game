@@ -1,15 +1,8 @@
 from enum import Enum, auto
 import math
-import queue
 from typing import Self
 
 from pydantic import BaseModel
-
-
-class Queues:
-    COMMAND_QUEUE = queue.Queue()
-    RENDER_QUEUE = queue.Queue()
-    SOUND_QUEUE = queue.Queue()
 
 
 class PointOffset(Enum):
