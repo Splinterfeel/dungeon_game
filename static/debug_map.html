@@ -81,6 +81,7 @@ body {
 <script>
 let selectedCell = null;
 let lastPlayerState = null;
+let playerWeapon = null;
 let availableMoves = [];
 
 function select_cell(x, y, cellEl) {
@@ -213,6 +214,8 @@ function handle_ws_msg(msg) {
 function handle_game_state(state){
     const playerId = document.getElementById("player_id_input").value;
     lastPlayerState = state.players.find(p => p.id === playerId);
+    // TODO пока просто ставим оружием игрока первое имеющееся
+    playerWeapon = lastPlayerState.inventory.weapons[0];
     const dungeon = state.dungeon;
     const tiles = dungeon.map.tiles;
     const width = dungeon.map.width;
@@ -372,6 +375,10 @@ async function send_attack() {
         showToast("Клетка ещё не выбрана");
         return;
     }
+    if (!playerWeapon) {
+        alert("Оружие не выбрано!");
+        return;
+    }
     const action = {
         id: crypto.randomUUID(),
         actor: lastPlayerState,
@@ -380,7 +387,9 @@ async function send_attack() {
             x: selectedCell.x,
             y: selectedCell.y
         },
-        params: null
+        params: {
+            weapon_id: playerWeapon.id
+        }
     };
     console.log("Sending ATTACK action:", action);
     socket.send(JSON.stringify(action));

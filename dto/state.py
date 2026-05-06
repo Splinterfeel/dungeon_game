@@ -24,6 +24,7 @@ class StatsState(BaseModel):
 
 
 class WeaponState(BaseModel):
+    id: str
     type: Literal["melee", "ranged"]
     name: str
     damage: int

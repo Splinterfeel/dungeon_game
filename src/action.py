@@ -1,3 +1,4 @@
+from typing import Optional, Union
 import uuid
 from pydantic import BaseModel, Field, field_validator
 
@@ -16,12 +17,16 @@ class ActionType(Enum):
     EXIT = auto()
 
 
+class AttackActionParams(BaseModel):
+    weapon_id: uuid.UUID
+
+
 class Action(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     actor: Actor
     type: ActionType
     cell: Point
-    params: dict | None = None
+    params: Optional[Union[AttackActionParams]] = None
 
     @field_validator("type", mode="before")
     @classmethod

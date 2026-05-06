@@ -6,12 +6,12 @@ if TYPE_CHECKING:
     from lobby import Lobby
 
 from dto.event import GameEvent
-from src.action import Action, ActionResult, ActionType
+from src.action import Action, ActionResult, ActionType, AttackActionParams
 from src.entities.base import Actor
 from src.base import Point
 from src.entities.player import Player
 from src.dungeon import Dungeon
-from src.constants import CELL_TYPE, AttackType
+from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
 
 
@@ -119,11 +119,25 @@ class Game:
                     speed_spent=action_ap_cost,
                 )
             case ActionType.ATTACK:
-                if action.params:
-                    attack_action = AttackType(**action.params)
-                else:
-                    attack_action = AttackType()
-                action_ap_cost = attack_action.cost
+                # TODO доставать action_ap_cost для конкретного оружия
+                attack_params: AttackActionParams = action.params
+                try:
+                    weapon = next(
+                        w
+                        for w in actor.inventory.weapons
+                        if w.id == attack_params.weapon_id
+                    )
+                except StopIteration:
+                    return ActionResult(
+                        performed=False,
+                        action=action,
+                        detail=f"У игрока в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
+                    )
+                print(
+                    "ATTACKING WITH WEAPON", weapon.name, weapon.cost_ap, weapon.damage
+                )
+                action_ap_cost = weapon.cost_ap
+                damage = weapon.damage
                 if self.turn.current_actor.current_action_points < action_ap_cost:
                     print(
                         f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
@@ -142,7 +156,6 @@ class Game:
                         action=action,
                         detail="Слишком далеко для атаки",
                     )
-                damage = int(actor.stats.damage * attack_action.default_multiplier)
                 if (
                     actor_cell_type == CELL_TYPE.ENEMY.value
                     and action_cell_type == CELL_TYPE.PLAYER.value

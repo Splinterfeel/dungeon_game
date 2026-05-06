@@ -1,9 +1,8 @@
 import time
 
-from src.action import Action, ActionType
+from src.action import Action, ActionType, AttackActionParams
 from src.ai.base import AI
 from src.base import Point
-from src.constants import Attack
 
 
 class SimpleEnemyAI(AI):
@@ -65,11 +64,16 @@ class SimpleEnemyAI(AI):
             print(f"         ENEMY {self.actor.name} - ATTACKING")
             # пытаемся атаковать (пока не проверяем action points)
             self.attacked_on_turn = True
+            # берём melee-оружие
+            melee_weapon = next(
+                w for w in self.actor.inventory.weapons if w.type == "melee"
+            )
+            attack_params = AttackActionParams(weapon_id=melee_weapon.id)
             return Action(
                 actor=self.actor,
                 type=ActionType.ATTACK,
                 cell=nearest_player_for_attack.position,
-                params=Attack.SIMPLE.model_dump(),
+                params=attack_params,
             )
         print(f"         ENEMY {self.actor.name} - ENDING TURN")
         return self.end_turn()

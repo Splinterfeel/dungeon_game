@@ -27,6 +27,7 @@ class CharacterStats(BaseModel):
 
 
 class Weapon(BaseModel):
+    id: UUIDStr = Field(default_factory=uuid.uuid4)
     type: Literal["melee", "ranged"]
     name: str
     damage: int
