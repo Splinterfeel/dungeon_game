@@ -11,6 +11,7 @@ from dto.base import (
     StartGameRequest,
     StartGameResponse,
 )
+from dto.event import GameEvent
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
@@ -96,7 +97,10 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
         print("broadcasting game state")
         # Если игра уже идет (например, переподключение), шлем состояние игры
         await lobby.broadcast_game_state()
-
+    if lobby.game.ended:
+        await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
+        await websocket.close(code=WSCloseCodes.GAME_ENDED, reason="Game ended")
+        return
     print("entering cycle")
     try:
         while True:
