@@ -238,6 +238,12 @@ function handle_game_state(state){
         div.style.color = "#33AA44";
         actorsContainer.appendChild(div);
     }
+    if (state.turn.current_actor) {
+        const div = document.createElement("div");
+        div.textContent = `Текущий актор ${state.turn.current_actor.name} — HP: ${state.turn.current_actor.stats.health} AP: ${state.turn.current_actor.current_action_points} / ${state.turn.current_actor.stats.action_points} Dmg: ${state.turn.current_actor.stats.damage}`;
+        div.style.color = "#99AAEE";
+        actorsContainer.appendChild(div);
+    }
 
     const container = document.getElementById("map");
     container.innerHTML = "";
