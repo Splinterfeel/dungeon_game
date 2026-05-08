@@ -111,8 +111,22 @@ class Dungeon(BaseModel):
             point = possible_enemy_points[i]
             mock_enemy_inventory = Inventory(
                 weapons=[
-                    Weapon(type="melee", name="Старая сабля", damage=3, cost_ap=5),
-                    Weapon(type="ranged", name="Старый пистолет", damage=4, cost_ap=8),
+                    Weapon(
+                        type="melee",
+                        name="Старая сабля",
+                        damage=3,
+                        cost_ap=5,
+                        range=1,
+                        accuracy=100,
+                    ),
+                    Weapon(
+                        type="ranged",
+                        name="Старый пистолет",
+                        damage=4,
+                        cost_ap=8,
+                        range=4,
+                        accuracy=50,
+                    ),
                 ]
             )
             self.enemies.append(

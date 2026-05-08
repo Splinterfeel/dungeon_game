@@ -37,8 +37,22 @@ class Lobby:
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
         mock_player_inventory = Inventory(
             weapons=[
-                Weapon(type="melee", name="Кортик", damage=3, cost_ap=5),
-                Weapon(type="ranged", name="Пистолет", damage=5, cost_ap=8),
+                Weapon(
+                    type="melee",
+                    name="Кортик",
+                    damage=3,
+                    cost_ap=5,
+                    range=1,
+                    accuracy=100,
+                ),
+                Weapon(
+                    type="ranged",
+                    name="Пистолет",
+                    damage=5,
+                    cost_ap=8,
+                    range=4,
+                    accuracy=80,
+                ),
             ]
         )
         if str(player.id) in self.players:
@@ -150,7 +164,6 @@ class Lobby:
             print(e)
         for ws in list(self.connections.values()):
             try:
-                print("sending to ws", ws)
                 await ws.send_json(
                     {"type": "state_update", "payload": state.model_dump()}
                 )

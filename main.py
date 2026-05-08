@@ -90,18 +90,15 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
     # даже до первого сообщения игрока сразу даём ему состояние лобби и состояние игры
     print("BROADCASTING ON CONNECT")
     if not lobby.game:
-        print("broadcasting lobby state")
         # Если игры нет, уведомляем всех, что зашел новый игрок + обновляем экран ожидания
         await lobby.broadcast_lobby_state()
     else:
-        print("broadcasting game state")
         # Если игра уже идет (например, переподключение), шлем состояние игры
         await lobby.broadcast_game_state()
     if lobby.game.ended:
         await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
         await websocket.close(code=WSCloseCodes.GAME_ENDED, reason="Game ended")
         return
-    print("entering cycle")
     try:
         while True:
             data = await websocket.receive_json()

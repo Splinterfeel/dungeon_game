@@ -138,6 +138,17 @@ class Game:
                 )
                 action_ap_cost = weapon.cost_ap
                 damage = weapon.damage
+                current_dist = Point.distance_chebyshev(actor.position, action.cell)
+                # проверка линии видимости
+                if weapon.range > 1:
+                    if not self.dungeon.map.has_line_of_sight(
+                        actor.position, action.cell
+                    ):
+                        return ActionResult(
+                            performed=False,
+                            action=action,
+                            detail="Клетка атаки вне прямой видимости (есть преграды)",
+                        )
                 if self.turn.current_actor.current_action_points < action_ap_cost:
                     print(
                         f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
@@ -147,21 +158,21 @@ class Game:
                         action=action,
                         detail="Недостаточно очков действия",
                     )
-                if Point.distance_chebyshev(actor.position, action.cell) > 1:
+                if current_dist > weapon.range:
                     print(
-                        f"Attempt to attack {action.cell}, but it's too far: {Point.distance_chebyshev(actor.position, action.cell)}"  # noqa
+                        f"Attempt to attack {action.cell}, but it's too far: {current_dist}"  # noqa
                     )  # noqa
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail="Слишком далеко для атаки",
+                        detail=f"Слишком далеко для атаки ({current_dist} / {weapon.range})",
                     )
                 if (
                     actor_cell_type == CELL_TYPE.ENEMY.value
                     and action_cell_type == CELL_TYPE.PLAYER.value
                 ):
-                    print("Enemy атакует Player")
                     player = next(x for x in self.players if x.position == action.cell)
+                    print(f"ИИ/Враг {actor.name} атакует игрока {player.name}")
                     player.apply_damage(damage)
                     if player.is_dead():
                         self.dungeon.remove_dead_player(player)
@@ -177,21 +188,16 @@ class Game:
                     actor_cell_type == CELL_TYPE.PLAYER.value
                     and action_cell_type == CELL_TYPE.ENEMY.value
                 ):
-                    print("Enemy атакует Player")
                     enemy = next(
                         x for x in self.dungeon.enemies if x.position == action.cell
                     )
+                    print(f"Игрок {actor.name} атакует ИИ/Врага {enemy.name}")
                     enemy.apply_damage(damage)
-                    print(
-                        f"     Attacked enemy at {action.cell}, DMG {damage}, enemy health: {enemy.stats.health}"
-                    )
                     if enemy.is_dead():
                         self.dungeon.remove_dead_enemy(enemy=enemy)
                         await self.lobby.broadcast_game_event(
                             GameEvent(message=f"Враг {enemy.name} погиб!")
                         )
-                    else:
-                        print("attacked enemy")
                     return ActionResult(action=action, action_cost=action_ap_cost)
                 else:
                     print(

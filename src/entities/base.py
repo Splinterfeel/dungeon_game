@@ -32,6 +32,8 @@ class Weapon(BaseModel):
     name: str
     damage: int
     cost_ap: int
+    range: int
+    accuracy: int
 
 
 class Inventory(BaseModel):

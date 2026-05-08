@@ -70,6 +70,8 @@ body {
 <button onclick="connect_ws()" style="background: #94941b; color: white; font-weight: bold;">Connect WS</button>
 <button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
 <button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
+<label for="weapon_select">Оружие:</label>
+<select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
 <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
 
 <div id="actors" style="margin-top: 20px;"></div>
@@ -81,7 +83,6 @@ body {
 <script>
 let selectedCell = null;
 let lastPlayerState = null;
-let playerWeapon = null;
 let availableMoves = [];
 
 function select_cell(x, y, cellEl) {
@@ -211,11 +212,27 @@ function handle_ws_msg(msg) {
     }
 }
 
+function update_weapon_selector(weapons) {
+    const select = document.getElementById("weapon_select");
+    const currentSelectedId = select.value;
+    select.innerHTML = "";
+    weapons.forEach(w => {
+        const option = document.createElement("option");
+        option.value = w.id;
+        option.textContent = `${w.name} (Dmg: ${w.damage}, Rng: ${w.range})`;
+        if (w.id === currentSelectedId) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
 function handle_game_state(state){
     const playerId = document.getElementById("player_id_input").value;
     lastPlayerState = state.players.find(p => p.id === playerId);
-    // TODO пока просто ставим оружием игрока первое имеющееся
-    playerWeapon = lastPlayerState.inventory.weapons[0];
+    if (lastPlayerState) {
+        update_weapon_selector(lastPlayerState.inventory.weapons);
+    }
     const dungeon = state.dungeon;
     const tiles = dungeon.map.tiles;
     const width = dungeon.map.width;
@@ -375,8 +392,10 @@ async function send_attack() {
         showToast("Клетка ещё не выбрана");
         return;
     }
-    if (!playerWeapon) {
-        alert("Оружие не выбрано!");
+    const weaponSelect = document.getElementById("weapon_select");
+    const selectedWeaponId = weaponSelect.value;
+    if (!selectedWeaponId) {
+        alert("У вас нет оружия для атаки!");
         return;
     }
     const action = {
@@ -388,7 +407,7 @@ async function send_attack() {
             y: selectedCell.y
         },
         params: {
-            weapon_id: playerWeapon.id
+            weapon_id: selectedWeaponId
         }
     };
     console.log("Sending ATTACK action:", action);

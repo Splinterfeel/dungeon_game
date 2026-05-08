@@ -53,3 +53,36 @@ class Point(BaseModel):
 
     def __hash__(self):
         return hash((self.x, self.y))
+
+    @staticmethod
+    def get_line_points(p1: Self, p2: Self):
+        """Алгоритм Брезенхема для получения списка точек линии"""
+        x1, y1 = p1.x, p1.y
+        x2, y2 = p2.x, p2.y
+        points = []
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        x, y = x1, y1
+        sx = -1 if x1 > x2 else 1
+        sy = -1 if y1 > y2 else 1
+
+        if dx > dy:
+            err = dx / 2.0
+            while x != x2:
+                points.append(Point(x=x, y=y))
+                err -= dy
+                if err < 0:
+                    y += sy
+                    err += dx
+                x += sx
+        else:
+            err = dy / 2.0
+            while y != y2:
+                points.append(Point(x=x, y=y))
+                err -= dx
+                if err < 0:
+                    x += sx
+                    err += dy
+                y += sy
+        points.append(Point(x=x, y=y))
+        return points

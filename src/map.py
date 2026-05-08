@@ -92,3 +92,12 @@ class DungeonMap(BaseModel):
                     visited.add(next_point)
                     queue.append((next_point, path + [next_point]))
         return None  # путь не найден
+
+    def has_line_of_sight(self, start: Point, end: Point) -> bool:
+        """Простая проверка: есть ли стены между двумя точками"""
+        points = Point.get_line_points(start, end)
+        # Убираем первую точку (самого игрока) и последнюю (цель)
+        for p in points[1:-1]:
+            if not self.is_free(p):
+                return False
+        return True
