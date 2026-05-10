@@ -13,7 +13,6 @@ from src.entities.player import Player
 from src.entities.base import CharacterStats, Inventory, Weapon
 from src.action import Action
 from src.map import DungeonMap
-from src.turn import GamePhase
 from src.maps import for_1_team
 
 
@@ -25,9 +24,6 @@ class Lobby:
         self.lobby = lobby_dto
         self.players_num = players_num
         self.created_by_player_id = str(created_by_player_id)
-        self.std_character_stats = CharacterStats(
-            health=15, damage=5, speed=5, action_points=10
-        )
         self.players: dict[str, Player] = {}
         self.connections: dict[str, WebSocket] = {}
 
@@ -35,26 +31,6 @@ class Lobby:
         self.game = None  # до момента старта игры нет
 
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
-        mock_player_inventory = Inventory(
-            weapons=[
-                Weapon(
-                    type="melee",
-                    name="Кортик",
-                    damage=3,
-                    cost_ap=5,
-                    range=1,
-                    accuracy=100,
-                ),
-                Weapon(
-                    type="ranged",
-                    name="Пистолет",
-                    damage=5,
-                    cost_ap=8,
-                    range=4,
-                    accuracy=80,
-                ),
-            ]
-        )
         if str(player.id) in self.players:
             return False, "player already in lobby"
         if len(self.players) == self.players_num:
@@ -63,8 +39,29 @@ class Lobby:
         self.players[str(player.id)] = Player(
             id=player.id,
             team=player.team,
-            stats=self.std_character_stats,
-            inventory=mock_player_inventory,
+            stats=CharacterStats(
+                health=15, damage=5, speed=5, action_points=10
+            ),
+            inventory=Inventory(
+                weapons=[
+                    Weapon(
+                        type="melee",
+                        name="Кортик",
+                        damage=3,
+                        cost_ap=5,
+                        range=1,
+                        accuracy=100,
+                    ),
+                    Weapon(
+                        type="ranged",
+                        name="Пистолет",
+                        damage=5,
+                        cost_ap=8,
+                        range=4,
+                        accuracy=80,
+                    ),
+                ]
+            ),
         )
         await self.broadcast_lobby_state()
         return True, "player connected"
@@ -146,10 +143,12 @@ class Lobby:
 
     async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
-            if self.game.turn.phase == GamePhase.PLAYER_PHASE:
-                actor = self.players[str(_actor.id)]
-            else:
-                actor = next(e for e in self.game.dungeon.enemies if e.id == _actor.id)
+            actors = {
+                str(e.id): e
+                for e in self.game.dungeon.enemies
+            }
+            actors.update(self.players)
+            actor = actors[str(_actor.id)]
             action = Action(**payload)
             if isinstance(actor, Enemy):
                 pass

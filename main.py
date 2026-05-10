@@ -138,6 +138,8 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                                     )
                                 await lobby.broadcast_game_state()
                             await lobby.broadcast_game_state()
+                        # конец хода ИИ врагов, ход окружения игры
+                        print("=== ХОД ОКРУЖЕНИЯ ===")
                     await lobby.broadcast_game_state()
                 if lobby.game.ended:
                     break

@@ -61,9 +61,11 @@ class Game:
         # возвращает action_performed (bool), AP cost (int)
         "True если действие выполнено успешно, иначе False"
         if self.turn.current_actor != actor:
-            raise ValueError(
-                f"Attempt to perform action of player {actor} when turn of player {self.turn.current_actor}"
-            )  # noqa
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"Attempt to perform action of player {actor} when turn of player {self.turn.current_actor}",
+            )
         # Enemy и Player приводятся к Actor
         action_ap_cost = 0
         actor_cell_type = self.dungeon.map.get(self.turn.current_actor.position)
@@ -261,7 +263,6 @@ class Game:
         if not next_actor:
             if self.turn.has_next_phase():
                 self.turn.switch_phase()
-                print()
             else:
                 self.turn.next()
             self.pass_turn_to_next_actor()
