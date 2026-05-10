@@ -36,7 +36,8 @@ body {
 .floor { background: #444; }
 
 /* entities */
-.player { background: #4caf50; }
+.player { background: #7ea97f; }
+.player_current { background: #2c902f; font-weight: bold;}
 .enemy { background: #f44336; }
 .chest { background: gold; color: black; }
 .exit { background: #2196f3; }
@@ -255,6 +256,8 @@ function handle_game_state(state){
     lastGameState = state;
     const playerId = document.getElementById("player_id_input").value;
     lastPlayerState = state.players.find(p => p.id === playerId);
+
+    document.title = lastPlayerState.name;
     if (lastPlayerState) {
         update_weapon_selector(lastPlayerState.inventory.weapons);
     }
@@ -280,7 +283,7 @@ function handle_game_state(state){
     for (const p of state.players) {
         const div = document.createElement("div");
         div.textContent = `Игрок ${p.name} — HP: ${p.stats.health} Total AP: ${p.stats.action_points} Dmg: ${p.stats.damage}`;
-        div.style.color = "#33AA44";
+        div.style.color = "#338833";
         actorsContainer.appendChild(div);
     }
     if (state.turn.current_actor) {
@@ -307,7 +310,11 @@ function handle_game_state(state){
 
     // игроки
     for (const p of state.players) {
-        visual[p.position.x][p.position.y].entity = "P";
+        let _val = "P";
+        if (p.id == lastPlayerState.id){
+            _val = "P!";
+        }
+        visual[p.position.x][p.position.y].entity = _val;
     }
 
     // враги
@@ -334,7 +341,7 @@ function handle_game_state(state){
 
             // entity overlay
             if (cellData.entity) {
-                const entityMap = { "P": "player", "E": "enemy", "C": "chest", "X": "exit" };
+                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy", "C": "chest", "X": "exit" };
                 const className = entityMap[cellData.entity];
                 if (className) {
                     cell.classList.add(className);
