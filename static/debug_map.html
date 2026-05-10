@@ -76,6 +76,7 @@ body {
 
 <div id="actors" style="margin-top: 20px;"></div>
 <div id="map"></div>
+<div id="cell_info" style="margin-top: 10px; min-height: 24px; color: #ccc;"></div>
 
 <script src="/static/utils.js"></script>
 
@@ -84,11 +85,34 @@ body {
 let selectedCell = null;
 let lastPlayerState = null;
 let availableMoves = [];
+let lastGameState = null;
 
 function select_cell(x, y, cellEl) {
     document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
     cellEl.classList.add("selected");
     selectedCell = { x, y };
+
+    const info = document.getElementById("cell_info");
+    if (!lastGameState) { info.textContent = ""; return; }
+
+    const players = lastGameState.players || [];
+    const enemies = lastGameState.dungeon.enemies || [];
+    const chests = lastGameState.dungeon.chests || [];
+    const exit = lastGameState.dungeon.exit;
+    let _pre_content = `[${x} ${y}]`;
+    const player = players.find(p => p.position.x === x && p.position.y === y);
+    if (player) { info.textContent = `${_pre_content} Игрок: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
+
+    const enemy = enemies.find(e => e.position.x === x && e.position.y === y);
+    if (enemy) { info.textContent = `${_pre_content} Враг: ${enemy.name} HP ${enemy.stats.health} Speed ${enemy.stats.speed}`; return; }
+
+    const chest = chests.find(c => c.position.x === x && c.position.y === y);
+    if (chest) { info.textContent = `${_pre_content} Сундук`; return; }
+
+    if (exit && exit.x === x && exit.y === y) { info.textContent = `${_pre_content} Выход`; return; }
+
+    const tiles = lastGameState.dungeon.map.tiles;
+    info.textContent = tiles[x][y] === " # " ? `${_pre_content} Стена` : `${_pre_content} Пол`;
 }
 
 let socket;
@@ -228,6 +252,7 @@ function update_weapon_selector(weapons) {
 }
 
 function handle_game_state(state){
+    lastGameState = state;
     const playerId = document.getElementById("player_id_input").value;
     lastPlayerState = state.players.find(p => p.id === playerId);
     if (lastPlayerState) {
