@@ -47,6 +47,10 @@ class ActorState(BaseModel):
     inventory: InventoryState
 
 
+class PlayerState(ActorState):
+    team: int
+
+
 class TurnState(BaseModel):
     number: int
     phase: int
@@ -75,7 +79,7 @@ class DungeonState(BaseModel):
 
 class GameState(BaseModel):
     dungeon: DungeonState
-    players: list[ActorState]
+    players: list[PlayerState]
     turn: TurnState
     version: int
     ended: bool

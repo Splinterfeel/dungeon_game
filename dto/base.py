@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class PlayerDTO(BaseModel):
     id: UUID
-    team: int = 1
+    team: int
 
 
 class DetailedBoolResponse(BaseModel):

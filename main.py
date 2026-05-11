@@ -7,7 +7,6 @@ from dto.base import (
     CreateLobbyRequest,
     DetailedBoolResponse,
     LobbyDTO,
-    PlayerDTO,
     StartGameRequest,
     StartGameResponse,
 )
@@ -72,7 +71,6 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
 async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str):
     await websocket.accept()
     lobby_dto = LobbyDTO(id=lobby_id)
-    player = PlayerDTO(id=player_id)
     lobby = lobby_manager.get_lobby(lobby_dto.id)
     if not lobby:
         # Сначала принимаем, чтобы иметь возможность отправить код закрытия
@@ -86,6 +84,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             reason="Player not connected to lobby",
         )
         return
+    player = lobby.players[player_id]
     lobby.connect(player, websocket)
     # даже до первого сообщения игрока сразу даём ему состояние лобби и состояние игры
     print("BROADCASTING ON CONNECT")
@@ -117,9 +116,9 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 if performed:
                     await lobby.broadcast_game_state()
                     # проверить ход врагов, и если да - выполнить их ходы
-                    if lobby.game.turn.phase == GamePhase.ENEMY_PHASE:
+                    if lobby.game.turn.phase == GamePhase.AI_ENEMY_PHASE:
                         while (
-                            lobby.game.turn.phase != GamePhase.PLAYER_PHASE
+                            lobby.game.turn.phase != GamePhase.TEAM_1_PHASE
                             and not lobby.game.ended
                         ):
                             actor = lobby.game.turn.current_actor

@@ -183,8 +183,6 @@ class Game:
                         await self.lobby.broadcast_game_event(
                             GameEvent(message=f"Игрок {player.name} погиб!")
                         )
-                    else:
-                        print("attacked player")
                     return ActionResult(action=action)
                 elif (
                     actor_cell_type == CELL_TYPE.PLAYER.value
@@ -201,6 +199,32 @@ class Game:
                             GameEvent(message=f"Враг {enemy.name} погиб!")
                         )
                     return ActionResult(action=action, action_cost=action_ap_cost)
+                elif (
+                    actor_cell_type == CELL_TYPE.PLAYER.value
+                    and action_cell_type == CELL_TYPE.PLAYER.value
+                ):
+                    # игрок атакует другого игрока
+                    player_attacking: Player = next(
+                        x for x in self.players if x.position == actor.position
+                    )
+                    player_attacked: Player = next(
+                        x for x in self.players if x.position == action.cell
+                    )
+                    if player_attacking.team == player_attacked.team:
+                        return ActionResult(
+                            performed=False,
+                            action=action,
+                            detail="Нельзя атаковать своего сокомандника",
+                        )
+                    player_attacked.apply_damage(damage)
+                    if player_attacked.is_dead():
+                        self.dungeon.remove_dead_player(player_attacked)
+                        print("[!] player", player_attacked, "is dead")
+                        self.players.remove(player_attacked)
+                        await self.lobby.broadcast_game_event(
+                            GameEvent(message=f"Игрок {player_attacked.name} погиб!")
+                        )
+                    return ActionResult(action=action)
                 else:
                     print(
                         f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}"
@@ -247,8 +271,10 @@ class Game:
         return action_result
 
     def pass_turn_to_next_actor(self):
-        if self.turn.phase == GamePhase.PLAYER_PHASE:
-            actors = self.players
+        if self.turn.phase == GamePhase.TEAM_1_PHASE:
+            actors = [x for x in self.players if x.team == 1]
+        elif self.turn.phase == GamePhase.TEAM_2_PHASE:
+            actors = [x for x in self.players if x.team == 2]
         else:
             actors = self.dungeon.enemies
         # находим игрока/врага который еще не ходил
@@ -269,20 +295,25 @@ class Game:
         else:
             self.prepare_actor_turn(next_actor)
 
-    def check_game_end(self) -> bool:
-        if all(p.is_dead() for p in self.players):
+    def check_game_end(self):
+        players_team_1 = [x for x in self.players if x.team == 1]
+        players_team_2 = [x for x in self.players if x.team == 2]
+        team_1_dead = (
+            all(p.is_dead() for p in players_team_1) or len(players_team_1) == 0
+        )
+        team_2_dead = (
+            all(p.is_dead() for p in players_team_2) or len(players_team_2) == 0
+        )
+        enemies_dead = (
+            all(e.is_dead() for e in self.dungeon.enemies)
+            or len(self.dungeon.enemies) == 0
+        )
+        if team_1_dead and team_2_dead:
+            # все игроки мертвы
             self.ended = True
-            return True
-        if all(e.is_dead() for e in self.dungeon.enemies):
+        if enemies_dead and (team_1_dead or team_2_dead):
+            # осталась одна команда игроков
             self.ended = True
-            return True
-        if not self.players:
-            self.ended = True
-            return True
-        if not self.dungeon.enemies:
-            self.ended = True
-            return True
-        return False
 
     def _init_players(self):
         point_choices = {
@@ -316,6 +347,6 @@ class Game:
             "version": self.version,
             "ended": self.ended,
         }
-        if self.turn.phase == GamePhase.ENEMY_PHASE:
+        if self.turn.phase == GamePhase.AI_ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
         return dump

@@ -6,7 +6,7 @@ from uuid import UUID
 
 # Start the FastAPI server in a separate process
 server_process = subprocess.Popen(
-    ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"]
+    ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 )
 
 # Wait for the server to start

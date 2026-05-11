@@ -56,6 +56,11 @@ body {
 <label for="input_players_num">Кол-во игроков</label>
 <input type="number" id="input_players_num" value="1" style="width: 50px">
 <button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
+
+<select id="team_select" style="background: #222; color: #eee; padding: 5px;">
+    <option value="1">1</option>
+    <option value="2">2</option>
+</select>
 <button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
 <button onclick="start_game()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
 <br>
@@ -175,6 +180,7 @@ async function start_game() {
 async function connect_to_lobby() {
     const _input_lobby = document.getElementById("lobby_id_input");
     const _player_id_input = document.getElementById("player_id_input");
+    const _player_team_select = document.getElementById("team_select");
     try {
         const response = await fetch("http://localhost:8000/connect_lobby", {
             method: "POST",
@@ -183,7 +189,7 @@ async function connect_to_lobby() {
                 lobby_id: _input_lobby.value,
                 player: {
                     id: _player_id_input.value,
-                    team: 1,
+                    team: _player_team_select.value,
                 }
             })
         });
@@ -230,7 +236,7 @@ function handle_ws_msg(msg) {
         console.log("lobby msg state");
     }
     else if (msg.type === "game_event") {
-        alert(msg.message);
+        showToast(msg.message);
     }
     else if (msg.type === "state_update") {
         handle_game_state(msg.payload);

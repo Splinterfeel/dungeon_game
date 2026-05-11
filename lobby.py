@@ -39,9 +39,7 @@ class Lobby:
         self.players[str(player.id)] = Player(
             id=player.id,
             team=player.team,
-            stats=CharacterStats(
-                health=15, damage=5, speed=5, action_points=10
-            ),
+            stats=CharacterStats(health=15, damage=5, speed=5, action_points=10),
             inventory=Inventory(
                 weapons=[
                     Weapon(
@@ -143,10 +141,7 @@ class Lobby:
 
     async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
-            actors = {
-                str(e.id): e
-                for e in self.game.dungeon.enemies
-            }
+            actors = {str(e.id): e for e in self.game.dungeon.enemies}
             actors.update(self.players)
             actor = actors[str(_actor.id)]
             action = Action(**payload)
