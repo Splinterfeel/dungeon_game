@@ -143,6 +143,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 if lobby.game.ended:
                     break
             if lobby.game.ended:
+                await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
                 print("GAME END")
                 break
     except WebSocketDisconnect:

@@ -64,7 +64,7 @@ class Game:
             return ActionResult(
                 performed=False,
                 action=action,
-                detail=f"Attempt to perform action of player {actor} when turn of player {self.turn.current_actor}",
+                detail=f"{actor.name} попытался походить во время хода {self.turn.current_actor.name}",
             )
         # Enemy и Player приводятся к Actor
         action_ap_cost = 0
@@ -74,11 +74,12 @@ class Game:
             case ActionType.END_TURN:
                 if self.turn.current_actor != action.actor:
                     print(
-                        f"[!] not turn of actor {action.actor}, now turn of {self.turn.current_actor}"
+                        detail=f"{actor.name} попытался закончить ход во время хода {self.turn.current_actor.name}",
                     )
                 return ActionResult(
                     action=action,
                     action_cost=30000,  # TODO пока просто завершаем ход немыслимым кол-вом AP
+                    detail=f"{actor.name} завершает ход",
                 )
             case ActionType.MOVE:
                 if action.cell not in self.turn.available_moves:
@@ -86,42 +87,39 @@ class Game:
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail="Нельзя переместиться, слишком далеко",
+                        detail=f"{actor.name}, нельзя переместиться в {action.cell}, слишком далеко",
                     )
                 if not self.dungeon.map.is_free(action.cell):
-                    print(f"Cell {action.cell} is not free, can't move {actor} here")
                     return ActionResult(
-                        performed=False, action=action, detail="Клетка занята"
+                        performed=False,
+                        action=action,
+                        detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
                     )
                 path = self.dungeon.map.bfs_path(
                     action.cell, self.turn.current_actor.position
                 )
                 if not path:
-                    print(f"Can't reach point (BFS): {action.cell}")
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail="Не получилось построить путь до точки",
+                        detail=f"{actor.name}, не получилось построить путь до точки {action.cell}",
                     )
                 action_ap_cost = len(path) - 1
                 assert action_ap_cost > 0
                 if self.turn.current_actor.current_action_points < action_ap_cost:
-                    print(
-                        f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
-                    )
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail="Недостаточно очков действия!",
+                        detail=f"{actor.name}, Недостаточно очков действия для перемещения в {action.cell}!",
                     )
                 self.move_actor(actor, action.cell)
                 return ActionResult(
                     action=action,
                     action_cost=action_ap_cost,
                     speed_spent=action_ap_cost,
+                    detail=f"{actor.name} перемещается в клетку {action.cell}",
                 )
             case ActionType.ATTACK:
-                # TODO доставать action_ap_cost для конкретного оружия
                 attack_params: AttackActionParams = action.params
                 try:
                     weapon = next(
@@ -133,11 +131,8 @@ class Game:
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail=f"У игрока в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
+                        detail=f"{actor.name}, в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
                     )
-                print(
-                    "ATTACKING WITH WEAPON", weapon.name, weapon.cost_ap, weapon.damage
-                )
                 action_ap_cost = weapon.cost_ap
                 damage = weapon.damage
                 current_dist = Point.distance_chebyshev(actor.position, action.cell)
@@ -149,16 +144,13 @@ class Game:
                         return ActionResult(
                             performed=False,
                             action=action,
-                            detail="Клетка атаки вне прямой видимости (есть преграды)",
+                            detail=f"{actor.name}, клетка {action.cell} вне прямой видимости (есть преграды), нельзя атаковать",  # noqa
                         )
                 if self.turn.current_actor.current_action_points < action_ap_cost:
-                    print(
-                        f"Not enough AP: {self.turn.current_actor.current_action_points} / {action_ap_cost}"
-                    )
                     return ActionResult(
                         performed=False,
                         action=action,
-                        detail="Недостаточно очков действия",
+                        detail=f"{actor.name}, недостаточно очков действия для выбранной атаки",
                     )
                 if current_dist > weapon.range:
                     print(
@@ -174,16 +166,17 @@ class Game:
                     and action_cell_type == CELL_TYPE.PLAYER.value
                 ):
                     player = next(x for x in self.players if x.position == action.cell)
-                    print(f"ИИ/Враг {actor.name} атакует игрока {player.name}")
                     player.apply_damage(damage)
                     if player.is_dead():
                         self.dungeon.remove_dead_player(player)
-                        print("[!] player", player, "is dead")
                         self.players.remove(player)
                         await self.lobby.broadcast_game_event(
                             GameEvent(message=f"Игрок {player.name} погиб!")
                         )
-                    return ActionResult(action=action)
+                    return ActionResult(
+                        action=action,
+                        detail=f"{actor.name} атакует {player.name} и наносит {damage} урона",
+                    )
                 elif (
                     actor_cell_type == CELL_TYPE.PLAYER.value
                     and action_cell_type == CELL_TYPE.ENEMY.value
@@ -191,14 +184,17 @@ class Game:
                     enemy = next(
                         x for x in self.dungeon.enemies if x.position == action.cell
                     )
-                    print(f"Игрок {actor.name} атакует ИИ/Врага {enemy.name}")
                     enemy.apply_damage(damage)
                     if enemy.is_dead():
                         self.dungeon.remove_dead_enemy(enemy=enemy)
                         await self.lobby.broadcast_game_event(
-                            GameEvent(message=f"Враг {enemy.name} погиб!")
+                            GameEvent(message=f"Одичалый {enemy.name} погиб!")
                         )
-                    return ActionResult(action=action, action_cost=action_ap_cost)
+                    return ActionResult(
+                        action=action,
+                        action_cost=action_ap_cost,
+                        detail=f"{actor.name} атакует {enemy.name} и наносит {damage} урона",
+                    )
                 elif (
                     actor_cell_type == CELL_TYPE.PLAYER.value
                     and action_cell_type == CELL_TYPE.PLAYER.value
@@ -214,23 +210,27 @@ class Game:
                         return ActionResult(
                             performed=False,
                             action=action,
-                            detail="Нельзя атаковать своего сокомандника",
+                            detail=f"{actor.name}, нельзя атаковать своего сокомандника",
                         )
                     player_attacked.apply_damage(damage)
                     if player_attacked.is_dead():
                         self.dungeon.remove_dead_player(player_attacked)
-                        print("[!] player", player_attacked, "is dead")
                         self.players.remove(player_attacked)
                         await self.lobby.broadcast_game_event(
                             GameEvent(message=f"Игрок {player_attacked.name} погиб!")
                         )
-                    return ActionResult(action=action)
+                    return ActionResult(
+                        action=action,
+                        detail=f"{player_attacking.name} атакует {player_attacked.name} и наносит {damage} урона",
+                    )
                 else:
                     print(
                         f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}"
                     )
                     return ActionResult(
-                        performed=False, action=action, detail="Нельзя атаковать клетку"
+                        performed=False,
+                        action=action,
+                        detail=f"{actor.name}, нельзя атаковать клетку {action.cell}",
                     )
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell, action_cell_type)
@@ -253,10 +253,7 @@ class Game:
 
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         action_result: ActionResult = await self._perform_actor_action(actor, action)
-        if not action_result.performed:
-            await self.lobby.broadcast_game_event(
-                GameEvent(message=action_result.detail)
-            )
+        await self.lobby.broadcast_game_event(GameEvent(message=action_result.detail))
         if action_result.performed:
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0
