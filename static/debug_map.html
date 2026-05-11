@@ -47,10 +47,48 @@ body {
 .available { background: rgba(0, 255, 255, 0.35) !important; }
 .selected { outline: 3px solid #ff00ff; }
 
+/* layout */
+#layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+#left_panel { flex: 0 0 60%; min-width: 0; }
+#right_panel {
+    flex: 1;
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* event log */
+#event_log {
+    width: 100%;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    border: 1px solid #555;
+    background: #1a1a1a;
+    padding: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+#event_log .event-line {
+    border-bottom: 1px solid #333;
+    padding: 3px 0;
+}
+#event_log .event-time {
+    color: #888;
+    margin-right: 6px;
+}
+
 </style>
 </head>
 
 <body>
+
+<div id="layout">
+<div id="left_panel">
 
 <br>
 <label for="input_players_num">Кол-во игроков</label>
@@ -83,6 +121,15 @@ body {
 <div id="actors" style="margin-top: 20px;"></div>
 <div id="map"></div>
 <div id="cell_info" style="margin-top: 10px; min-height: 24px; color: #ccc;"></div>
+
+</div>
+<div id="right_panel">
+
+<div style="color: #aaa; margin-bottom: 8px;">Лог событий</div>
+<div id="event_log"></div>
+
+</div>
+</div>
 
 <script src="/static/utils.js"></script>
 
@@ -230,6 +277,17 @@ async function connect_ws() {
     };
 }
 
+function append_event_log(text) {
+    const log = document.getElementById("event_log");
+    const line = document.createElement("div");
+    line.classList.add("event-line");
+    const now = new Date();
+    const time = now.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+    line.innerHTML = `<span class="event-time">[${time}]</span>${text}`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+}
+
 function handle_ws_msg(msg) {
     console.log(msg);
     if (msg.type === "lobby_state") {
@@ -237,6 +295,7 @@ function handle_ws_msg(msg) {
     }
     else if (msg.type === "game_event") {
         showToast(msg.message);
+        append_event_log(msg.message);
     }
     else if (msg.type === "state_update") {
         handle_game_state(msg.payload);
