@@ -151,15 +151,28 @@ class Lobby:
             self.game.version += 1
             return action_result.performed
 
+    def filter_available_moves(
+        self, game_state: GameState, player_id: str
+    ) -> GameState:
+        game_state = game_state.model_copy(deep=True)
+        if not game_state.turn.current_actor:
+            # если нет текущего актора (значит это Enemy AI) - не отдаём доступные клетки
+            game_state.turn.available_moves = []
+            return game_state
+        if game_state.turn.current_actor.id != player_id:
+            game_state.turn.available_moves = []
+        return game_state
+
     async def broadcast_game_state(self):
         try:
             state = GameState.model_validate(self.game.dump_state())
         except Exception as e:
             print(e)
-        for ws in list(self.connections.values()):
+        for player_id, ws in self.connections.items():
+            _state = self.filter_available_moves(state, str(player_id))
             try:
                 await ws.send_json(
-                    {"type": "state_update", "payload": state.model_dump()}
+                    {"type": "state_update", "payload": _state.model_dump()}
                 )
             except Exception as e:
                 print(f"Error sending to ws {ws}: {e}")
