@@ -136,6 +136,7 @@ class Dungeon(BaseModel):
                         health=random.randint(8, 12),
                         damage=random.randint(3, 5),
                         speed=2,
+                        view_distance=5,
                         action_points=random.randint(
                             self.min_enemy_ap, self.max_enemy_ap
                         ),
@@ -188,6 +189,7 @@ class Dungeon(BaseModel):
                     health=random.randint(10, 20),
                     damage=random.randint(3, 5),
                     speed=2,
+                    view_distance=5,
                     action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
                 ),
             )

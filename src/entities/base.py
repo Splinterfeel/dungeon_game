@@ -24,6 +24,7 @@ class CharacterStats(BaseModel):
     damage: int
     speed: int  # сколько клеток может пройти за ход
     action_points: int
+    view_distance: int
 
 
 class Weapon(BaseModel):

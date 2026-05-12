@@ -16,11 +16,12 @@ class LobbyState(BaseModel):
     payload: LobbyStatePayload
 
 
-class StatsState(BaseModel):
+class CharacherStatsState(BaseModel):
     health: int
     damage: int
     speed: int
     action_points: int
+    view_distance: int
 
 
 class WeaponState(BaseModel):
@@ -40,7 +41,7 @@ class InventoryState(BaseModel):
 class ActorState(BaseModel):
     id: str
     position: PointState
-    stats: StatsState
+    stats: CharacherStatsState
     name: str
     current_action_points: int
     current_speed_spent: int

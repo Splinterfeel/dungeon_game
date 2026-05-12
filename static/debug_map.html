@@ -46,6 +46,7 @@ body {
 .move { outline: 2px solid #00ffff; }
 .available { background: rgba(0, 255, 255, 0.35) !important; }
 .selected { outline: 3px solid #ff00ff; }
+.fog { filter: brightness(0.25) saturate(0.1); }
 
 /* layout */
 #layout {
@@ -395,6 +396,61 @@ function handle_game_state(state){
     // // выход
     visual[dungeon.exit.x][dungeon.exit.y].entity = "X";
 
+    // === туман войны (евклидова дистанция + луч видимости по Брезенхему) ===
+    const viewDist = lastPlayerState.stats.view_distance;
+    const px = lastPlayerState.position.x;
+    const py = lastPlayerState.position.y;
+
+    function bresenham(x1, y1, x2, y2) {
+        const points = [];
+        let dx = Math.abs(x2 - x1);
+        let dy = Math.abs(y2 - y1);
+        let x = x1, y = y1;
+        const sx = x1 > x2 ? -1 : 1;
+        const sy = y1 > y2 ? -1 : 1;
+        if (dx > dy) {
+            let err = dx / 2.0;
+            while (x !== x2) {
+                points.push({x, y});
+                err -= dy;
+                if (err < 0) { y += sy; err += dx; }
+                x += sx;
+            }
+        } else {
+            let err = dy / 2.0;
+            while (y !== y2) {
+                points.push({x, y});
+                err -= dx;
+                if (err < 0) { x += sx; err += dy; }
+                y += sy;
+            }
+        }
+        points.push({x, y});
+        return points;
+    }
+
+    function isWall(x, y) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return true;
+        return normalize_map_value(tiles[x][y]) === "#";
+    }
+
+    function hasLineOfSight(x1, y1, x2, y2) {
+        const line = bresenham(x1, y1, x2, y2);
+        for (let i = 1; i < line.length - 1; i++) {
+            if (isWall(line[i].x, line[i].y)) return false;
+        }
+        return true;
+    }
+
+    const fogMap = [];
+    for (let x = 0; x < width; x++) {
+        fogMap[x] = [];
+        for (let y = 0; y < height; y++) {
+            const inRange = Math.sqrt((x - px) ** 2 + (y - py) ** 2) <= viewDist;
+            fogMap[x][y] = !inRange || !hasLineOfSight(px, py, x, y);
+        }
+    }
+
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const cellData = visual[x][y];
@@ -403,6 +459,11 @@ function handle_game_state(state){
 
             // base
             cell.classList.add(cellData.base === "#" ? "wall" : "floor");
+
+            // fog of war
+            if (fogMap[x][y]) {
+                cell.classList.add("fog");
+            }
 
             // entity overlay
             if (cellData.entity) {

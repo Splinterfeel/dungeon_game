@@ -39,7 +39,9 @@ class Lobby:
         self.players[str(player.id)] = Player(
             id=player.id,
             team=player.team,
-            stats=CharacterStats(health=15, damage=5, speed=5, action_points=10),
+            stats=CharacterStats(
+                health=15, damage=5, speed=5, action_points=10, view_distance=5
+            ),
             inventory=Inventory(
                 weapons=[
                     Weapon(
