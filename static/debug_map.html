@@ -171,16 +171,16 @@ function select_cell(x, y, cellEl) {
 
 let socket;
 const _input = document.getElementById("player_id_input");
-_input.value = crypto.randomUUID();
+_input.value = generateUUID();
 
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
-    _input.value = crypto.randomUUID();
+    _input.value = generateUUID();
 }
 
 function generate_new_lobby_id(){
     const _input = document.getElementById("lobby_id_input");
-    _input.value = crypto.randomUUID();
+    _input.value = generateUUID();
 }
 
 async function create_lobby() {
@@ -497,7 +497,7 @@ async function send_end_turn() {
         return;
     }
     const action = {
-        id: crypto.randomUUID(), // uuid.UUID
+        id: generateUUID(), // uuid.UUID
         actor: lastPlayerState,  // ActorState (объект из последнего state_update)
         type: "END_TURN",        // Literal
         cell: {                  // PointState
@@ -524,7 +524,7 @@ async function send_move() {
         return;
     }
     const action = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         actor: lastPlayerState,
         type: "MOVE",
         cell: {
@@ -557,7 +557,7 @@ async function send_attack() {
         return;
     }
     const action = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         actor: lastPlayerState,
         type: "ATTACK",
         cell: {
