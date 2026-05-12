@@ -323,8 +323,8 @@ function handle_game_state(state){
     const playerId = document.getElementById("player_id_input").value;
     lastPlayerState = state.players.find(p => p.id === playerId);
 
-    document.title = lastPlayerState.name;
     if (lastPlayerState) {
+        document.title = lastPlayerState.name;
         update_weapon_selector(lastPlayerState.inventory.weapons);
     }
     const dungeon = state.dungeon;
