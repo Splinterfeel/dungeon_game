@@ -188,7 +188,7 @@ async function create_lobby() {
     const _input_lobby = document.getElementById("lobby_id_input");
     const _players_num = document.getElementById("input_players_num");
     try {
-        const response = await fetch("http://localhost:8000/lobbies", {
+        const response = await fetch("http://{{ host }}/lobbies", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -209,7 +209,7 @@ async function create_lobby() {
 async function start_game() {
     const _input_lobby = document.getElementById("lobby_id_input");
     try {
-        const response = await fetch("http://localhost:8000/start_game", {
+        const response = await fetch("http://{{ host }}/start_game", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -230,7 +230,7 @@ async function connect_to_lobby() {
     const _player_id_input = document.getElementById("player_id_input");
     const _player_team_select = document.getElementById("team_select");
     try {
-        const response = await fetch("http://localhost:8000/connect_lobby", {
+        const response = await fetch("http://{{ host }}/connect_lobby", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -261,7 +261,7 @@ async function connect_ws() {
         console.log("connect(): using lobby uuid from input");
     }
 
-    socket = new WebSocket(`ws://localhost:8000/ws/${lobbyId}/${playerId}`);
+    socket = new WebSocket(`ws://{{ host }}/ws/${lobbyId}/${playerId}`);
     socket.onclose = (event) => {
         console.log(`Код: ${event.code}`);
         console.log(`Причина: ${event.reason}`); // "Lobby not found"

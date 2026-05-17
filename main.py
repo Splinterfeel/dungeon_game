@@ -1,4 +1,6 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from uuid import UUID
 from fastapi.middleware.cors import CORSMiddleware
 from dto.action import GameActionState
@@ -20,15 +22,27 @@ from ws_utils import WSCloseCodes
 
 
 app = FastAPI(docs_url="/api/docs", redoc_url="/redoc")
+
+# CORS — разрешаем текущий хост и localhost для дебага
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # для дебага
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 lobby_manager = LobbyManager()
+
+
+@app.get("/", response_class=HTMLResponse)
+async def debug_map(request: Request):
+    host = request.headers.get("host", "localhost:8000")
+    return templates.TemplateResponse(
+        "debug_map.html", {"request": request, "host": host}
+    )
 
 
 @app.post("/lobbies", description="Создать лобби")
