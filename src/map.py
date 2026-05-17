@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel, Field, model_validator
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
-from src.entities.base import Actor, Entity
+from src.entities.base import Actor, Entity, Weapon
 
 
 class DungeonMap(BaseModel):
@@ -95,14 +95,19 @@ class DungeonMap(BaseModel):
                     queue.append((next_point, path + [next_point]))
         return None  # путь не найден
 
-    def has_line_of_sight(self, start: Point, end: Point) -> bool:
+    def has_line_of_sight(
+        self, start: Point, end: Point, through_entities: bool
+    ) -> bool:
         """Простая проверка: есть ли стены между двумя точками"""
         points = Point.get_line_points(start, end)
         # Убираем первую точку (самого игрока) и последнюю (цель)
         # игроки, враги, сундуки не преграждают видимость
         # только стены
         for p in points[1:-1]:
-            if self.get(p) == CELL_TYPE.WALL.value:
+            # не считаем предметы/игроков/сундуки/врагов как преграды
+            if through_entities and self.get(p) == CELL_TYPE.WALL.value:
+                return False
+            elif not through_entities and not self.is_free(p):
                 return False
         return True
 
@@ -111,5 +116,16 @@ class DungeonMap(BaseModel):
             Point.distance_euklid(actor.position, entity.position)
             <= actor.stats.view_distance
         )
-        has_line_of_sight = self.has_line_of_sight(actor.position, entity.position)
+        has_line_of_sight = self.has_line_of_sight(
+            actor.position, entity.position, through_entities=True
+        )
         return can_see_by_view_distance and has_line_of_sight
+
+    def can_shoot(self, actor: Actor, weapon: Weapon, point: Point) -> bool:
+        _distance = Point.distance_euklid(actor.position, point)
+        can_see_by_view_distance = _distance <= actor.stats.view_distance
+        can_shoot_by_range = _distance <= weapon.range
+        has_line_of_sight = self.has_line_of_sight(
+            actor.position, point, through_entities=False
+        )
+        return can_see_by_view_distance and can_shoot_by_range and has_line_of_sight

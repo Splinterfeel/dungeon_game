@@ -138,13 +138,11 @@ class Game:
                 current_dist = Point.distance_chebyshev(actor.position, action.cell)
                 # проверка линии видимости
                 if weapon.range > 1:
-                    if not self.dungeon.map.has_line_of_sight(
-                        actor.position, action.cell
-                    ):
+                    if not self.dungeon.map.can_shoot(actor, weapon, action.cell):
                         return ActionResult(
                             performed=False,
                             action=action,
-                            detail=f"{actor.name}, клетка {action.cell} вне прямой видимости (есть преграды), нельзя атаковать",  # noqa
+                            detail=f"{actor.name}, клетка {action.cell} нельзя атаковать - слишком далеко или есть преграды",  # noqa
                         )
                 if self.turn.current_actor.current_action_points < action_ap_cost:
                     return ActionResult(
