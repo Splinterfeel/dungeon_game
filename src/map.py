@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel, Field, model_validator
 from src.base import Point, PointOffset
 from src.constants import CELL_TYPE
-from src.entities.base import Actor
+from src.entities.base import Actor, Entity
 
 
 class DungeonMap(BaseModel):
@@ -45,7 +45,9 @@ class DungeonMap(BaseModel):
             PointOffset.BOTTOM,
         ]
         # сколько клеток может пройти
-        _speed = actor.stats.speed - actor.current_speed_spent
+        _speed = min(
+            actor.stats.speed - actor.current_speed_spent, actor.current_action_points
+        )
         assert _speed >= 0
         while queue:
             point, distance = queue.popleft()
@@ -97,7 +99,17 @@ class DungeonMap(BaseModel):
         """Простая проверка: есть ли стены между двумя точками"""
         points = Point.get_line_points(start, end)
         # Убираем первую точку (самого игрока) и последнюю (цель)
+        # игроки, враги, сундуки не преграждают видимость
+        # только стены
         for p in points[1:-1]:
-            if not self.is_free(p):
+            if self.get(p) == CELL_TYPE.WALL.value:
                 return False
         return True
+
+    def can_see(self, actor: Actor, entity: Entity) -> bool:
+        can_see_by_view_distance = (
+            Point.distance_euklid(actor.position, entity.position)
+            <= actor.stats.view_distance
+        )
+        has_line_of_sight = self.has_line_of_sight(actor.position, entity.position)
+        return can_see_by_view_distance and has_line_of_sight

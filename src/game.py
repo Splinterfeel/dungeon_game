@@ -41,18 +41,18 @@ class Game:
         if self.is_server:
             self.dump_state()
 
-    def launch(self):
+    async def launch(self):
         self._init_players()
 
         # ставим ход первому игроку
         self.turn.next()
-        self.pass_turn_to_next_actor()
+        await self.pass_turn_to_next_actor()
 
-    def prepare_actor_turn(self, actor: Actor):
-        print(f"turn - {str(type(actor)).split(".")} [{actor.name}]")
-        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
+    async def prepare_actor_turn(self, actor: Actor):
+        await self.lobby.broadcast_game_event(GameEvent(message=f"Ход {actor.name}"))
         # в начале хода задаем базовое количество AP игроку
         actor.current_action_points = actor.stats.action_points
+        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
         # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
@@ -175,6 +175,7 @@ class Game:
                         )
                     return ActionResult(
                         action=action,
+                        action_cost=action_ap_cost,
                         detail=f"{actor.name} атакует {player.name} и наносит {damage} урона",
                     )
                 elif (
@@ -221,6 +222,7 @@ class Game:
                         )
                     return ActionResult(
                         action=action,
+                        action_cost=action_ap_cost,
                         detail=f"{player_attacking.name} атакует {player_attacked.name} и наносит {damage} урона",
                     )
                 else:
@@ -260,14 +262,14 @@ class Game:
             )
             actor.current_speed_spent += action_result.speed_spent
         if action.type == ActionType.END_TURN:
-            self.pass_turn_to_next_actor()
+            await self.pass_turn_to_next_actor()
         self.check_game_end()
         self.turn.available_moves = self.dungeon.map.get_available_moves(
             self.turn.current_actor
         )
         return action_result
 
-    def pass_turn_to_next_actor(self):
+    async def pass_turn_to_next_actor(self):
         if self.turn.phase == GamePhase.TEAM_1_PHASE:
             actors = [x for x in self.players if x.team == 1]
         elif self.turn.phase == GamePhase.TEAM_2_PHASE:
@@ -288,9 +290,9 @@ class Game:
                 self.turn.switch_phase()
             else:
                 self.turn.next()
-            self.pass_turn_to_next_actor()
+            await self.pass_turn_to_next_actor()
         else:
-            self.prepare_actor_turn(next_actor)
+            await self.prepare_actor_turn(next_actor)
 
     def check_game_end(self):
         players_team_1 = [x for x in self.players if x.team == 1]

@@ -66,7 +66,7 @@ class Lobby:
         await self.broadcast_lobby_state()
         return True, "player connected"
 
-    def start_game(self) -> tuple[bool, str]:
+    async def start_game(self) -> tuple[bool, str]:
         if self.game is not None:
             return False, "Game already started"
         if len(self.players) != self.players_num:
@@ -99,7 +99,7 @@ class Lobby:
         self.game = Game(
             lobby=self, dungeon=dungeon, players=list(self.players.values())
         )
-        self.game.launch()
+        await self.game.launch()
         return True, "Game started"
 
     def connect(self, player: PlayerDTO, websocket: WebSocket):
@@ -170,11 +170,48 @@ class Lobby:
             state = GameState.model_validate(self.game.dump_state())
         except Exception as e:
             print(e)
-        for player_id, ws in self.connections.items():
-            _state = self.filter_available_moves(state, str(player_id))
-            try:
-                await ws.send_json(
-                    {"type": "state_update", "payload": _state.model_dump()}
-                )
-            except Exception as e:
-                print(f"Error sending to ws {ws}: {e}")
+        else:
+            states_for_teams = {
+                1: self.filter_visible_entities_for_team(state, 1),
+                2: self.filter_visible_entities_for_team(state, 2),
+            }
+            for player_id, ws in self.connections.items():
+                player = self.players[str(player_id)]
+                _state = states_for_teams[player.team]
+                _state = self.filter_available_moves(_state, str(player_id))
+                try:
+                    await ws.send_json(
+                        {"type": "state_update", "payload": _state.model_dump()}
+                    )
+                except Exception as e:
+                    print(f"Error sending to ws {ws}: {e}")
+
+    def filter_visible_entities_for_team(
+        self, game_state: GameState, team: int
+    ) -> GameState:
+        # исключаем те, которые больше view_distance по Евклиду и имеют препятствия
+        game_state = game_state.model_copy(deep=True)
+        team_players = [p for p in game_state.players if p.team == team]
+        another_team_players = [p for p in game_state.players if p.team != team]
+        visible_enemies = []
+        visible_chests = []
+        visible_players = [p for p in team_players]
+        for enemy in game_state.dungeon.enemies:
+            for player in team_players:
+                if self.game.dungeon.map.can_see(player, enemy):
+                    visible_enemies.append(enemy)
+                    break
+        for chest in game_state.dungeon.chests:
+            for player in team_players:
+                if self.game.dungeon.map.can_see(player, chest):
+                    visible_chests.append(chest)
+                    break
+        for another_player in another_team_players:
+            for player in team_players:
+                if self.game.dungeon.map.can_see(player, another_player):
+                    visible_players.append(another_player)
+                    break
+        game_state.players = visible_players
+        game_state.dungeon.enemies = visible_enemies
+        game_state.dungeon.chests = visible_chests
+        return game_state

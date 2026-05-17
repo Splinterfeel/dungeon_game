@@ -52,7 +52,7 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
     lobby = lobby_manager.get_lobby(request.lobby_id)
     if not lobby:
         raise HTTPException(status_code=404, detail="Lobby not found")
-    result, detail = lobby.start_game()
+    result, detail = await lobby.start_game()
     await lobby.broadcast_lobby_state()
     await lobby.broadcast_game_state()
     return StartGameResponse(
@@ -141,10 +141,14 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                         print("=== ХОД ОКРУЖЕНИЯ ===")
                     await lobby.broadcast_game_state()
                 if lobby.game.ended:
+                    print("GAME END")
+                    await lobby.broadcast_game_event(
+                        GameEvent(message="Игра закончилась")
+                    )
                     break
             if lobby.game.ended:
-                await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
                 print("GAME END")
+                await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
                 break
     except WebSocketDisconnect:
         lobby.disconnect(player)
