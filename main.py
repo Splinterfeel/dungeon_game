@@ -13,6 +13,7 @@ from dto.base import (
     StartGameResponse,
 )
 from dto.event import GameEvent
+from lobby import Lobby
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
@@ -45,6 +46,11 @@ async def debug_map(request: Request):
     )
 
 
+@app.get("/lobbies", description="Получить список лобби")
+def get_lobbies_list() -> list[LobbyDTO]:
+    return lobby_manager.get_lobbies_list()
+
+
 @app.post("/lobbies", description="Создать лобби")
 def create_lobby(request: CreateLobbyRequest) -> dict[str, UUID]:
     game_lobby = lobby_manager.create_lobby(request)
@@ -53,10 +59,10 @@ def create_lobby(request: CreateLobbyRequest) -> dict[str, UUID]:
 
 @app.post("/connect_lobby", description="Присоединиться к лобби (игрок)")
 async def connect_lobby(request: ConnectLobbyRequest) -> DetailedBoolResponse:
-    game_lobby = lobby_manager.get_lobby(request.lobby_id)
-    if not game_lobby:
+    lobby = lobby_manager.get_lobby(request.lobby_id)
+    if not lobby:
         raise HTTPException(status_code=404, detail="Lobby not found")
-    result, detail = await game_lobby.connect_player(request.player)
+    result, detail = await lobby.connect_player(request.player)
     return DetailedBoolResponse(result=result, detail=detail)
 
 
@@ -84,8 +90,7 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
 @app.websocket("/ws/{lobby_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str):
     await websocket.accept()
-    lobby_dto = LobbyDTO(id=lobby_id)
-    lobby = lobby_manager.get_lobby(lobby_dto.id)
+    lobby = lobby_manager.get_lobby(lobby_id)
     if not lobby:
         # Сначала принимаем, чтобы иметь возможность отправить код закрытия
         await websocket.close(

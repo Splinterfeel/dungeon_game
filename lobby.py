@@ -1,9 +1,9 @@
 import asyncio
 import copy
-from uuid import UUID
+from uuid import uuid4, UUID
 from fastapi import WebSocket
 
-from dto.base import LobbyDTO, PlayerDTO
+from dto.base import PlayerDTO
 from dto.event import GameEvent
 from dto.state import GameState, LobbyState, LobbyStatePayload
 from src.entities.enemy import Enemy
@@ -17,11 +17,9 @@ from src.maps import for_1_team
 
 
 class Lobby:
-    def __init__(
-        self, lobby_dto: LobbyDTO, players_num: int, created_by_player_id: UUID
-    ):
-        self.id = lobby_dto.id
-        self.lobby = lobby_dto
+    def __init__(self, name: str, players_num: int, created_by_player_id: UUID):
+        self.id = uuid4()
+        self.name = name
         self.players_num = players_num
         self.created_by_player_id = str(created_by_player_id)
         self.players: dict[str, Player] = {}
