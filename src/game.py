@@ -72,12 +72,36 @@ class Game:
                 return await self._perform_action_move(actor=actor, action=action)
             case ActionType.ATTACK:
                 return await self._perform_action_attack(actor=actor, action=action)
+            case ActionType.EXIT:
+                return await self._perform_action_exit(actor=actor, action=action)
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell)
                 return ActionResult(action=action)
             case _:
                 print("Performing unknown action", action)
                 return ActionResult(action=action)
+
+    async def _perform_action_exit(self, actor: Actor, action: Action) -> ActionResult:
+        # покинуть можно только самым первым действием на ходу, когда AP на максимуме
+        if self.dungeon._initial_map.get(actor.position) != CELL_TYPE.EXIT.value:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, покинуть данж можно только на клетке выхода",
+            )
+        if actor.current_action_points < actor.stats.action_points:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, покинуть данж можно только когда AP на максимуме",
+            )
+        player = next(x for x in self.players if x.position == action.cell)
+        self.players.remove(player)
+        return ActionResult(
+            action=action,
+            action_cost=30000,
+            detail=f"{actor.name} покинул данж!",
+        )
 
     async def _perform_action_end_turn(
         self, actor: Actor, action: Action

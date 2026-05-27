@@ -118,6 +118,7 @@ body {
 <label for="weapon_select">Оружие:</label>
 <select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
 <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
+<button onclick="send_exit()" style="background: #118db7; color: white; font-weight: bold;">EXIT</button>
 
 <div id="actors" style="margin-top: 20px;"></div>
 <div id="map"></div>
@@ -572,6 +573,28 @@ async function send_attack() {
         }
     };
     console.log("Sending ATTACK action:", action);
+    socket.send(JSON.stringify(action));
+}
+
+async function send_exit() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("WebSocket не подключен!");
+        return;
+    }
+    if (!lastPlayerState) {
+        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
+        return;
+    }
+    const action = {
+        id: generateUUID(),
+        actor: lastPlayerState,
+        type: "EXIT",
+        cell: {
+            x: lastPlayerState.position.x,
+            y: lastPlayerState.position.y
+        }
+    };
+    console.log("Sending EXIT action:", action);
     socket.send(JSON.stringify(action));
 }
 </script>
