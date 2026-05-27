@@ -14,7 +14,7 @@ class SimpleEnemyAI(AI):
         self.attacked_on_turn = False
 
     def decide(self) -> Action:
-        time.sleep(1)
+        time.sleep(0.3)
         players_distances = []
         for player in self.game.players:
             path = self.game.dungeon.map.bfs_path(self.actor.position, player.position)

@@ -98,14 +98,15 @@ class Game:
             return ActionResult(
                 performed=False,
                 action=action,
-                detail=f"{actor.name}, нельзя переместиться в {action.cell}, слишком далеко",
+                detail=f"{actor.name}, нельзя переместиться в {action.cell}",
             )
         if not self.dungeon.map.is_free(action.cell):
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
-            )
+            if self.dungeon.map.get(action.cell) != CELL_TYPE.EXIT.value:
+                return ActionResult(
+                    performed=False,
+                    action=action,
+                    detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
+                )
         path = self.dungeon.map.bfs_path(action.cell, self.turn.current_actor.position)
         if not path:
             return ActionResult(
@@ -246,7 +247,7 @@ class Game:
 
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.dungeon.map.get(actor.position)
-        self.dungeon.map.set(actor.position, CELL_TYPE.EMPTY.value)
+        self.dungeon.reset_map_cell(actor.position)
         actor.position = cell
         self.dungeon.map.set(cell, actor_cell_type)
 

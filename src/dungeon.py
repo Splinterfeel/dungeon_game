@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import List, Optional
 
@@ -30,7 +31,7 @@ class Dungeon(BaseModel):
     rooms: List[Room] = Field(default_factory=list)
     chests: List[Chest] = Field(default_factory=list)
     enemies: List[Enemy] = Field(default_factory=list)
-    exit: Optional[Point] = None
+    exits: List[Point] = Field(default_factory=list)
 
     # Списки стартовых точек
     start_points_team_1: List[Point] = Field(default_factory=list)
@@ -58,6 +59,7 @@ class Dungeon(BaseModel):
                 if getattr(self, attr) is None:
                     raise ValueError(f"Can't procedural generate without {attr}")
             self._procedural_generate()
+        self._initial_map = self.map.model_copy(deep=True)
         return self
 
     def _init_from_map(self):
@@ -75,7 +77,7 @@ class Dungeon(BaseModel):
                 elif self.map.get(_point) == CELL_TYPE.START_TEAM_2.value:
                     self.start_points_team_2.append(_point)
                 elif self.map.get(_point) == CELL_TYPE.EXIT.value:
-                    self.exit = _point
+                    self.exits.append(_point)
         if not self.start_points_team_1:
             raise ValueError("Can't find start points or exit")
         # TODO вторую команду пока не проверяем, еще нет логики под 2 команды
@@ -166,12 +168,16 @@ class Dungeon(BaseModel):
             self.enemies = []
             self._generate_enemies()
 
-        if self.exit is None:
-            self._generate_exit()
+        if not self.exits:
+            self._generate_exits()
 
     def remove_dead_enemy(self, enemy: Enemy):
         self.enemies.remove(enemy)
         self.map.set(enemy.position, CELL_TYPE.EMPTY.value)
+
+    def reset_map_cell(self, cell: Point):
+        initial_value = self._initial_map.get(cell)
+        self.map.set(cell, initial_value)
 
     def remove_dead_player(self, player: Player):
         self.map.set(player.position, CELL_TYPE.EMPTY.value)
@@ -338,7 +344,7 @@ class Dungeon(BaseModel):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.map.set(Point(x, y), CELL_TYPE.EMPTY.value)
 
-    def _generate_exit(self):
+    def _generate_exits(self):
         # найдем самую дальнюю комнату от старта
         farthest_room = self.start_room
         largest_distance = 0
@@ -350,5 +356,6 @@ class Dungeon(BaseModel):
         # генерим точку выхода
         choices = self._get_room_border_places(farthest_room)
         # Выбираем случайную позицию внутри комнаты, избегая границ
-        self.exit = random.choice(choices)
-        self.map.set(self.exit, CELL_TYPE.EXIT.value)
+        self.exits = [random.choice(choices)]
+        for e in self.exits:
+            self.map.set(e, CELL_TYPE.EXIT.value)

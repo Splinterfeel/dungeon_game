@@ -75,7 +75,7 @@ class DungeonState(BaseModel):
     chests: list[ChestState]
     enemies: list[ActorState]
     map: MapState
-    exit: PointState
+    exits: List[PointState]
 
 
 class GameState(BaseModel):

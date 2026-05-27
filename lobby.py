@@ -13,7 +13,7 @@ from src.entities.player import Player
 from src.entities.base import CharacterStats, Inventory, Weapon
 from src.action import Action
 from src.map import DungeonMap
-from src.maps import for_1_team
+from src.maps import default
 
 
 class Lobby:
@@ -89,9 +89,9 @@ class Lobby:
 
         # готовые карты
         dungeon_map = DungeonMap(
-            width=copy.deepcopy(for_1_team.map_1["width"]),
-            height=copy.deepcopy(for_1_team.map_1["height"]),
-            tiles=copy.deepcopy(for_1_team.map_1["tiles"]),
+            width=copy.deepcopy(default.map_2["width"]),
+            height=copy.deepcopy(default.map_2["height"]),
+            tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         dungeon = Dungeon(max_chests=3, enemies_num=2, map=dungeon_map)
         self.game = Game(

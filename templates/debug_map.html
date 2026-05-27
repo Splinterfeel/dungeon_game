@@ -374,14 +374,6 @@ function handle_game_state(state){
 
     // === накладываем сущности ===
 
-    // игроки
-    for (const p of state.players) {
-        let _val = "P";
-        if (p.id == lastPlayerState.id){
-            _val = "P!";
-        }
-        visual[p.position.x][p.position.y].entity = _val;
-    }
 
     // враги
     for (const e of dungeon.enemies) {
@@ -393,9 +385,20 @@ function handle_game_state(state){
         visual[c.position.x][c.position.y].entity = "C";
     }
 
-    // // выход
-    visual[dungeon.exit.x][dungeon.exit.y].entity = "X";
+    // // выходы
 
+    for (const c of dungeon.exits) {
+        visual[c.x][c.y].entity = "X";
+    }
+
+    // игроки
+    for (const p of state.players) {
+        let _val = "P";
+        if (p.id == lastPlayerState.id){
+            _val = "P!";
+        }
+        visual[p.position.x][p.position.y].entity = _val;
+    }
     // === туман войны (евклидова дистанция + луч видимости по Брезенхему) ===
     const viewDist = lastPlayerState.stats.view_distance;
     const px = lastPlayerState.position.x;

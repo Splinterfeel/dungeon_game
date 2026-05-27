@@ -28,8 +28,12 @@ class LobbyManager:
                 name=l.name,
                 players_num=l.players_num,
                 created_by_player_id=l.created_by_player_id,
-                team_1_connected_players=len([p for p in l.players.values() if p.team == 1]),
-                team_2_connected_players=len([p for p in l.players.values() if p.team == 2]),
+                team_1_connected_players=len(
+                    [p for p in l.players.values() if p.team == 1]
+                ),
+                team_2_connected_players=len(
+                    [p for p in l.players.values() if p.team == 2]
+                ),
                 game_started=l.game is not None,
             )
             for l in self.lobbies.values()
