@@ -83,24 +83,30 @@ class Game:
 
     async def _perform_action_exit(self, actor: Actor, action: Action) -> ActionResult:
         # покинуть можно только самым первым действием на ходу, когда AP на максимуме
-        if self.dungeon._initial_map.get(actor.position) != CELL_TYPE.EXIT.value:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, покинуть данж можно только на клетке выхода",
-            )
-        if actor.current_action_points < actor.stats.action_points:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, покинуть данж можно только когда AP на максимуме",
-            )
         player = next(x for x in self.players if x.position == action.cell)
+        if player.team != 1:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{player.name}, покинуть данж может только команда 1!",
+            )
+        if self.dungeon._initial_map.get(player.position) != CELL_TYPE.EXIT.value:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{player.name}, покинуть данж можно только на клетке выхода",
+            )
+        if player.current_action_points < player.stats.action_points:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{player.name}, покинуть данж можно только когда AP на максимуме",
+            )
         self.players.remove(player)
         return ActionResult(
             action=action,
             action_cost=30000,
-            detail=f"{actor.name} покинул данж!",
+            detail=f"{player.name} покинул данж!",
         )
 
     async def _perform_action_end_turn(
