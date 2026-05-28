@@ -33,6 +33,15 @@ class DungeonMap(BaseModel):
             return True
         return False
 
+    def clear_start_points(self):
+        "Поставить EMPTY в точки старта команд"
+        start_points = {CELL_TYPE.START_TEAM_1.value, CELL_TYPE.START_TEAM_2.value}
+        for x in range(self.width):
+            for y in range(self.height):
+                p = Point(x=x, y=y)
+                if self.get(p) in start_points:
+                    self.set(p, CELL_TYPE.EMPTY.value)
+
     def get_available_moves(self, actor: Actor) -> list[Point]:
         "Возвращает список всех достижимых клеток за указанную скорость (BFS)"
         visited = {actor.position}

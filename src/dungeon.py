@@ -59,8 +59,12 @@ class Dungeon(BaseModel):
                 if getattr(self, attr) is None:
                     raise ValueError(f"Can't procedural generate without {attr}")
             self._procedural_generate()
-        self._initial_map = self.map.model_copy(deep=True)
+        self.__save_initial_map()
         return self
+
+    def __save_initial_map(self):
+        self._initial_map = self.map.model_copy(deep=True)
+        self._initial_map.clear_start_points()
 
     def _init_from_map(self):
         self.enemies = []
@@ -79,8 +83,9 @@ class Dungeon(BaseModel):
                 elif self.map.get(_point) == CELL_TYPE.EXIT.value:
                     self.exits.append(_point)
         if not self.start_points_team_1:
-            raise ValueError("Can't find start points or exit")
-        # TODO вторую команду пока не проверяем, еще нет логики под 2 команды
+            raise ValueError("Can't find start points for team 1")
+        if not self.start_points_team_2:
+            raise ValueError("Can't find start points for team 2")
         # find possible chests and enemies positions
         possible_chest_points: list[Point] = []
         possible_enemy_points: list[Point] = []

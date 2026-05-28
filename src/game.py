@@ -2,6 +2,8 @@ import copy
 import random
 from typing import TYPE_CHECKING
 
+from src.action_handler import ActionHandler
+
 if TYPE_CHECKING:
     from lobby import Lobby
 
@@ -22,24 +24,18 @@ class Game:
         dungeon: Dungeon,
         players: list[Player],
         turn: Turn = None,
-        is_server: bool = True,
         version: int = 0,
     ):
         self.lobby = lobby
         self.ended = False
         self.version = version
-        self.is_server = is_server
         self.dungeon = dungeon
         self.players = players
         if turn is not None:
             self.turn = turn
         else:
             self.turn = Turn()
-
-        if is_server and not players:
-            raise ValueError("No players passed")
-        if self.is_server:
-            self.dump_state()
+        self.action_handler = ActionHandler(game=self)
 
     async def launch(self):
         self._init_players()
@@ -57,224 +53,6 @@ class Game:
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
 
-    async def _perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
-        if self.turn.current_actor != actor:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name} попытался походить во время хода {self.turn.current_actor.name}",
-            )
-        # Enemy и Player приводятся к Actor
-        match action.type:
-            case ActionType.END_TURN:
-                return await self._perform_action_end_turn(actor=actor, action=action)
-            case ActionType.MOVE:
-                return await self._perform_action_move(actor=actor, action=action)
-            case ActionType.ATTACK:
-                return await self._perform_action_attack(actor=actor, action=action)
-            case ActionType.EXIT:
-                return await self._perform_action_exit(actor=actor, action=action)
-            case ActionType.INSPECT:
-                print("INSPECTING", action.cell)
-                return ActionResult(action=action)
-            case _:
-                print("Performing unknown action", action)
-                return ActionResult(action=action)
-
-    async def _perform_action_exit(self, actor: Actor, action: Action) -> ActionResult:
-        # покинуть можно только самым первым действием на ходу, когда AP на максимуме
-        player = next(x for x in self.players if x.position == action.cell)
-        if player.team != 1:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж может только команда 1!",
-            )
-        if self.dungeon._initial_map.get(player.position) != CELL_TYPE.EXIT.value:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж можно только на клетке выхода",
-            )
-        if player.current_action_points < player.stats.action_points:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж можно только когда AP на максимуме",
-            )
-        self.players.remove(player)
-        return ActionResult(
-            action=action,
-            action_cost=30000,
-            detail=f"{player.name} покинул данж!",
-        )
-
-    async def _perform_action_end_turn(
-        self, actor: Actor, action: Action
-    ) -> ActionResult:
-        if self.turn.current_actor != action.actor:
-            print(
-                detail=f"{actor.name} попытался закончить ход во время хода {self.turn.current_actor.name}",
-            )
-        return ActionResult(
-            action=action,
-            action_cost=30000,  # TODO пока просто завершаем ход немыслимым кол-вом AP
-            detail=f"{actor.name} завершает ход",
-        )
-
-    async def _perform_action_move(self, actor: Actor, action: Action) -> ActionResult:
-        if action.cell not in self.turn.available_moves:
-            print(f"Can't move player {actor} to cell {action.cell}")
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, нельзя переместиться в {action.cell}",
-            )
-        if not self.dungeon.map.is_free(action.cell):
-            if self.dungeon.map.get(action.cell) != CELL_TYPE.EXIT.value:
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
-                )
-        path = self.dungeon.map.bfs_path(action.cell, self.turn.current_actor.position)
-        if not path:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, не получилось построить путь до точки {action.cell}",
-            )
-        action_ap_cost = len(path) - 1
-        assert action_ap_cost > 0
-        if self.turn.current_actor.current_action_points < action_ap_cost:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, Недостаточно очков действия для перемещения в {action.cell}!",
-            )
-        self.move_actor(actor, action.cell)
-        return ActionResult(
-            action=action,
-            action_cost=action_ap_cost,
-            speed_spent=action_ap_cost,
-            detail=f"{actor.name} перемещается в клетку {action.cell}",
-        )
-
-    async def _perform_action_attack(
-        self, actor: Actor, action: Action
-    ) -> ActionResult:
-        action_ap_cost = 0
-        actor_cell_type = self.dungeon.map.get(self.turn.current_actor.position)
-        action_cell_type = self.dungeon.map.get(action.cell)
-        attack_params: AttackActionParams = action.params
-        try:
-            weapon = next(
-                w for w in actor.inventory.weapons if w.id == attack_params.weapon_id
-            )
-        except StopIteration:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
-            )
-        action_ap_cost = weapon.cost_ap
-        damage = weapon.damage
-        current_dist = Point.distance_chebyshev(actor.position, action.cell)
-        # проверка линии видимости
-        if weapon.range > 1:
-            if not self.dungeon.map.can_shoot(actor, weapon, action.cell):
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name}, клетка {action.cell} нельзя атаковать - слишком далеко или есть преграды",  # noqa
-                )
-        if self.turn.current_actor.current_action_points < action_ap_cost:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, недостаточно очков действия для выбранной атаки",
-            )
-        if current_dist > weapon.range:
-            print(
-                f"Attempt to attack {action.cell}, but it's too far: {current_dist}"  # noqa
-            )  # noqa
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"Слишком далеко для атаки ({current_dist} / {weapon.range})",
-            )
-        if (
-            actor_cell_type == CELL_TYPE.ENEMY.value
-            and action_cell_type == CELL_TYPE.PLAYER.value
-        ):
-            player = next(x for x in self.players if x.position == action.cell)
-            player.apply_damage(damage)
-            if player.is_dead():
-                self.dungeon.remove_dead_player(player)
-                self.players.remove(player)
-                await self.lobby.broadcast_game_event(
-                    GameEvent(message=f"Игрок {player.name} погиб!")
-                )
-            return ActionResult(
-                action=action,
-                action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} и наносит {damage} урона",
-            )
-        elif (
-            actor_cell_type == CELL_TYPE.PLAYER.value
-            and action_cell_type == CELL_TYPE.ENEMY.value
-        ):
-            enemy = next(x for x in self.dungeon.enemies if x.position == action.cell)
-            enemy.apply_damage(damage)
-            if enemy.is_dead():
-                self.dungeon.remove_dead_enemy(enemy=enemy)
-                await self.lobby.broadcast_game_event(
-                    GameEvent(message=f"Одичалый {enemy.name} погиб!")
-                )
-            return ActionResult(
-                action=action,
-                action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {enemy.name} и наносит {damage} урона",
-            )
-        elif (
-            actor_cell_type == CELL_TYPE.PLAYER.value
-            and action_cell_type == CELL_TYPE.PLAYER.value
-        ):
-            # игрок атакует другого игрока
-            player_attacking: Player = next(
-                x for x in self.players if x.position == actor.position
-            )
-            player_attacked: Player = next(
-                x for x in self.players if x.position == action.cell
-            )
-            if player_attacking.team == player_attacked.team:
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name}, нельзя атаковать своего сокомандника",
-                )
-            player_attacked.apply_damage(damage)
-            if player_attacked.is_dead():
-                self.dungeon.remove_dead_player(player_attacked)
-                self.players.remove(player_attacked)
-                await self.lobby.broadcast_game_event(
-                    GameEvent(message=f"Игрок {player_attacked.name} погиб!")
-                )
-            return ActionResult(
-                action=action,
-                action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} и наносит {damage} урона",
-            )
-        else:
-            print(
-                f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}"
-            )
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, нельзя атаковать клетку {action.cell}",
-            )
-
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.dungeon.map.get(actor.position)
         self.dungeon.reset_map_cell(actor.position)
@@ -282,13 +60,12 @@ class Game:
         self.dungeon.map.set(cell, actor_cell_type)
 
     def dump_state(self) -> dict:
-        if not self.is_server:
-            raise ValueError("Can't dump not server instance of Game")
-        # положить состояние в очередь
         return self.to_dict()
 
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
-        action_result: ActionResult = await self._perform_actor_action(actor, action)
+        action_result: ActionResult = await self.action_handler.perform_actor_action(
+            actor, action
+        )
         await self.lobby.broadcast_game_event(GameEvent(message=action_result.detail))
         if action_result.performed:
             actor.current_action_points = max(
@@ -365,11 +142,7 @@ class Game:
             point_choices[player.team].remove(position)
             player.position = position
             self.dungeon.map.set(player.position, CELL_TYPE.PLAYER.value)
-        # убираем лишние старт-поинты, которые не пригодились
-        for point in point_choices[1]:
-            self.dungeon.map.set(point, CELL_TYPE.EMPTY.value)
-        for point in point_choices[2]:
-            self.dungeon.map.set(point, CELL_TYPE.EMPTY.value)
+        self.dungeon.map.clear_start_points()
 
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
