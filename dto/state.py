@@ -18,6 +18,7 @@ class LobbyState(BaseModel):
 
 class CharacherStatsState(BaseModel):
     health: int
+    max_health: int
     damage: int
     speed: int
     action_points: int

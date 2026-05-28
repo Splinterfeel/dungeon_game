@@ -44,6 +44,24 @@ body {
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
+
+/* actor bars */
+.actor-row { margin-bottom: 6px; font-size: 13px; }
+.actor-name { margin-bottom: 2px; }
+.bar-container {
+    width: 160px; height: 14px;
+    background: #333; border: 1px solid #555;
+    display: inline-flex; align-items: center;
+    position: relative; vertical-align: middle;
+}
+.bar-fill { height: 100%; transition: width 0.3s; }
+.bar-fill.hp { background: #4caf50; }
+.bar-fill.ap { background: #2196f3; }
+.bar-text {
+    position: absolute; width: 100%; text-align: center;
+    font-size: 11px; color: #eee; text-shadow: 0 0 2px #000;
+}
+.bar-label { display: inline-block; width: 24px; font-size: 11px; color: #aaa; }
 .available { background: rgba(0, 255, 255, 0.35) !important; }
 .selected { outline: 3px solid #ff00ff; }
 .fog { filter: brightness(0.25) saturate(0.1); }
@@ -341,23 +359,35 @@ function handle_game_state(state){
 
     const actorsContainer = document.getElementById("actors");
     actorsContainer.innerHTML = "";
-    for (const e of dungeon.enemies) {
+
+    function makeBar(label, current, max, barClass) {
+        const pct = max > 0 ? Math.round(current / max * 100) : 0;
+        return `<span class="bar-label">${label}</span>` +
+            `<span class="bar-container">` +
+            `<span class="bar-fill ${barClass}" style="width:${pct}%"></span>` +
+            `<span class="bar-text">${current}/${max}</span>` +
+            `</span> `;
+    }
+
+    function makeActorRow(name, stats, currentAp, color) {
         const div = document.createElement("div");
-        div.textContent = `ИИ/Враг ${e.name} — HP: ${e.stats.health} Total AP: ${e.stats.action_points} Dmg: ${e.stats.damage}`;
-        div.style.color = "#AA3344";
-        actorsContainer.appendChild(div);
+        div.classList.add("actor-row");
+        div.style.color = color;
+        div.innerHTML = `<div class="actor-name">${name} Dmg: ${stats.damage}</div>` +
+            makeBar("HP", stats.health, stats.max_health, "hp") +
+            makeBar("AP", currentAp, stats.action_points, "ap");
+        return div;
+    }
+
+    for (const e of dungeon.enemies) {
+        actorsContainer.appendChild(makeActorRow(`ИИ/Враг ${e.name}`, e.stats, e.current_action_points, "#AA3344"));
     }
     for (const p of state.players) {
-        const div = document.createElement("div");
-        div.textContent = `Игрок ${p.name} — HP: ${p.stats.health} Total AP: ${p.stats.action_points} Dmg: ${p.stats.damage}`;
-        div.style.color = "#338833";
-        actorsContainer.appendChild(div);
+        actorsContainer.appendChild(makeActorRow(`Игрок ${p.name}`, p.stats, p.current_action_points, "#338833"));
     }
     if (state.turn.current_actor) {
-        const div = document.createElement("div");
-        div.textContent = `Текущий актор ${state.turn.current_actor.name} — HP: ${state.turn.current_actor.stats.health} AP: ${state.turn.current_actor.current_action_points} / ${state.turn.current_actor.stats.action_points} Dmg: ${state.turn.current_actor.stats.damage}`;
-        div.style.color = "#99AAEE";
-        actorsContainer.appendChild(div);
+        const ca = state.turn.current_actor;
+        actorsContainer.appendChild(makeActorRow(`Текущий ${ca.name}`, ca.stats, ca.current_action_points, "#99AAEE"));
     }
 
     const container = document.getElementById("map");

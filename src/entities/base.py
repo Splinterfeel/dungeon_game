@@ -22,11 +22,18 @@ class Entity(BaseModel):
 
 class CharacterStats(BaseModel):
     health: int
+    max_health: int = 0
     damage: int
     speed: int  # сколько клеток может пройти за ход
     action_points: int
     view_distance: int
     accuracy: int
+
+    @model_validator(mode="after")
+    def set_max_health(self):
+        if self.max_health == 0:
+            self.max_health = self.health
+        return self
 
 
 class Weapon(BaseModel):

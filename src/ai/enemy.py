@@ -1,3 +1,4 @@
+import random
 import time
 
 from src.action import Action, ActionType, AttackActionParams
@@ -15,6 +16,29 @@ class SimpleEnemyAI(AI):
 
     def decide(self) -> Action:
         time.sleep(0.3)
+
+        # сначала проверяем ranged-атаку (до движения, чтобы хватило AP)
+        if not self.attacked_on_turn:
+            ranged_weapon = next(
+                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
+            )
+            if ranged_weapon:
+                for player in self.game.players:
+                    if self.game.dungeon.map.can_shoot(
+                        self.actor, ranged_weapon, player.position
+                    ):
+                        if random.random() < 1 / 3:
+                            print(f"         ENEMY {self.actor.name} - RANGED ATTACK")
+                            self.attacked_on_turn = True
+                            attack_params = AttackActionParams(weapon_id=ranged_weapon.id)
+                            return Action(
+                                actor_id=str(self.actor.id),
+                                type=ActionType.ATTACK,
+                                cell=player.position,
+                                params=attack_params,
+                            )
+
+        # фаза движения
         players_distances = []
         for player in self.game.players:
             path = self.game.dungeon.map.bfs_path(self.actor.position, player.position)
@@ -30,7 +54,6 @@ class SimpleEnemyAI(AI):
             print("ENEMY AI - can't find any player path")
             return self.end_turn()
         else:
-            # если еще есть возможность двигаться
             if self.actor.stats.speed - self.actor.current_speed_spent > 0:
                 nearest_player_data = min(players_distances, key=lambda _list: _list[0])
                 distance, path = nearest_player_data
@@ -39,10 +62,7 @@ class SimpleEnemyAI(AI):
                 elif len(path) < 1:
                     print(f"ENEMY AI - player {player} already near. no need to walk")
                 else:
-                    # пытаемся подойти ближе
-                    # получаем путь в обратном направлении, отбрасываем последний элемент (наша позиция)
                     rev_path = path[::-1][:-1]
-                    # идем настолько далеко от текущей позиции к игроку, насколько можем
                     if not self.game.turn.available_moves:
                         print(" ===== no available moves!")
                     for step in rev_path:
@@ -54,7 +74,7 @@ class SimpleEnemyAI(AI):
                                 cell=step,
                             )
 
-        # после фазы движения смотрим можем ли атаковать
+        # после движения — melee-атака
         nearest_player_for_attack = None
         # если расстояние в 1 клетку (в т.ч. по диагонали) - надо атаковать
         for player in self.game.players:
@@ -64,9 +84,7 @@ class SimpleEnemyAI(AI):
                 break
         if nearest_player_for_attack and not self.attacked_on_turn:
             print(f"         ENEMY {self.actor.name} - ATTACKING")
-            # пытаемся атаковать (пока не проверяем action points)
             self.attacked_on_turn = True
-            # берём melee-оружие
             melee_weapon = next(
                 w for w in self.actor.inventory.weapons if w.type == "melee"
             )

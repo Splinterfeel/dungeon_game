@@ -21,8 +21,8 @@ class Dungeon(BaseModel):
     max_rooms: Optional[int] = None
     min_room_size: Optional[int] = None
     max_room_size: Optional[int] = None
-    min_enemy_ap: int = 8
-    max_enemy_ap: int = 10
+    min_enemy_ap: int = 9
+    max_enemy_ap: int = 12
 
     # Состояние подземелья
     map: Optional[DungeonMap] = None
@@ -141,7 +141,7 @@ class Dungeon(BaseModel):
                     stats=CharacterStats(
                         health=random.randint(8, 12),
                         damage=random.randint(3, 5),
-                        speed=2,
+                        speed=3,
                         view_distance=5,
                         accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
                         action_points=random.randint(
@@ -199,7 +199,7 @@ class Dungeon(BaseModel):
                 stats=CharacterStats(
                     health=random.randint(10, 20),
                     damage=random.randint(3, 5),
-                    speed=2,
+                    speed=3,
                     view_distance=5,
                     accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
                     action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),

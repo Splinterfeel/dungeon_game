@@ -189,7 +189,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} и наносит {damage} урона",
+                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -213,7 +213,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {enemy.name} и наносит {damage} урона",
+                detail=f"{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -248,7 +248,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} и наносит {damage} урона",
+                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона",  # noqa
             )
         else:
             print(
