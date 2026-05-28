@@ -15,9 +15,14 @@ class ActionType(Enum):
     HEAVY_ATTACK = auto()
     OPEN_CHEST = auto()
     EXIT = auto()
+    OVERWATCH = auto()
 
 
 class AttackActionParams(BaseModel):
+    weapon_id: uuid.UUID
+
+
+class OverwatchActionParams(BaseModel):
     weapon_id: uuid.UUID
 
 
@@ -26,7 +31,7 @@ class Action(BaseModel):
     actor_id: str
     type: ActionType
     cell: Point
-    params: Optional[Union[AttackActionParams]] = None
+    params: Optional[Union[AttackActionParams, OverwatchActionParams]] = None
 
     @field_validator("type", mode="before")
     @classmethod

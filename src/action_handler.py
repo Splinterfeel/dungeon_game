@@ -1,10 +1,17 @@
+import asyncio
 import typing
 
 from dto.event import GameEvent
-from src.action import Action, ActionResult, ActionType, AttackActionParams
+from src.action import (
+    Action,
+    ActionResult,
+    ActionType,
+    AttackActionParams,
+    OverwatchActionParams,
+)
 from src.base import Point
 from src.constants import CELL_TYPE
-from src.entities.base import Actor
+from src.entities.base import Actor, OverwatchState
 from src.entities.player import Player
 
 if typing.TYPE_CHECKING:
@@ -30,6 +37,8 @@ class ActionHandler:
                 return await self.__perform_action_move(actor=actor, action=action)
             case ActionType.ATTACK:
                 return await self.__perform_action_attack(actor=actor, action=action)
+            case ActionType.OVERWATCH:
+                return await self.__perform_action_overwatch(actor=actor, action=action)
             case ActionType.EXIT:
                 return await self.__perform_action_exit(actor=actor, action=action)
             case ActionType.INSPECT:
@@ -82,6 +91,46 @@ class ActionHandler:
             detail=f"{actor.name} завершает ход",
         )
 
+    async def __perform_action_overwatch(
+        self, actor: Actor, action: Action
+    ) -> ActionResult:
+        if actor.overwatch is not None:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name} уже в режиме огневого дозора",
+            )
+        params: OverwatchActionParams = action.params
+        try:
+            weapon = next(
+                w for w in actor.inventory.weapons if w.id == params.weapon_id
+            )
+        except StopIteration:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, в инвентаре нет указанного оружия для огневого дозора",
+            )
+        if weapon.type != "ranged":
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, огневой дозор доступен только с дальнобойным оружием",
+            )
+        ap_cost = actor.current_action_points
+        if ap_cost <= 0:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, нет очков действия для огневого дозора",
+            )
+        actor.overwatch = OverwatchState(weapon_id=weapon.id)
+        return ActionResult(
+            action=action,
+            action_cost=ap_cost,
+            detail=f"{actor.name} переходит в режим огневого дозора ({weapon.name})",
+        )
+
     async def __perform_action_move(self, actor: Actor, action: Action) -> ActionResult:
         if action.cell not in self.game.turn.available_moves:
             print(f"Can't move player {actor} to cell {action.cell}")
@@ -106,19 +155,33 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, не получилось построить путь до точки {action.cell}",
             )
-        action_ap_cost = len(path) - 1
-        assert action_ap_cost > 0
-        if self.game.turn.current_actor.current_action_points < action_ap_cost:
+        total_cost = len(path) - 1
+        assert total_cost > 0
+        if self.game.turn.current_actor.current_action_points < total_cost:
             return ActionResult(
                 performed=False,
                 action=action,
                 detail=f"{actor.name}, Недостаточно очков действия для перемещения в {action.cell}!",
             )
-        self.game.move_actor(actor, action.cell)
+        # шагаем по пути по одной клетке, проверяя огневой дозор
+        step_path = list(reversed(path))[1:]  # путь от текущей позиции к цели
+        for i, step_cell in enumerate(step_path):
+            self.game.move_actor(actor, step_cell)
+            self.game.version += 1
+            await self.game.lobby.broadcast_game_state()
+            await asyncio.sleep(0.1)
+            overwatch_fired = await self.game.check_overwatch_triggers(actor)
+            if overwatch_fired and actor.is_dead():
+                return ActionResult(
+                    action=action,
+                    action_cost=i + 1,
+                    speed_spent=i + 1,
+                    detail=f"{actor.name} убит огневым дозором при перемещении!",
+                )
         return ActionResult(
             action=action,
-            action_cost=action_ap_cost,
-            speed_spent=action_ap_cost,
+            action_cost=total_cost,
+            speed_spent=total_cost,
             detail=f"{actor.name} перемещается в клетку {action.cell}",
         )
 
@@ -208,7 +271,7 @@ class ActionHandler:
             if enemy.is_dead():
                 self.game.dungeon.remove_dead_enemy(enemy=enemy)
                 await self.game.lobby.broadcast_game_event(
-                    GameEvent(message=f"Одичалый {enemy.name} погиб!")
+                    GameEvent(message=f"{enemy.name} погиб!")
                 )
             return ActionResult(
                 action=action,

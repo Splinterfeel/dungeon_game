@@ -1,5 +1,5 @@
 import random
-from typing import Annotated, ClassVar, Dict
+from typing import Annotated, ClassVar, Dict, Optional
 import uuid
 import names
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, model_validator
@@ -65,6 +65,10 @@ class Inventory(BaseModel):
     weapons: list[Weapon]
 
 
+class OverwatchState(BaseModel):
+    weapon_id: UUIDStr
+
+
 class Actor(Entity):
     _registry: ClassVar[Dict[uuid.UUID, "Actor"]] = {}
     id: UUIDStr = Field(default_factory=uuid.uuid4)
@@ -73,6 +77,7 @@ class Actor(Entity):
     current_action_points: int = 0
     current_speed_spent: int = 0  # сколько клеток прошел за ход
     name: str = Field(default_factory=names.get_full_name)
+    overwatch: Optional[OverwatchState] = None
 
     @model_validator(mode="after")
     def register_instance(self):

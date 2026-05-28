@@ -9,9 +9,10 @@ if TYPE_CHECKING:
 
 from dto.event import GameEvent
 from src.action import Action, ActionResult, ActionType, AttackActionParams
-from src.entities.base import Actor
+from src.entities.base import Actor, OverwatchState
 from src.base import Point
 from src.entities.player import Player
+from src.entities.enemy import Enemy
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
@@ -46,12 +47,70 @@ class Game:
 
     async def prepare_actor_turn(self, actor: Actor):
         await self.lobby.broadcast_game_event(GameEvent(message=f"Ход {actor.name}"))
-        # в начале хода задаем базовое количество AP игроку
         actor.current_action_points = actor.stats.action_points
+        actor.overwatch = None
         self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
-        # в начале хода еще не прошел ни одной клетки
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
+
+    def _is_hostile(self, watcher: Actor, target: Actor) -> bool:
+        if isinstance(watcher, Enemy) and isinstance(target, Player):
+            return True
+        if isinstance(watcher, Player) and isinstance(target, Enemy):
+            return True
+        if isinstance(watcher, Player) and isinstance(target, Player):
+            return watcher.team != target.team
+        return False
+
+    async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
+        all_actors: list[Actor] = list(self.players) + list(self.dungeon.enemies)
+        for watcher in all_actors:
+            if watcher.overwatch is None or watcher.is_dead():
+                continue
+            if not self._is_hostile(watcher, moving_actor):
+                continue
+            weapon = next(
+                (
+                    w
+                    for w in watcher.inventory.weapons
+                    if w.id == watcher.overwatch.weapon_id
+                ),
+                None,
+            )
+            if weapon is None:
+                watcher.overwatch = None
+                continue
+            if self.dungeon.map.can_shoot(watcher, weapon, moving_actor.position):
+                await self._fire_overwatch_shot(watcher, weapon, moving_actor)
+                watcher.overwatch = None
+                return True
+        return False
+
+    async def _fire_overwatch_shot(self, watcher: Actor, weapon, target: Actor):
+        distance = Point.distance_chebyshev(watcher.position, target.position)
+        attack_hit = weapon.check_hit(actor_stats=watcher.stats, distance=distance)
+        if not attack_hit:
+            await self.lobby.broadcast_game_event(
+                GameEvent(
+                    message=f"Огневой дозор: {watcher.name} промахивается по {target.name} из {weapon.name}"
+                )
+            )
+            return
+        target.apply_damage(weapon.damage)
+        await self.lobby.broadcast_game_event(
+            GameEvent(
+                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({weapon.damage} урона)"
+            )
+        )
+        if target.is_dead():
+            if isinstance(target, Player):
+                self.dungeon.remove_dead_player(target)
+                self.players.remove(target)
+            elif isinstance(target, Enemy):
+                self.dungeon.remove_dead_enemy(target)
+            await self.lobby.broadcast_game_event(
+                GameEvent(message=f"{target.name} убит огневым дозором!")
+            )
 
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.dungeon.map.get(actor.position)

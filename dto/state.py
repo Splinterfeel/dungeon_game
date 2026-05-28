@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 from dto.base import PointState
@@ -39,6 +39,10 @@ class InventoryState(BaseModel):
     weapons: list[WeaponState]
 
 
+class OverwatchStateDTO(BaseModel):
+    weapon_id: str
+
+
 class ActorState(BaseModel):
     id: str
     position: PointState
@@ -47,6 +51,7 @@ class ActorState(BaseModel):
     current_action_points: int
     current_speed_spent: int
     inventory: InventoryState
+    overwatch: Optional[OverwatchStateDTO] = None
 
 
 class PlayerState(ActorState):

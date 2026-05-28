@@ -10,7 +10,14 @@ class GameActionState(BaseModel):
     id: uuid.UUID
     actor_id: str
     type: Literal[
-        "END_TURN", "MOVE", "INSPECT", "ATTACK", "HEAVY_ATTACK", "OPEN_CHEST", "EXIT"
+        "END_TURN",
+        "MOVE",
+        "INSPECT",
+        "ATTACK",
+        "HEAVY_ATTACK",
+        "OPEN_CHEST",
+        "EXIT",
+        "OVERWATCH",
     ]
     cell: PointState
     params: dict | None = None

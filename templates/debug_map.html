@@ -64,6 +64,7 @@ body {
 .bar-label { display: inline-block; width: 24px; font-size: 11px; color: #aaa; }
 .available { background: rgba(0, 255, 255, 0.35) !important; }
 .selected { outline: 3px solid #ff00ff; }
+.overwatch { outline: 3px solid #ff6600; box-shadow: 0 0 8px #ff6600; }
 .fog { filter: brightness(0.25) saturate(0.1); }
 
 /* layout */
@@ -136,6 +137,7 @@ body {
 <label for="weapon_select">Оружие:</label>
 <select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
 <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
+<button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
 <button onclick="send_exit()" style="background: #118db7; color: white; font-weight: bold;">EXIT</button>
 
 <div id="actors" style="margin-top: 20px;"></div>
@@ -369,25 +371,26 @@ function handle_game_state(state){
             `</span> `;
     }
 
-    function makeActorRow(name, stats, currentAp, color) {
+    function makeActorRow(name, stats, currentAp, color, isOverwatch) {
         const div = document.createElement("div");
         div.classList.add("actor-row");
         div.style.color = color;
-        div.innerHTML = `<div class="actor-name">${name} Dmg: ${stats.damage}</div>` +
+        const owTag = isOverwatch ? ' <span style="color:#ff6600;">[OVERWATCH]</span>' : '';
+        div.innerHTML = `<div class="actor-name">${name}${owTag} Dmg: ${stats.damage}</div>` +
             makeBar("HP", stats.health, stats.max_health, "hp") +
             makeBar("AP", currentAp, stats.action_points, "ap");
         return div;
     }
 
     for (const e of dungeon.enemies) {
-        actorsContainer.appendChild(makeActorRow(`ИИ/Враг ${e.name}`, e.stats, e.current_action_points, "#AA3344"));
+        actorsContainer.appendChild(makeActorRow(`ИИ/Враг ${e.name}`, e.stats, e.current_action_points, "#AA3344", !!e.overwatch));
     }
     for (const p of state.players) {
-        actorsContainer.appendChild(makeActorRow(`Игрок ${p.name}`, p.stats, p.current_action_points, "#338833"));
+        actorsContainer.appendChild(makeActorRow(`Игрок ${p.name}`, p.stats, p.current_action_points, "#338833", !!p.overwatch));
     }
     if (state.turn.current_actor) {
         const ca = state.turn.current_actor;
-        actorsContainer.appendChild(makeActorRow(`Текущий ${ca.name}`, ca.stats, ca.current_action_points, "#99AAEE"));
+        actorsContainer.appendChild(makeActorRow(`Текущий ${ca.name}`, ca.stats, ca.current_action_points, "#99AAEE", !!ca.overwatch));
     }
 
     const container = document.getElementById("map");
@@ -409,9 +412,8 @@ function handle_game_state(state){
     // враги
     for (const e of dungeon.enemies) {
         visual[e.position.x][e.position.y].entity = "E";
+        visual[e.position.x][e.position.y].overwatch = !!e.overwatch;
     }
-
-    // // сундуки
     for (const c of dungeon.chests) {
         visual[c.position.x][c.position.y].entity = "C";
     }
@@ -429,6 +431,7 @@ function handle_game_state(state){
             _val = "P!";
         }
         visual[p.position.x][p.position.y].entity = _val;
+        visual[p.position.x][p.position.y].overwatch = !!p.overwatch;
     }
     // === туман войны (евклидова дистанция + луч видимости по Брезенхему) ===
     const viewDist = lastPlayerState.stats.view_distance;
@@ -506,6 +509,9 @@ function handle_game_state(state){
                 if (className) {
                     cell.classList.add(className);
                     cell.innerText = cellData.entity;
+                }
+                if (cellData.overwatch) {
+                    cell.classList.add("overwatch");
                 }
             }
 
@@ -603,6 +609,37 @@ async function send_attack() {
         }
     };
     console.log("Sending ATTACK action:", action);
+    socket.send(JSON.stringify(action));
+}
+
+async function send_overwatch() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("WebSocket не подключен!");
+        return;
+    }
+    if (!lastPlayerState) {
+        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
+        return;
+    }
+    const weaponSelect = document.getElementById("weapon_select");
+    const selectedWeaponId = weaponSelect.value;
+    if (!selectedWeaponId) {
+        alert("У вас нет оружия для огневого дозора!");
+        return;
+    }
+    const action = {
+        id: generateUUID(),
+        actor_id: lastPlayerState.id,
+        type: "OVERWATCH",
+        cell: {
+            x: lastPlayerState.position.x,
+            y: lastPlayerState.position.y
+        },
+        params: {
+            weapon_id: selectedWeaponId
+        }
+    };
+    console.log("Sending OVERWATCH action:", action);
     socket.send(JSON.stringify(action));
 }
 

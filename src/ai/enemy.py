@@ -1,7 +1,7 @@
 import random
 import time
 
-from src.action import Action, ActionType, AttackActionParams
+from src.action import Action, ActionType, AttackActionParams, OverwatchActionParams
 from src.ai.base import AI
 from src.base import Point
 
@@ -30,7 +30,9 @@ class SimpleEnemyAI(AI):
                         if random.random() < 1 / 3:
                             print(f"         ENEMY {self.actor.name} - RANGED ATTACK")
                             self.attacked_on_turn = True
-                            attack_params = AttackActionParams(weapon_id=ranged_weapon.id)
+                            attack_params = AttackActionParams(
+                                weapon_id=ranged_weapon.id
+                            )
                             return Action(
                                 actor_id=str(self.actor.id),
                                 type=ActionType.ATTACK,
@@ -95,5 +97,27 @@ class SimpleEnemyAI(AI):
                 cell=nearest_player_for_attack.position,
                 params=attack_params,
             )
+
+        # если не атаковали и не двигались — пробуем огневой дозор
+        if self.actor.current_action_points > 0 and self.actor.overwatch is None:
+            ranged_weapon = next(
+                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
+            )
+            if ranged_weapon:
+                can_see_any_player = any(
+                    Point.distance_euklid(self.actor.position, p.position)
+                    <= self.actor.stats.view_distance
+                    for p in self.game.players
+                )
+                if can_see_any_player:
+                    print(f"         ENEMY {self.actor.name} - OVERWATCH")
+                    overwatch_params = OverwatchActionParams(weapon_id=ranged_weapon.id)
+                    return Action(
+                        actor_id=str(self.actor.id),
+                        type=ActionType.OVERWATCH,
+                        cell=self.actor.position,
+                        params=overwatch_params,
+                    )
+
         print(f"         ENEMY {self.actor.name} - ENDING TURN")
         return self.end_turn()
