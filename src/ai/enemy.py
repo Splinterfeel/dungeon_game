@@ -49,7 +49,9 @@ class SimpleEnemyAI(AI):
                         if step in self.game.turn.available_moves:
                             print(f"         ENEMY {self.actor.name} - MOVING")
                             return Action(
-                                actor=self.actor, type=ActionType.MOVE, cell=step
+                                actor_id=str(self.actor.id),
+                                type=ActionType.MOVE,
+                                cell=step,
                             )
 
         # после фазы движения смотрим можем ли атаковать
@@ -70,7 +72,7 @@ class SimpleEnemyAI(AI):
             )
             attack_params = AttackActionParams(weapon_id=melee_weapon.id)
             return Action(
-                actor=self.actor,
+                actor_id=str(self.actor.id),
                 type=ActionType.ATTACK,
                 cell=nearest_player_for_attack.position,
                 params=attack_params,

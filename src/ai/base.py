@@ -19,5 +19,7 @@ class AI(ABC):
 
     def end_turn(self) -> Action:
         return Action(
-            actor=self.actor, type=ActionType.END_TURN, cell=self.actor.position
+            actor_id=str(self.actor.id),
+            type=ActionType.END_TURN,
+            cell=self.actor.position,
         )

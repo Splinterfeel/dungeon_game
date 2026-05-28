@@ -124,7 +124,7 @@ class Dungeon(BaseModel):
                         damage=3,
                         cost_ap=5,
                         range=1,
-                        accuracy=100,
+                        accuracy=94,
                     ),
                     Weapon(
                         type="ranged",
@@ -132,7 +132,7 @@ class Dungeon(BaseModel):
                         damage=4,
                         cost_ap=8,
                         range=4,
-                        accuracy=50,
+                        accuracy=83,
                     ),
                 ]
             )
@@ -144,6 +144,7 @@ class Dungeon(BaseModel):
                         damage=random.randint(3, 5),
                         speed=2,
                         view_distance=5,
+                        accuracy=75,
                         action_points=random.randint(
                             self.min_enemy_ap, self.max_enemy_ap
                         ),
@@ -201,6 +202,7 @@ class Dungeon(BaseModel):
                     damage=random.randint(3, 5),
                     speed=2,
                     view_distance=5,
+                    accuracy=75,
                     action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
                 ),
             )

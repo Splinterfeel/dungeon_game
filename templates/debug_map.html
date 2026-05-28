@@ -502,7 +502,7 @@ async function send_end_turn() {
     }
     const action = {
         id: generateUUID(), // uuid.UUID
-        actor: lastPlayerState,  // ActorState (объект из последнего state_update)
+        actor_id: lastPlayerState.id,  // ActorState (объект из последнего state_update)
         type: "END_TURN",        // Literal
         cell: {                  // PointState
             x: lastPlayerState.position.x,
@@ -529,7 +529,7 @@ async function send_move() {
     }
     const action = {
         id: generateUUID(),
-        actor: lastPlayerState,
+        actor_id: lastPlayerState.id,
         type: "MOVE",
         cell: {
             x: selectedCell.x,
@@ -562,7 +562,7 @@ async function send_attack() {
     }
     const action = {
         id: generateUUID(),
-        actor: lastPlayerState,
+        actor_id: lastPlayerState.id,
         type: "ATTACK",
         cell: {
             x: selectedCell.x,
@@ -587,7 +587,7 @@ async function send_exit() {
     }
     const action = {
         id: generateUUID(),
-        actor: lastPlayerState,
+        actor_id: lastPlayerState.id,
         type: "EXIT",
         cell: {
             x: lastPlayerState.position.x,

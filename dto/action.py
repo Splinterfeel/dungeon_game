@@ -8,7 +8,7 @@ from dto.state import ActorState
 
 class GameActionState(BaseModel):
     id: uuid.UUID
-    actor: ActorState
+    actor_id: str
     type: Literal[
         "END_TURN", "MOVE", "INSPECT", "ATTACK", "HEAVY_ATTACK", "OPEN_CHEST", "EXIT"
     ]

@@ -148,7 +148,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                             ):
                                 action = ai.decide()
                                 performed = await lobby.handle_game_action(
-                                    action.actor, action.model_dump(mode="json")
+                                    actor, action.model_dump(mode="json")
                                 )
                                 if not performed:
                                     print(

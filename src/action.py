@@ -23,7 +23,7 @@ class AttackActionParams(BaseModel):
 
 class Action(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
-    actor: Actor
+    actor_id: str
     type: ActionType
     cell: Point
     params: Optional[Union[AttackActionParams]] = None

@@ -38,7 +38,12 @@ class Lobby:
             id=player.id,
             team=player.team,
             stats=CharacterStats(
-                health=15, damage=5, speed=5, action_points=10, view_distance=5
+                health=15,
+                damage=5,
+                speed=5,
+                action_points=10,
+                view_distance=5,
+                accuracy=87,
             ),
             inventory=Inventory(
                 weapons=[
@@ -48,7 +53,7 @@ class Lobby:
                         damage=3,
                         cost_ap=5,
                         range=1,
-                        accuracy=100,
+                        accuracy=97,
                     ),
                     Weapon(
                         type="ranged",
@@ -56,7 +61,7 @@ class Lobby:
                         damage=5,
                         cost_ap=8,
                         range=4,
-                        accuracy=80,
+                        accuracy=87,
                     ),
                 ]
             ),

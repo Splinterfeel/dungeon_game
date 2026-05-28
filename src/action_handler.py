@@ -70,9 +70,11 @@ class ActionHandler:
     async def __perform_action_end_turn(
         self, actor: Actor, action: Action
     ) -> ActionResult:
-        if self.game.turn.current_actor != action.actor:
+        if str(self.game.turn.current_actor.id) != action.actor_id:
+            print(self.game.turn.current_actor.id)
+            print(action.actor_id)
             print(
-                detail=f"{actor.name} попытался закончить ход во время хода {self.turn.current_actor.name}",
+                detail=f"{actor.name} попытался закончить ход во время хода {self.game.turn.current_actor.name}",
             )
         return ActionResult(
             action=action,
@@ -165,11 +167,18 @@ class ActionHandler:
                 action=action,
                 detail=f"Слишком далеко для атаки ({current_dist} / {weapon.range})",
             )
+        attack_hit = weapon.check_hit(actor_stats=actor.stats, distance=current_dist)
         if (
             actor_cell_type == CELL_TYPE.ENEMY.value
             and action_cell_type == CELL_TYPE.PLAYER.value
         ):
             player = next(x for x in self.game.players if x.position == action.cell)
+            if not attack_hit:
+                return ActionResult(
+                    performed=False,
+                    action=action,
+                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {player.name}",
+                )
             player.apply_damage(damage)
             if player.is_dead():
                 self.game.dungeon.remove_dead_player(player)
@@ -189,6 +198,12 @@ class ActionHandler:
             enemy = next(
                 x for x in self.game.dungeon.enemies if x.position == action.cell
             )
+            if not attack_hit:
+                return ActionResult(
+                    performed=False,
+                    action=action,
+                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
+                )
             enemy.apply_damage(damage)
             if enemy.is_dead():
                 self.game.dungeon.remove_dead_enemy(enemy=enemy)
@@ -216,6 +231,12 @@ class ActionHandler:
                     performed=False,
                     action=action,
                     detail=f"{actor.name}, нельзя атаковать своего сокомандника",
+                )
+            if not attack_hit:
+                return ActionResult(
+                    performed=False,
+                    action=action,
+                    detail=f"{player_attacking.name} промахивается из оружия {weapon.name} по {player_attacked.name}",
                 )
             player_attacked.apply_damage(damage)
             if player_attacked.is_dead():

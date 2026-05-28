@@ -1,3 +1,4 @@
+import random
 from typing import Annotated, ClassVar, Dict
 import uuid
 import names
@@ -25,6 +26,7 @@ class CharacterStats(BaseModel):
     speed: int  # сколько клеток может пройти за ход
     action_points: int
     view_distance: int
+    accuracy: int
 
 
 class Weapon(BaseModel):
@@ -35,6 +37,21 @@ class Weapon(BaseModel):
     cost_ap: int
     range: int
     accuracy: int
+
+    def calculate_hit_chance(self, actor_stats: CharacterStats, distance: int) -> float:
+        if distance > self.range:
+            return 0.0
+        base_chance = actor_stats.accuracy * (self.accuracy / 100.0)
+        if self.type != "melee":
+            distance_penalty = (distance - 1) * (20 / self.range)
+            hit_chance = base_chance - distance_penalty
+        else:
+            hit_chance = base_chance
+        return max(0.05, min(0.95, hit_chance / 100.0))
+
+    def check_hit(self, actor_stats: CharacterStats, distance: int) -> bool:
+        chance = self.calculate_hit_chance(actor_stats=actor_stats, distance=distance)
+        return random.random() <= chance
 
 
 class Inventory(BaseModel):
