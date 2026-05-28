@@ -8,8 +8,8 @@ if TYPE_CHECKING:
     from lobby import Lobby
 
 from dto.event import GameEvent
-from src.action import Action, ActionResult, ActionType, AttackActionParams
-from src.entities.base import Actor, OverwatchState
+from src.action import Action, ActionResult, ActionType
+from src.entities.base import Actor
 from src.base import Point
 from src.entities.player import Player
 from src.entities.enemy import Enemy
@@ -49,7 +49,7 @@ class Game:
         await self.lobby.broadcast_game_event(GameEvent(message=f"Ход {actor.name}"))
         actor.current_action_points = actor.stats.action_points
         actor.overwatch = None
-        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
+        self.turn.available_moves = self.dungeon.map.get_available_moves(actor, self)
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
 
@@ -61,6 +61,39 @@ class Game:
         if isinstance(watcher, Player) and isinstance(target, Player):
             return watcher.team != target.team
         return False
+
+    def get_actor_at_cell(self, cell: Point) -> Actor | None:
+        """
+        Find any actor (Player or Enemy) at the given cell position.
+        Returns None if no actor found at the position.
+        """
+        for player in self.players:
+            if player.position == cell:
+                return player
+
+        for enemy in self.dungeon.enemies:
+            if enemy.position == cell:
+                return enemy
+
+        return None
+
+    async def handle_actor_death(self, actor: Actor) -> None:
+        """
+        Handle actor death - remove from appropriate lists and broadcast event.
+        Works for both Player and Enemy types.
+        """
+        if isinstance(actor, Player):
+            self.dungeon.remove_dead_player(actor)
+            if actor in self.players:
+                self.players.remove(actor)
+            await self.lobby.broadcast_game_event(
+                GameEvent(message=f"Игрок {actor.name} погиб!")
+            )
+        elif isinstance(actor, Enemy):
+            self.dungeon.remove_dead_enemy(enemy=actor)
+            await self.lobby.broadcast_game_event(
+                GameEvent(message=f"{actor.name} погиб!")
+            )
 
     async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
         all_actors: list[Actor] = list(self.players) + list(self.dungeon.enemies)
@@ -99,7 +132,7 @@ class Game:
         target.apply_damage(weapon.damage)
         await self.lobby.broadcast_game_event(
             GameEvent(
-                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({weapon.damage} урона)"
+                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({weapon.damage} урона)"  # noqa
             )
         )
         if target.is_dead():
@@ -113,10 +146,25 @@ class Game:
             )
 
     def move_actor(self, actor: Actor, cell: Point):
-        actor_cell_type = self.dungeon.map.get(actor.position)
-        self.dungeon.reset_map_cell(actor.position)
+        # Clear old position - set to EMPTY unless it's an exit
+        old_position = actor.position
+        old_cell_type = self.dungeon.map.get(old_position)
+
+        # Clear old position
+        if old_cell_type == CELL_TYPE.EXIT.value:
+            self.dungeon.map.set(old_position, CELL_TYPE.EXIT.value)
+        elif old_cell_type in [CELL_TYPE.START_TEAM_1.value, CELL_TYPE.START_TEAM_2.value]:
+            # For start positions, set to EMPTY after player moves away
+            self.dungeon.map.set(old_position, CELL_TYPE.EMPTY.value)
+        else:
+            self.dungeon.map.set(old_position, CELL_TYPE.EMPTY.value)
+
+        # Set new position
         actor.position = cell
-        self.dungeon.map.set(cell, actor_cell_type)
+        if isinstance(actor, Player):
+            self.dungeon.map.set(cell, CELL_TYPE.PLAYER.value)
+        else:
+            self.dungeon.map.set(cell, CELL_TYPE.ENEMY.value)
 
     def dump_state(self) -> dict:
         return self.to_dict()
@@ -131,12 +179,15 @@ class Game:
                 actor.current_action_points - action_result.action_cost, 0
             )
             actor.current_speed_spent += action_result.speed_spent
-        if action.type == ActionType.END_TURN:
-            await self.pass_turn_to_next_actor()
-        self.check_game_end()
-        self.turn.available_moves = self.dungeon.map.get_available_moves(
-            self.turn.current_actor
-        )
+            # Overwatch automatically ends the turn only if successfully performed
+            if action.type == ActionType.END_TURN or action.type == ActionType.OVERWATCH:
+                await self.pass_turn_to_next_actor()
+        else:
+            # Check game end even if action failed
+            self.check_game_end()
+            self.turn.available_moves = self.dungeon.map.get_available_moves(
+                self.turn.current_actor, self
+            )
         return action_result
 
     async def pass_turn_to_next_actor(self):

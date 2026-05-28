@@ -1,7 +1,6 @@
 import asyncio
 import typing
 
-from dto.event import GameEvent
 from src.action import (
     Action,
     ActionResult,
@@ -27,7 +26,7 @@ class ActionHandler:
             return ActionResult(
                 performed=False,
                 action=action,
-                detail=f"{actor.name} попытался походить во время хода {self.turn.current_actor.name}",
+                detail=f"{actor.name} попытался походить во время хода {self.game.turn.current_actor.name}",
             )
         # Enemy и Player приводятся к Actor
         match action.type:
@@ -50,7 +49,13 @@ class ActionHandler:
 
     async def __perform_action_exit(self, actor: Actor, action: Action) -> ActionResult:
         # покинуть можно только самым первым действием на ходу, когда AP на максимуме
-        player: Player = next(x for x in self.game.players if x.position == action.cell)
+        player = self.game.get_actor_at_cell(action.cell)
+        if not isinstance(player, Player):
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"На клетке {action.cell} нет игрока",
+            )
         if player.team != 1:
             return ActionResult(
                 performed=False,
@@ -117,8 +122,8 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, огневой дозор доступен только с дальнобойным оружием",
             )
-        ap_cost = actor.current_action_points
-        if ap_cost <= 0:
+        ap_cost = weapon.cost_ap
+        if actor.current_action_points < ap_cost:
             return ActionResult(
                 performed=False,
                 action=action,
@@ -147,7 +152,7 @@ class ActionHandler:
                     detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
                 )
         path = self.game.dungeon.map.bfs_path(
-            action.cell, self.game.turn.current_actor.position
+            action.cell, self.game.turn.current_actor.position, self.game
         )
         if not path:
             return ActionResult(
@@ -188,11 +193,7 @@ class ActionHandler:
     async def __perform_action_attack(
         self, actor: Actor, action: Action
     ) -> ActionResult:
-        action_ap_cost = 0
-        actor_cell_type = self.game.dungeon.map.get(
-            self.game.turn.current_actor.position
-        )
-        action_cell_type = self.game.dungeon.map.get(action.cell)
+        # === VALIDATION PHASE ===
         attack_params: AttackActionParams = action.params
         try:
             weapon = next(
@@ -204,121 +205,82 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
             )
+
         action_ap_cost = weapon.cost_ap
         damage = weapon.damage
         current_dist = Point.distance_chebyshev(actor.position, action.cell)
-        # проверка линии видимости
+
+        # Line of sight and distance validation
         if weapon.range > 1:
             if not self.game.dungeon.map.can_shoot(actor, weapon, action.cell):
                 return ActionResult(
                     performed=False,
                     action=action,
-                    detail=f"{actor.name}, клетка {action.cell} нельзя атаковать - слишком далеко или есть преграды",  # noqa
+                    detail=f"{actor.name}, клетка {action.cell} нельзя атаковать - слишком далеко или есть преграды",
                 )
+
         if self.game.turn.current_actor.current_action_points < action_ap_cost:
             return ActionResult(
                 performed=False,
                 action=action,
                 detail=f"{actor.name}, недостаточно очков действия для выбранной атаки",
             )
+
         if current_dist > weapon.range:
-            print(
-                f"Attempt to attack {action.cell}, but it's too far: {current_dist}"  # noqa
-            )  # noqa
+            print(f"Attempt to attack {action.cell}, but it's too far: {current_dist}")
             return ActionResult(
                 performed=False,
                 action=action,
                 detail=f"Слишком далеко для атаки ({current_dist} / {weapon.range})",
             )
-        attack_hit = weapon.check_hit(actor_stats=actor.stats, distance=current_dist)
-        if (
-            actor_cell_type == CELL_TYPE.ENEMY.value
-            and action_cell_type == CELL_TYPE.PLAYER.value
-        ):
-            player = next(x for x in self.game.players if x.position == action.cell)
-            if not attack_hit:
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {player.name}",
-                )
-            player.apply_damage(damage)
-            if player.is_dead():
-                self.game.dungeon.remove_dead_player(player)
-                self.game.players.remove(player)
-                await self.game.lobby.broadcast_game_event(
-                    GameEvent(message=f"Игрок {player.name} погиб!")
-                )
+
+        # === ATTACK EXECUTION PHASE ===
+        # Find target actor using new utility method
+        target_actor = self.game.get_actor_at_cell(action.cell)
+
+        if target_actor is None:
             return ActionResult(
+                performed=False,
                 action=action,
-                action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона",
+                detail=f"{actor.name}, в клетке {action.cell} никого нет",
             )
-        elif (
-            actor_cell_type == CELL_TYPE.PLAYER.value
-            and action_cell_type == CELL_TYPE.ENEMY.value
-        ):
-            enemy = next(
-                x for x in self.game.dungeon.enemies if x.position == action.cell
-            )
-            if not attack_hit:
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
-                )
-            enemy.apply_damage(damage)
-            if enemy.is_dead():
-                self.game.dungeon.remove_dead_enemy(enemy=enemy)
-                await self.game.lobby.broadcast_game_event(
-                    GameEvent(message=f"{enemy.name} погиб!")
-                )
-            return ActionResult(
-                action=action,
-                action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона",
-            )
-        elif (
-            actor_cell_type == CELL_TYPE.PLAYER.value
-            and action_cell_type == CELL_TYPE.PLAYER.value
-        ):
-            # игрок атакует другого игрока
-            player_attacking: Player = next(
-                x for x in self.game.players if x.position == actor.position
-            )
-            player_attacked: Player = next(
-                x for x in self.game.players if x.position == action.cell
-            )
-            if player_attacking.team == player_attacked.team:
+
+        # Validate attack using _is_hostile
+        if not self.game._is_hostile(actor, target_actor):
+            # Handle friendly fire prevention
+            if isinstance(actor, Player) and isinstance(target_actor, Player):
                 return ActionResult(
                     performed=False,
                     action=action,
                     detail=f"{actor.name}, нельзя атаковать своего сокомандника",
                 )
-            if not attack_hit:
+            else:
                 return ActionResult(
                     performed=False,
                     action=action,
-                    detail=f"{player_attacking.name} промахивается из оружия {weapon.name} по {player_attacked.name}",
+                    detail=f"{actor.name}, нельзя атаковать этот объект",
                 )
-            player_attacked.apply_damage(damage)
-            if player_attacked.is_dead():
-                self.game.dungeon.remove_dead_player(player_attacked)
-                self.game.players.remove(player_attacked)
-                await self.game.lobby.broadcast_game_event(
-                    GameEvent(message=f"Игрок {player_attacked.name} погиб!")
-                )
-            return ActionResult(
-                action=action,
-                action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона",  # noqa
-            )
-        else:
-            print(
-                f"Unknown actor_type / cell_type for attack: {actor_cell_type} / {action_cell_type}"
-            )
+
+        # Calculate hit
+        attack_hit = weapon.check_hit(actor_stats=actor.stats, distance=current_dist)
+
+        if not attack_hit:
             return ActionResult(
                 performed=False,
                 action=action,
-                detail=f"{actor.name}, нельзя атаковать клетку {action.cell}",
+                detail=f"{actor.name} промахивается из оружия {weapon.name} по {target_actor.name}",
             )
+
+        # Apply damage
+        target_actor.apply_damage(damage)
+
+        # Handle death if needed
+        if target_actor.is_dead():
+            await self.game.handle_actor_death(target_actor)
+
+        # Return success result
+        return ActionResult(
+            action=action,
+            action_cost=action_ap_cost,
+            detail=f"{actor.name} атакует {target_actor.name} ({weapon.name}) и наносит {damage} урона",
+        )

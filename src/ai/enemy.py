@@ -43,7 +43,7 @@ class SimpleEnemyAI(AI):
         # фаза движения
         players_distances = []
         for player in self.game.players:
-            path = self.game.dungeon.map.bfs_path(self.actor.position, player.position)
+            path = self.game.dungeon.map.bfs_path(self.actor.position, player.position, self.game)
             if not path:
                 continue
             players_distances.append(
@@ -99,25 +99,24 @@ class SimpleEnemyAI(AI):
             )
 
         # если не атаковали и не двигались — пробуем огневой дозор
-        if self.actor.current_action_points > 0 and self.actor.overwatch is None:
+        if self.actor.overwatch is None:
             ranged_weapon = next(
                 (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
             )
-            if ranged_weapon:
-                can_see_any_player = any(
-                    Point.distance_euklid(self.actor.position, p.position)
-                    <= self.actor.stats.view_distance
-                    for p in self.game.players
-                )
-                if can_see_any_player:
-                    print(f"         ENEMY {self.actor.name} - OVERWATCH")
-                    overwatch_params = OverwatchActionParams(weapon_id=ranged_weapon.id)
-                    return Action(
-                        actor_id=str(self.actor.id),
-                        type=ActionType.OVERWATCH,
-                        cell=self.actor.position,
-                        params=overwatch_params,
-                    )
+            if ranged_weapon and self.actor.current_action_points >= ranged_weapon.cost_ap:
+                # Check if any players are within overwatch range and line of sight
+                for player in self.game.players:
+                    if Point.distance_chebyshev(self.actor.position, player.position) <= ranged_weapon.range:
+                        if self.game.dungeon.map.can_shoot(self.actor, ranged_weapon, player.position):
+                            # Only use overwatch if we have clear line of sight to at least one player
+                            print(f"         ENEMY {self.actor.name} - OVERWATCH")
+                            overwatch_params = OverwatchActionParams(weapon_id=ranged_weapon.id)
+                            return Action(
+                                actor_id=str(self.actor.id),
+                                type=ActionType.OVERWATCH,
+                                cell=self.actor.position,
+                                params=overwatch_params,
+                            )
 
         print(f"         ENEMY {self.actor.name} - ENDING TURN")
         return self.end_turn()

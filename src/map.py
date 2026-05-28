@@ -28,10 +28,18 @@ class DungeonMap(BaseModel):
     def set(self, point: Point, value):
         self.tiles[point.x][point.y] = value
 
-    def is_free(self, point: Point) -> bool:
-        if self.get(point) == CELL_TYPE.EMPTY.value:
-            return True
-        return False
+    def is_free(self, point: Point, game: "Game" = None) -> bool:
+        # Check map cell type
+        if self.get(point) != CELL_TYPE.EMPTY.value and self.get(point) != CELL_TYPE.EXIT.value:
+            return False
+
+        # If game instance provided, check actual actor occupancy
+        if game is not None:
+            actor = game.get_actor_at_cell(point)
+            if actor is not None:
+                return False  # Cell occupied by actor
+
+        return True
 
     def clear_start_points(self):
         "Поставить EMPTY в точки старта команд"
@@ -42,7 +50,7 @@ class DungeonMap(BaseModel):
                 if self.get(p) in start_points:
                     self.set(p, CELL_TYPE.EMPTY.value)
 
-    def get_available_moves(self, actor: Actor) -> list[Point]:
+    def get_available_moves(self, actor: Actor, game: "Game" = None) -> list[Point]:
         "Возвращает список всех достижимых клеток за указанную скорость (BFS)"
         visited = {actor.position}
         available = []
@@ -70,14 +78,14 @@ class DungeonMap(BaseModel):
             for offset in directions:
                 next_point = point.on(offset)
                 if next_point not in visited and (
-                    self.is_free(next_point)
+                    self.is_free(next_point, game)
                     or self.get(next_point) == CELL_TYPE.EXIT.value
                 ):
                     visited.add(next_point)
                     queue.append((next_point, distance + 1))
         return available
 
-    def bfs_path(self, start: Point, goal: Point) -> list[Point] | None:
+    def bfs_path(self, start: Point, goal: Point, game: "Game" = None) -> list[Point] | None:
         """
         Находит кратчайший путь от start до goal (BFS).
         Возвращает список клеток от старта до цели включительно.
@@ -101,7 +109,7 @@ class DungeonMap(BaseModel):
             for offset in directions:
                 next_point = point.on(offset)
                 if next_point not in visited and (
-                    self.is_free(next_point) or next_point == goal
+                    self.is_free(next_point, game) or next_point == goal
                 ):
                     visited.add(next_point)
                     queue.append((next_point, path + [next_point]))
