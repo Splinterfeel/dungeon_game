@@ -6,6 +6,7 @@ from fastapi import WebSocket
 from dto.base import PlayerDTO
 from dto.event import GameEvent
 from dto.state import GameState, LobbyState, LobbyStatePayload
+from src.constants import Accuracy
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
@@ -43,7 +44,7 @@ class Lobby:
                 speed=5,
                 action_points=10,
                 view_distance=5,
-                accuracy=87,
+                accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
             ),
             inventory=Inventory(
                 weapons=[
@@ -53,7 +54,7 @@ class Lobby:
                         damage=3,
                         cost_ap=5,
                         range=1,
-                        accuracy=97,
+                        accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
                     ),
                     Weapon(
                         type="ranged",
@@ -61,7 +62,7 @@ class Lobby:
                         damage=5,
                         cost_ap=8,
                         range=4,
-                        accuracy=87,
+                        accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,
                     ),
                 ]
             ),

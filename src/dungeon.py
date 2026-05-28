@@ -1,10 +1,9 @@
-import copy
 import random
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 from src.base import Point, PointOffset
-from src.constants import CELL_TYPE
+from src.constants import CELL_TYPE, Accuracy
 from src.entities.base import CharacterStats, Inventory, Weapon
 from src.entities.chest import Chest
 from src.entities.player import Player
@@ -124,7 +123,7 @@ class Dungeon(BaseModel):
                         damage=3,
                         cost_ap=5,
                         range=1,
-                        accuracy=94,
+                        accuracy=Accuracy.DEFAULT_ENEMY_MELEE_WEAPON_ACCURACY,
                     ),
                     Weapon(
                         type="ranged",
@@ -132,7 +131,7 @@ class Dungeon(BaseModel):
                         damage=4,
                         cost_ap=8,
                         range=4,
-                        accuracy=83,
+                        accuracy=Accuracy.DEFAULT_ENEMY_RANGED_WEAPON_ACCURACY,
                     ),
                 ]
             )
@@ -144,7 +143,7 @@ class Dungeon(BaseModel):
                         damage=random.randint(3, 5),
                         speed=2,
                         view_distance=5,
-                        accuracy=75,
+                        accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
                         action_points=random.randint(
                             self.min_enemy_ap, self.max_enemy_ap
                         ),
@@ -202,7 +201,7 @@ class Dungeon(BaseModel):
                     damage=random.randint(3, 5),
                     speed=2,
                     view_distance=5,
-                    accuracy=75,
+                    accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
                     action_points=random.randint(self.min_enemy_ap, self.max_enemy_ap),
                 ),
             )
