@@ -117,7 +117,7 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, огневой дозор доступен только с дальнобойным оружием",
             )
-        if actor.current_action_points <= weapon.cost_ap:
+        if actor.current_action_points < weapon.cost_ap:
             return ActionResult(
                 performed=False,
                 action=action,

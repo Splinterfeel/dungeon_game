@@ -111,9 +111,6 @@ class Game:
                 self.players.remove(target)
             elif isinstance(target, Enemy):
                 self.dungeon.remove_dead_enemy(target)
-            await self.lobby.broadcast_game_event(
-                GameEvent(message=f"{target.name} убит огневым дозором!")
-            )
 
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.dungeon.map.get(actor.position)
