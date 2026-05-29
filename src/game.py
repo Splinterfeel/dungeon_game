@@ -1,12 +1,8 @@
 import copy
 import random
-from typing import TYPE_CHECKING
+from typing import Optional, List
 
 from src.action_handler import ActionHandler
-
-if TYPE_CHECKING:
-    from lobby import Lobby
-
 from dto.event import GameEvent
 from src.action import Action, ActionResult, ActionType
 from src.entities.base import Actor
@@ -16,6 +12,7 @@ from src.entities.enemy import Enemy
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
+from src.game_observer import GameObserver
 
 
 ACTIONS_ENDS_TURN = {ActionType.END_TURN, ActionType.OVERWATCH}
@@ -24,13 +21,12 @@ ACTIONS_ENDS_TURN = {ActionType.END_TURN, ActionType.OVERWATCH}
 class Game:
     def __init__(
         self,
-        lobby: "Lobby",
         dungeon: Dungeon,
-        players: list[Player],
+        players: List[Player],
         turn: Turn = None,
         version: int = 0,
     ):
-        self.lobby = lobby
+        self._observer: Optional[GameObserver] = None
         self.ended = False
         self.version = version
         self.dungeon = dungeon
@@ -41,6 +37,22 @@ class Game:
             self.turn = Turn()
         self.action_handler = ActionHandler(game=self)
 
+    def set_observer(self, observer: GameObserver) -> None:
+        """Register an observer for game events"""
+        self._observer = observer
+
+    async def _notify_event(
+        self, event: GameEvent, receiver_player_ids: Optional[List[str]] = None
+    ) -> None:
+        """Notify observer of game event"""
+        if self._observer:
+            await self._observer.on_game_event(event, receiver_player_ids)
+
+    async def _notify_state_change(self) -> None:
+        """Notify observer of state change"""
+        if self._observer:
+            await self._observer.on_state_change()
+
     async def launch(self):
         self._init_players()
 
@@ -49,7 +61,7 @@ class Game:
         await self.pass_turn_to_next_actor()
 
     async def prepare_actor_turn(self, actor: Actor):
-        await self.lobby.broadcast_game_event(GameEvent(message=f"Ход {actor.name}"))
+        await self._notify_event(GameEvent(message=f"Ход {actor.name}"))
         actor.current_action_points = actor.stats.action_points
         actor.overwatch = None
         self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
@@ -93,14 +105,14 @@ class Game:
         distance = Point.distance_chebyshev(watcher.position, target.position)
         attack_hit = weapon.check_hit(actor_stats=watcher.stats, distance=distance)
         if not attack_hit:
-            await self.lobby.broadcast_game_event(
+            await self._notify_event(
                 GameEvent(
                     message=f"Огневой дозор: {watcher.name} промахивается по {target.name} из {weapon.name}"
                 )
             )
             return
         target.apply_damage(weapon.damage)
-        await self.lobby.broadcast_game_event(
+        await self._notify_event(
             GameEvent(
                 message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({weapon.damage} урона)"
             )
@@ -125,7 +137,7 @@ class Game:
         action_result: ActionResult = await self.action_handler.perform_actor_action(
             actor, action
         )
-        await self.lobby.broadcast_game_event(GameEvent(message=action_result.detail))
+        await self._notify_event(GameEvent(message=action_result.detail))
         if action_result.performed:
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0

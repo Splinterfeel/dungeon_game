@@ -2,6 +2,7 @@ import asyncio
 import copy
 from uuid import uuid4, UUID
 from fastapi import WebSocket
+from typing import Optional, List
 
 from dto.base import PlayerDTO
 from dto.event import GameEvent
@@ -15,9 +16,10 @@ from src.entities.base import CharacterStats, Inventory, Weapon
 from src.action import Action
 from src.map import DungeonMap
 from src.maps import default
+from src.game_observer import GameObserver
 
 
-class Lobby:
+class Lobby(GameObserver):
     def __init__(self, name: str, players_num: int, created_by_player_id: UUID):
         self.id = uuid4()
         self.name = name
@@ -28,6 +30,16 @@ class Lobby:
 
         self.lock = asyncio.Lock()
         self.game = None  # до момента старта игры нет
+
+    async def on_game_event(
+        self, event: GameEvent, receiver_player_ids: Optional[List[str]] = None
+    ) -> None:
+        """Observer interface implementation"""
+        await self.broadcast_game_event(event, receiver_player_ids)
+
+    async def on_state_change(self) -> None:
+        """Observer interface implementation"""
+        await self.broadcast_game_state()
 
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
         if str(player.id) in self.players:
@@ -100,9 +112,8 @@ class Lobby:
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         dungeon = Dungeon(max_chests=3, enemies_num=2, map=dungeon_map)
-        self.game = Game(
-            lobby=self, dungeon=dungeon, players=list(self.players.values())
-        )
+        self.game = Game(dungeon=dungeon, players=list(self.players.values()))
+        self.game.set_observer(self)  # Register as observer
         await self.game.launch()
         return True, "Game started"
 

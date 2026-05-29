@@ -167,7 +167,7 @@ class ActionHandler:
         for i, step_cell in enumerate(step_path):
             self.game.move_actor(actor, step_cell)
             self.game.version += 1
-            await self.game.lobby.broadcast_game_state()
+            await self.game._notify_state_change()
             await asyncio.sleep(0.1)
             overwatch_fired = await self.game.check_overwatch_triggers(actor)
             if overwatch_fired and actor.is_dead():
@@ -245,7 +245,7 @@ class ActionHandler:
             if player.is_dead():
                 self.game.dungeon.remove_dead_player(player)
                 self.game.players.remove(player)
-                await self.game.lobby.broadcast_game_event(
+                await self.game._notify_event(
                     GameEvent(message=f"Игрок {player.name} погиб!")
                 )
             return ActionResult(
@@ -269,9 +269,7 @@ class ActionHandler:
             enemy.apply_damage(damage)
             if enemy.is_dead():
                 self.game.dungeon.remove_dead_enemy(enemy=enemy)
-                await self.game.lobby.broadcast_game_event(
-                    GameEvent(message=f"{enemy.name} погиб!")
-                )
+                await self.game._notify_event(GameEvent(message=f"{enemy.name} погиб!"))
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
@@ -304,7 +302,7 @@ class ActionHandler:
             if player_attacked.is_dead():
                 self.game.dungeon.remove_dead_player(player_attacked)
                 self.game.players.remove(player_attacked)
-                await self.game.lobby.broadcast_game_event(
+                await self.game._notify_event(
                     GameEvent(message=f"Игрок {player_attacked.name} погиб!")
                 )
             return ActionResult(
