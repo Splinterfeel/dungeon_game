@@ -127,9 +127,12 @@ body {
 <input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input"  style="width: 40%;"/>
 <button onclick="generate_new_player_id()">Сгенерить новый</button>
 <br>
-<label for="lobby_id_input">Lobby ID</label>
-<input type="text" value="" id="lobby_id_input" style="width: 40%;"/>
-<button onclick="generate_new_lobby_id()">Сгенерить новый</button>
+<label for="lobby_id_select">Lobby ID</label>
+<select id="lobby_id_select" style="width: 40%; background: #222; color: #eee; padding: 5px;">
+    <option value="">-- Выберите лобби --</option>
+</select>
+<button onclick="refresh_lobbies_list()">Обновить список</button>
+<input type="hidden" value="" id="lobby_id_input"/>
 <br>
 <button onclick="connect_ws()" style="background: #94941b; color: white; font-weight: bold;">Connect WS</button>
 <button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
@@ -194,14 +197,73 @@ let socket;
 const _input = document.getElementById("player_id_input");
 _input.value = generateUUID();
 
+// Event listener for lobby select dropdown
+document.getElementById("lobby_id_select").addEventListener("change", function() {
+    document.getElementById("lobby_id_input").value = this.value;
+});
+
+// Initialize lobbies list on page load
+refresh_lobbies_list();
+
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
     _input.value = generateUUID();
 }
 
 function generate_new_lobby_id(){
-    const _input = document.getElementById("lobby_id_input");
-    _input.value = generateUUID();
+    const newId = generateUUID();
+    const hiddenInput = document.getElementById("lobby_id_input");
+    const select = document.getElementById("lobby_id_select");
+
+    hiddenInput.value = newId;
+
+    // Create a new option for this manually generated ID
+    const option = document.createElement("option");
+    option.value = newId;
+    option.textContent = `${newId} (Новый ID)`;
+    option.selected = true;
+
+    select.appendChild(option);
+}
+
+async function refresh_lobbies_list() {
+    try {
+        const response = await fetch(`http://{{ host }}/lobbies`);
+        const lobbies = await response.json();
+
+        const select = document.getElementById("lobby_id_select");
+        const hiddenInput = document.getElementById("lobby_id_input");
+
+        // Save current selection
+        const currentValue = hiddenInput.value;
+
+        // Clear existing options (except the default one)
+        select.innerHTML = '<option value="">-- Выберите лобби --</option>';
+
+        // Populate select with lobbies
+        for (const lobby of lobbies) {
+            const option = document.createElement("option");
+            option.value = lobby.id;
+            const status = lobby.game_started ? "[Игра идет]" : "[Ожидание]";
+            const playersInfo = `${lobby.team_1_connected_players}/${lobby.players_num} игроков`;
+            option.textContent = `${lobby.name} (${playersInfo}) ${status}`;
+
+            if (lobby.id === currentValue) {
+                option.selected = true;
+            }
+
+            select.appendChild(option);
+        }
+
+        // Update hidden input with current selection
+        if (currentValue && lobbies.some(l => l.id === currentValue)) {
+            hiddenInput.value = currentValue;
+        }
+
+    } catch (e) {
+        console.error("Ошибка при получении списка лобби:", e);
+        alert("Не удалось получить список лобби");
+    }
 }
 
 async function create_lobby() {
@@ -220,6 +282,10 @@ async function create_lobby() {
         const data = await response.json();
         _input_lobby.value = data.lobby_id;
         showToast("Лобби успешно создано");
+
+        // Refresh lobbies list and select the newly created lobby
+        await refresh_lobbies_list();
+
         return data.lobby_id;
     } catch (e) {
         console.error("Ошибка при создании лобби:", e);
@@ -239,6 +305,9 @@ async function start_game() {
         });
         const response_data = await response.json();
         showToast(JSON.stringify(response_data["detail"]));
+
+        // Refresh lobbies list to update game state
+        await refresh_lobbies_list();
 
     } catch (e) {
         console.error("Ошибка при старте игры", e);
@@ -264,6 +333,10 @@ async function connect_to_lobby() {
         });
         const response_data = await response.json();
         showToast(JSON.stringify(response_data));
+
+        // Refresh lobbies list to update player counts
+        await refresh_lobbies_list();
+
     } catch (e) {
         console.error("Ошибка при присоединении к лобби:", e);
         alert("Не удалось присоединиться к лобби");
@@ -277,16 +350,20 @@ async function connect_ws() {
     let lobbyId = _input_lobby_id.value;
     if (lobbyId === ""){
         await create_lobby();
+        lobbyId = _input_lobby_id.value; // Get the newly created lobby ID
     }
     else {
         console.log("connect(): using lobby uuid from input");
     }
 
+    // Refresh lobbies list to show current state before connecting
+    await refresh_lobbies_list();
+
     socket = new WebSocket(`ws://{{ host }}/ws/${lobbyId}/${playerId}`);
     socket.onclose = (event) => {
         console.log(`Код: ${event.code}`);
         console.log(`Причина: ${event.reason}`); // "Lobby not found"
-        
+
         if (event.reason === "Lobby not found") {
             alert("Лобби не существует!");
         }
