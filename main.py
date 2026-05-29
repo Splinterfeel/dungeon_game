@@ -19,6 +19,11 @@ from dto.debug import (
     DebugRestoreRequest,
     DebugRestoreResponse,
 )
+
+from src.dungeon import Dungeon, DungeonMap
+from src.entities.player import Player
+from src.entities.enemy import Enemy
+from src.turn import Turn
 from dto.event import GameEvent
 from lobby import Lobby
 from lobby_manager import LobbyManager
@@ -146,16 +151,6 @@ async def dump_game_state(request: DebugDumpRequest) -> DebugDumpResponse:
 async def restore_game_state(request: DebugRestoreRequest) -> DebugRestoreResponse:
     """Restore game state for debugging purposes - creates a fresh lobby with provided ID"""
     try:
-        # Import necessary classes for reconstruction
-        from src.dungeon import Dungeon, DungeonMap
-        from src.entities.player import Player
-        from src.entities.enemy import Enemy
-        from src.turn import Turn
-        from src.entities.base import Actor
-        from src.action import Action
-        import copy
-        from src.maps import default
-
         # Get lobby info from game state dump
         game_data = request.game_state
         lobby_id = UUID(request.lobby_id)
