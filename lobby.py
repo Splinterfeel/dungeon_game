@@ -137,9 +137,16 @@ class Lobby:
             except Exception as e:
                 print("broadcast_lobby_state exception", e)
 
-    async def broadcast_game_event(self, event: GameEvent):
+    async def broadcast_game_event(
+        self, event: GameEvent, receiver_player_ids: list[str] = None
+    ):
         "Отправка информационных сообщений - смерть игрока и т д"
-        for ws in list(self.connections.values()):
+        _receivers = self.connections
+        if receiver_player_ids:
+            _receivers = {
+                k: ws for k, ws in self.connections.items() if k in receiver_player_ids
+            }
+        for ws in _receivers.values():
             try:
                 await ws.send_json(event.model_dump())
             except Exception as e:

@@ -27,7 +27,7 @@ class ActionHandler:
             return ActionResult(
                 performed=False,
                 action=action,
-                detail=f"{actor.name} попытался походить во время хода {self.turn.current_actor.name}",
+                detail=f"{actor.name} попытался походить во время хода {self.game.turn.current_actor.name}",
             )
         # Enemy и Player приводятся к Actor
         match action.type:
@@ -237,7 +237,7 @@ class ActionHandler:
             player = next(x for x in self.game.players if x.position == action.cell)
             if not attack_hit:
                 return ActionResult(
-                    performed=False,
+                    performed=True,
                     action=action,
                     detail=f"{actor.name} промахивается из оружия {weapon.name} по {player.name}",
                 )
@@ -262,7 +262,7 @@ class ActionHandler:
             )
             if not attack_hit:
                 return ActionResult(
-                    performed=False,
+                    performed=True,
                     action=action,
                     detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
                 )

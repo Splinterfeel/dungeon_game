@@ -113,6 +113,10 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
     else:
         # Если игра уже идет (например, переподключение), шлем состояние игры
         await lobby.broadcast_game_state()
+        await lobby.broadcast_game_event(
+            GameEvent(message=f"Ход {lobby.game.turn.current_actor.name}"),
+            receiver_player_ids=[player.id],
+        )
     if lobby.game.ended:
         await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
         await websocket.close(code=WSCloseCodes.GAME_ENDED, reason="Game ended")
