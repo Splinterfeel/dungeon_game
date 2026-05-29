@@ -11,7 +11,7 @@ from src.action import (
 )
 from src.base import Point
 from src.constants import CELL_TYPE
-from src.entities.base import Actor, OverwatchState
+from src.entities.base import Actor, OverwatchState, Weapon
 from src.entities.player import Player
 
 if typing.TYPE_CHECKING:
@@ -101,11 +101,11 @@ class ActionHandler:
                 detail=f"{actor.name} уже в режиме огневого дозора",
             )
         params: OverwatchActionParams = action.params
-        try:
-            weapon = next(
-                w for w in actor.inventory.weapons if w.id == params.weapon_id
-            )
-        except StopIteration:
+        weapon: Weapon | None = next(
+            (w for w in actor.inventory.weapons if w.id == params.weapon_id),
+            None,
+        )
+        if weapon is None:
             return ActionResult(
                 performed=False,
                 action=action,
@@ -117,8 +117,7 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, огневой дозор доступен только с дальнобойным оружием",
             )
-        ap_cost = actor.current_action_points
-        if ap_cost <= 0:
+        if actor.current_action_points <= weapon.cost_ap:
             return ActionResult(
                 performed=False,
                 action=action,
@@ -127,7 +126,7 @@ class ActionHandler:
         actor.overwatch = OverwatchState(weapon_id=weapon.id)
         return ActionResult(
             action=action,
-            action_cost=ap_cost,
+            action_cost=weapon.cost_ap,
             detail=f"{actor.name} переходит в режим огневого дозора ({weapon.name})",
         )
 

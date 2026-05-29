@@ -22,7 +22,7 @@ class SimpleEnemyAI(AI):
             ranged_weapon = next(
                 (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
             )
-            if ranged_weapon:
+            if ranged_weapon and self.actor.current_action_points >= ranged_weapon.cost_ap:
                 for player in self.game.players:
                     if self.game.dungeon.map.can_shoot(
                         self.actor, ranged_weapon, player.position
@@ -85,25 +85,27 @@ class SimpleEnemyAI(AI):
                 nearest_player_for_attack = player
                 break
         if nearest_player_for_attack and not self.attacked_on_turn:
-            print(f"         ENEMY {self.actor.name} - ATTACKING")
-            self.attacked_on_turn = True
             melee_weapon = next(
-                w for w in self.actor.inventory.weapons if w.type == "melee"
+                (w for w in self.actor.inventory.weapons if w.type == "melee"), None
             )
-            attack_params = AttackActionParams(weapon_id=melee_weapon.id)
-            return Action(
-                actor_id=str(self.actor.id),
-                type=ActionType.ATTACK,
-                cell=nearest_player_for_attack.position,
-                params=attack_params,
-            )
+            if melee_weapon and self.actor.current_action_points >= melee_weapon.cost_ap:
+                print(f"         ENEMY {self.actor.name} - ATTACKING")
+                self.attacked_on_turn = True
+                attack_params = AttackActionParams(weapon_id=melee_weapon.id)
+                return Action(
+                    actor_id=str(self.actor.id),
+                    type=ActionType.ATTACK,
+                    cell=nearest_player_for_attack.position,
+                    params=attack_params,
+                )
 
         # если не атаковали и не двигались — пробуем огневой дозор
-        if self.actor.current_action_points > 0 and self.actor.overwatch is None:
+        if self.actor.overwatch is None:
             ranged_weapon = next(
                 (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
             )
-            if ranged_weapon:
+            if ranged_weapon and self.actor.current_action_points >= ranged_weapon.cost_ap:
+                print(f"have AP {self.actor.current_action_points}, cost overwatch {ranged_weapon.cost_ap}, trying to overwatch")
                 can_see_any_player = any(
                     Point.distance_euklid(self.actor.position, p.position)
                     <= self.actor.stats.view_distance

@@ -8,14 +8,17 @@ if TYPE_CHECKING:
     from lobby import Lobby
 
 from dto.event import GameEvent
-from src.action import Action, ActionResult, ActionType, AttackActionParams
-from src.entities.base import Actor, OverwatchState
+from src.action import Action, ActionResult, ActionType
+from src.entities.base import Actor
 from src.base import Point
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.dungeon import Dungeon
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
+
+
+ACTIONS_ENDS_TURN = {ActionType.END_TURN, ActionType.OVERWATCH}
 
 
 class Game:
@@ -131,7 +134,7 @@ class Game:
                 actor.current_action_points - action_result.action_cost, 0
             )
             actor.current_speed_spent += action_result.speed_spent
-        if action.type == ActionType.END_TURN:
+        if action.type in ACTIONS_ENDS_TURN and action_result.performed:
             await self.pass_turn_to_next_actor()
         self.check_game_end()
         self.turn.available_moves = self.dungeon.map.get_available_moves(
