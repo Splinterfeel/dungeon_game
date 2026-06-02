@@ -36,6 +36,11 @@ from src.game import Game
 from fastapi.staticfiles import StaticFiles
 
 from ws_utils import WSCloseCodes
+from game_state_utils import (
+    create_debug_dump_response,
+    restore_game_state as restore_game_state_util,
+    create_restore_response,
+)
 
 
 app = FastAPI(docs_url="/api/docs", redoc_url="/redoc")
@@ -118,27 +123,8 @@ async def dump_game_state(request: DebugDumpRequest) -> DebugDumpResponse:
         )
 
     try:
-        # Get game state as dictionary
         game_state = lobby.game.to_dict()
-
-        # Get players info
-        players_info = [
-            {
-                "id": str(player.id),
-                "name": player.name,
-                "team": player.team,
-                "is_connected": str(player.id) in lobby.connections,
-            }
-            for player in lobby.players.values()
-        ]
-
-        return DebugDumpResponse(
-            lobby_id=str(lobby.id),
-            lobby_name=lobby.name,
-            game_state=game_state,
-            timestamp=datetime.now().isoformat(),
-            players_info=players_info,
-        )
+        return create_debug_dump_response(lobby, game_state)
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to dump game state: {str(e)}"
@@ -151,165 +137,17 @@ async def dump_game_state(request: DebugDumpRequest) -> DebugDumpResponse:
 async def restore_game_state(request: DebugRestoreRequest) -> DebugRestoreResponse:
     """Restore game state for debugging purposes - creates a fresh lobby with provided ID"""
     try:
-        # Get lobby info from game state dump
         game_data = request.game_state
         lobby_id = UUID(request.lobby_id)
         lobby_name = request.lobby_name or f"Restored Lobby {request.lobby_id[:8]}"
 
-        # Create a fresh lobby with the provided ID
-        lobby = Lobby(name=lobby_name, players_num=2, created_by_player_id=lobby_id)
-        lobby.id = lobby_id  # Override the generated ID with the provided one
-
-        # Extract and add players from the dump
-        player_states = {p["id"]: p for p in game_data["players"]}
-
-        for player_id, player_data in player_states.items():
-            player_uuid = UUID(player_id)
-            # Create player with restored state
-            restored_player = Player(
-                id=player_uuid,
-                team=player_data["team"],
-                stats=CharacterStats(
-                    health=player_data["stats"]["health"],
-                    damage=player_data["stats"]["damage"],
-                    speed=player_data["stats"]["speed"],
-                    action_points=player_data["stats"]["action_points"],
-                    view_distance=player_data["stats"]["view_distance"],
-                    accuracy=player_data["stats"]["accuracy"],
-                ),
-                inventory=player_data["inventory"],
-            )
-            # Restore current state
-            restored_player.position = player_data["position"]
-            restored_player.current_action_points = player_data["current_action_points"]
-            restored_player.current_speed_spent = player_data.get(
-                "current_speed_spent", 0
-            )
-            restored_player.overwatch = player_data.get("overwatch")
-            restored_player.name = player_data.get(
-                "name", f"Player {player_data['team']}"
-            )
-
-            # Add to lobby
-            lobby.players[str(player_id)] = restored_player
-
-        # Reconstruct dungeon
-        dungeon_data = game_data["dungeon"]
-        map_data = dungeon_data["map"]
-
-        # Use model_construct to bypass all validation
-        dungeon_data = game_data["dungeon"]
-        map_data = dungeon_data["map"]
-
-        # Extract start points from tiles
-        tiles = map_data["tiles"]
-        start_points_team_1 = []
-        start_points_team_2 = []
-
-        for y, row in enumerate(tiles):
-            for x, cell in enumerate(row):
-                if isinstance(cell, str):
-                    if "S1" in cell:
-                        start_points_team_1.append(Point(x=x, y=y))
-                    elif "S2" in cell:
-                        start_points_team_2.append(Point(x=x, y=y))
-
-        # Create DungeonMap
-        dungeon_map = DungeonMap.model_construct(
-            width=map_data["width"],
-            height=map_data["height"],
-            tiles=map_data["tiles"],
-            start_points_team_1=start_points_team_1,
-            start_points_team_2=start_points_team_2,
-        )
-
-        # Restore enemies and chests
-        restored_enemies = []
-        for e in dungeon_data["enemies"]:
-            restored_enemies.append(Enemy.model_validate(e))
-
-        restored_chests = []
-        for c in dungeon_data["chests"]:
-            restored_chests.append(Chest(**c) if isinstance(c, dict) else c)
-
-        # Use model_construct to completely bypass validation
-        dungeon = Dungeon.model_construct(
-            max_chests=dungeon_data["max_chests"],
-            enemies_num=dungeon_data["enemies_num"],
-            map=dungeon_map,
-            start_points_team_1=start_points_team_1,
-            start_points_team_2=start_points_team_2,
-            enemies=restored_enemies,
-            chests=restored_chests,
-            exits=[
-                (
-                    Point(x=e["x"], y=e["y"])
-                    if isinstance(e, dict)
-                    else Point(x=e[0], y=e[1])
-                )
-                for e in dungeon_data["exits"]
-            ],
-        )
-
-        # Restore players list for game (use the players we already added to lobby)
-        restored_players = list(lobby.players.values())
-
-        # Reconstruct turn
-        turn_data = game_data["turn"]
-        turn = Turn(
-            number=turn_data["number"],
-            phase=turn_data["phase"],
-            actor_ids_passed_turn=set(turn_data.get("actor_ids_passed_turn", [])),
-        )
-        turn.available_moves = [
-            Point(x=m["x"], y=m["y"]) if isinstance(m, dict) else Point(x=m[0], y=m[1])
-            for m in turn_data.get("available_moves", [])
-        ]
-
-        # Create new game instance
-        lobby.game = Game(
-            dungeon=dungeon,
-            players=restored_players,
-            turn=turn,
-            version=game_data.get("version", 0),
-        )
-        lobby.game.ended = game_data.get("ended", False)
-
-        # Register lobby as observer
-        lobby.game.set_observer(lobby)
-
-        # Restore current actor reference
-        if turn_data.get("current_actor"):
-            current_actor_data = turn_data["current_actor"]
-            actor_id = current_actor_data["id"]
-
-            # Find actor in players or enemies
-            current_actor = None
-            for player in restored_players:
-                if str(player.id) == actor_id:
-                    current_actor = player
-                    break
-
-            if not current_actor:
-                for enemy in dungeon.enemies:
-                    if str(enemy.id) == actor_id:
-                        current_actor = enemy
-                        break
-
-            if current_actor:
-                lobby.game.turn.current_actor = current_actor
-            else:
-                lobby.game.turn.current_actor = None
+        # Restore game state using utility function
+        lobby = restore_game_state_util(game_data, lobby_id, lobby_name)
 
         # Add the restored lobby to the lobby manager
         lobby_manager.lobbies[str(lobby_id)] = lobby
 
-        return DebugRestoreResponse(
-            success=True,
-            message=f"Game state restored successfully in new lobby '{lobby_name}'",
-            lobby_id=str(lobby_id),
-            timestamp=datetime.now().isoformat(),
-        )
+        return create_restore_response(lobby_id, lobby_name)
 
     except Exception as e:
         import traceback

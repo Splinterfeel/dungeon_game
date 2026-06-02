@@ -63,7 +63,7 @@ class Dungeon(BaseModel):
 
     def __save_initial_map(self):
         self._initial_map = self.map.model_copy(deep=True)
-        self._initial_map.clear_start_points()
+        self._initial_map.clear_start_points(clear_players_points=True)
 
     def _init_from_map(self):
         self.enemies = []
