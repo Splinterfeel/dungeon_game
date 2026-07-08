@@ -19,10 +19,11 @@ class LobbyState(BaseModel):
 class CharacherStatsState(BaseModel):
     health: int
     max_health: int
-    damage: int
+    melee_power: int
     speed: int
     action_points: int
     view_distance: int
+    accuracy: int
 
 
 class WeaponState(BaseModel):
@@ -43,6 +44,23 @@ class OverwatchStateDTO(BaseModel):
     weapon_id: str
 
 
+class PartState(BaseModel):
+    slot: str
+    name: str
+    health: int
+    speed: int
+    accuracy: int
+    melee_power: int
+    view_distance: int
+
+
+class MechState(BaseModel):
+    torso: PartState
+    legs: PartState
+    arms: PartState
+    head: PartState
+
+
 class ActorState(BaseModel):
     id: str
     position: PointState
@@ -56,6 +74,7 @@ class ActorState(BaseModel):
 
 class PlayerState(ActorState):
     team: int
+    mech: MechState
 
 
 class TurnState(BaseModel):

@@ -142,6 +142,13 @@ body {
 <button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
 
 <div id="actors" style="margin-top: 20px;"></div>
+
+<div style="margin-top: 20px;">
+    <label for="inspect_player_select">Инспектор меха:</label>
+    <select id="inspect_player_select" style="background: #222; color: #eee; padding: 5px;" onchange="render_mech_inspector()"></select>
+</div>
+<div id="mech_inspector" style="margin-top: 8px;"></div>
+
 <div id="map"></div>
 <div id="cell_info" style="margin-top: 10px; min-height: 24px; color: #ccc;"></div>
 
@@ -411,6 +418,71 @@ function update_weapon_selector(weapons) {
     });
 }
 
+const MECH_PART_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
+const MECH_STAT_LABELS = {health: "HP", speed: "Speed", accuracy: "Accuracy", melee_power: "Melee power", view_distance: "View distance"};
+
+function populate_inspect_selector(players) {
+    const select = document.getElementById("inspect_player_select");
+    const currentValue = select.value;
+    const keepCurrent = players.some(p => p.id === currentValue);
+    select.innerHTML = "";
+    players.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.name;
+        select.appendChild(option);
+    });
+    const ownPlayerId = document.getElementById("player_id_input").value;
+    if (keepCurrent) {
+        select.value = currentValue;
+    } else if (players.some(p => p.id === ownPlayerId)) {
+        select.value = ownPlayerId;
+    }
+}
+
+function render_mech_inspector() {
+    const container = document.getElementById("mech_inspector");
+    const select = document.getElementById("inspect_player_select");
+    if (!lastGameState || !select.value) {
+        container.innerHTML = "";
+        return;
+    }
+    const player = lastGameState.players.find(p => p.id === select.value);
+    if (!player) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const statsRows = [
+        ["HP", `${player.stats.health}/${player.stats.max_health}`],
+        ["AP", `${player.current_action_points}/${player.stats.action_points}`],
+        ["Speed", player.stats.speed],
+        ["Accuracy", player.stats.accuracy],
+        ["Melee power", player.stats.melee_power],
+        ["View distance", player.stats.view_distance],
+    ];
+    let html = `<div style="font-weight:bold;">${player.name} — итоговые характеристики</div>`;
+    html += `<table style="border-collapse:collapse;font-size:12px;margin:4px 0 10px;">`;
+    for (const [label, value] of statsRows) {
+        html += `<tr><td style="padding:1px 8px 1px 0;color:#aaa;">${label}</td><td>${value}</td></tr>`;
+    }
+    html += `</table>`;
+
+    html += `<div style="font-weight:bold;">Детали меха</div>`;
+    for (const slot of ["torso", "legs", "arms", "head"]) {
+        const part = player.mech[slot];
+        const nonZeroStats = Object.keys(MECH_STAT_LABELS)
+            .filter(key => part[key] !== 0)
+            .map(key => `${MECH_STAT_LABELS[key]}: ${part[key]}`)
+            .join(", ");
+        html += `<div style="font-size:12px;margin-top:2px;">` +
+            `<span style="color:#8fd88f;">${MECH_PART_LABELS[slot]}</span> — ${part.name}` +
+            (nonZeroStats ? ` (${nonZeroStats})` : " (нет бонусов)") +
+            `</div>`;
+    }
+    container.innerHTML = html;
+}
+
 function handle_game_state(state){
     lastGameState = state;
     const playerId = document.getElementById("player_id_input").value;
@@ -448,7 +520,7 @@ function handle_game_state(state){
         div.classList.add("actor-row");
         div.style.color = color;
         const owTag = isOverwatch ? ' <span style="color:#ff6600;">[OVERWATCH]</span>' : '';
-        div.innerHTML = `<div class="actor-name">${name}${owTag} Dmg: ${stats.damage}</div>` +
+        div.innerHTML = `<div class="actor-name">${name}${owTag} Melee: ${stats.melee_power}</div>` +
             makeBar("HP", stats.health, stats.max_health, "hp") +
             makeBar("AP", currentAp, stats.action_points, "ap");
         return div;
@@ -464,6 +536,9 @@ function handle_game_state(state){
         const ca = state.turn.current_actor;
         actorsContainer.appendChild(makeActorRow(`Текущий ${ca.name}`, ca.stats, ca.current_action_points, "#99AAEE", !!ca.overwatch));
     }
+
+    populate_inspect_selector(state.players);
+    render_mech_inspector();
 
     const container = document.getElementById("map");
     container.innerHTML = "";

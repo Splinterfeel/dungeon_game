@@ -23,7 +23,7 @@ class Entity(BaseModel):
 class CharacterStats(BaseModel):
     health: int
     max_health: int = 0
-    damage: int
+    melee_power: int  # бонус к урону оружия ближнего боя, приходит от детали "руки"
     speed: int  # сколько клеток может пройти за ход
     action_points: int
     view_distance: int

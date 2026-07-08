@@ -10,6 +10,7 @@ from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.entities.chest import Chest
 from src.entities.base import CharacterStats
+from src.entities.mech import Mech
 from src.turn import Turn, GamePhase
 from src.base import Point
 from src.game import Game
@@ -46,9 +47,12 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
     restored_player = Player(
         id=player_uuid,
         team=player_data["team"],
+        mech=Mech.model_validate(player_data["mech"]),
+        xp=player_data.get("xp", 0),
+        level=player_data.get("level", 1),
         stats=CharacterStats(
             health=player_data["stats"]["health"],
-            damage=player_data["stats"]["damage"],
+            melee_power=player_data["stats"]["melee_power"],
             speed=player_data["stats"]["speed"],
             action_points=player_data["stats"]["action_points"],
             view_distance=player_data["stats"]["view_distance"],

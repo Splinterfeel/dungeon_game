@@ -1,17 +1,8 @@
-import subprocess
-import time
 from fastapi.testclient import TestClient
 from main import app
 from uuid import UUID
 
-# Start the FastAPI server in a separate process
-server_process = subprocess.Popen(
-    ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-)
-
-# Wait for the server to start
-time.sleep(5)
-
+# TestClient гоняет ASGI-приложение in-process — отдельный uvicorn поднимать не нужно
 client = TestClient(app)
 
 
@@ -33,7 +24,7 @@ def test_connect_to_nonexistent_lobby():
         "/connect_lobby",
         json={
             "lobby_id": str(nonexistent_lobby_id),
-            "player": {"id": "123e4567-e89b-12d3-a456-426614174000"},
+            "player": {"id": "123e4567-e89b-12d3-a456-426614174000", "team": 1},
         },
     )
     assert response.status_code == 404
@@ -52,7 +43,7 @@ def test_join_lobby():
         "/connect_lobby",
         json={
             "lobby_id": resp.json()["lobby_id"],
-            "player": {"id": "123e4567-e89b-12d3-a456-426614174000"},
+            "player": {"id": "123e4567-e89b-12d3-a456-426614174000", "team": 1},
         },
     )
     assert response.status_code == 200
@@ -60,7 +51,7 @@ def test_join_lobby():
 
 
 def test_connect_to_full_lobby():
-    # Create a lobby with 2 players
+    # Create a lobby with 1 player slot
     resp = client.post(
         "/lobbies",
         json={
@@ -75,7 +66,7 @@ def test_connect_to_full_lobby():
         "/connect_lobby",
         json={
             "lobby_id": lobby_id,
-            "player": {"id": "123e4567-e89b-12d3-a456-426614174001"},
+            "player": {"id": "123e4567-e89b-12d3-a456-426614174001", "team": 1},
         },
     )
 
@@ -84,12 +75,8 @@ def test_connect_to_full_lobby():
         "/connect_lobby",
         json={
             "lobby_id": lobby_id,
-            "player": {"id": "123e4567-e89b-12d3-a456-426614174002"},
+            "player": {"id": "123e4567-e89b-12d3-a456-426614174002", "team": 2},
         },
     )
     assert response.status_code == 200
     assert response.json()["detail"] == "lobby full"
-
-
-# Stop the server after tests are done
-server_process.terminate()

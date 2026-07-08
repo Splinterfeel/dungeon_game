@@ -201,6 +201,8 @@ class ActionHandler:
             )
         action_ap_cost = weapon.cost_ap
         damage = weapon.damage
+        if weapon.type == "melee":
+            damage += actor.stats.melee_power
         current_dist = Point.distance_chebyshev(actor.position, action.cell)
         # проверка линии видимости
         if weapon.range > 1:

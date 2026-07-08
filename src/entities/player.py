@@ -2,10 +2,14 @@ import names
 from pydantic import Field, model_validator
 
 from src.entities.base import Actor
+from src.entities.mech import Mech
 
 
 class Player(Actor):
     team: int = 1
+    mech: Mech
+    xp: int = 0
+    level: int = 1
 
     @model_validator(mode="after")
     def set_team_name(self):

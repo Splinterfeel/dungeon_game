@@ -11,8 +11,9 @@ from typing import Optional, List
 from src.game import Game
 from src.dungeon import Dungeon, DungeonMap
 from src.entities.player import Player
-from src.entities.base import CharacterStats, Inventory, Weapon
+from src.entities.base import Inventory, Weapon
 from src.constants import Accuracy
+from src.parts_catalog import default_mech
 from src.game_observer import GameObserver
 from dto.event import GameEvent
 
@@ -36,17 +37,12 @@ def create_test_players() -> list[Player]:
     players = []
 
     # Player 1 - Team 1
+    mech1 = default_mech()
     player1 = Player(
         id=uuid4(),
         team=1,
-        stats=CharacterStats(
-            health=15,
-            damage=5,
-            speed=5,
-            action_points=10,
-            view_distance=5,
-            accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
-        ),
+        mech=mech1,
+        stats=mech1.build_character_stats(action_points=10),
         inventory=Inventory(
             weapons=[
                 Weapon(
@@ -71,17 +67,12 @@ def create_test_players() -> list[Player]:
     players.append(player1)
 
     # Player 2 - Team 2
+    mech2 = default_mech()
     player2 = Player(
         id=uuid4(),
         team=2,
-        stats=CharacterStats(
-            health=15,
-            damage=5,
-            speed=5,
-            action_points=10,
-            view_distance=5,
-            accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
-        ),
+        mech=mech2,
+        stats=mech2.build_character_stats(action_points=10),
         inventory=Inventory(
             weapons=[
                 Weapon(

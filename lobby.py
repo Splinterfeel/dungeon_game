@@ -12,10 +12,11 @@ from src.entities.enemy import Enemy
 from src.game import Game
 from src.dungeon import Dungeon
 from src.entities.player import Player
-from src.entities.base import CharacterStats, Inventory, Weapon
+from src.entities.base import Inventory, Weapon
 from src.action import Action
 from src.map import DungeonMap
 from src.maps import default
+from src.parts_catalog import default_mech
 from src.game_observer import GameObserver
 
 
@@ -47,17 +48,12 @@ class Lobby(GameObserver):
         if len(self.players) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
+        mech = default_mech()
         self.players[str(player.id)] = Player(
             id=player.id,
             team=player.team,
-            stats=CharacterStats(
-                health=15,
-                damage=5,
-                speed=5,
-                action_points=10,
-                view_distance=5,
-                accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
-            ),
+            mech=mech,
+            stats=mech.build_character_stats(action_points=10),
             inventory=Inventory(
                 weapons=[
                     Weapon(
