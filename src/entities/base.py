@@ -78,6 +78,7 @@ class Actor(Entity):
     current_speed_spent: int = 0  # сколько клеток прошел за ход
     name: str = Field(default_factory=names.get_full_name)
     overwatch: Optional[OverwatchState] = None
+    trophies: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def register_instance(self):

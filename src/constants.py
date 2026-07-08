@@ -8,7 +8,6 @@ class CELL_TYPE(Enum):
     START_TEAM_2 = " S2 "
     CHEST = " C "
     ENEMY = " E "
-    EXIT = " X "
     PLAYER = " P "
 
 

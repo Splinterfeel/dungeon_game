@@ -30,7 +30,6 @@ class Dungeon(BaseModel):
     rooms: List[Room] = Field(default_factory=list)
     chests: List[Chest] = Field(default_factory=list)
     enemies: List[Enemy] = Field(default_factory=list)
-    exits: List[Point] = Field(default_factory=list)
 
     # Списки стартовых точек
     start_points_team_1: List[Point] = Field(default_factory=list)
@@ -79,8 +78,6 @@ class Dungeon(BaseModel):
                     self.start_points_team_1.append(_point)
                 elif self.map.get(_point) == CELL_TYPE.START_TEAM_2.value:
                     self.start_points_team_2.append(_point)
-                elif self.map.get(_point) == CELL_TYPE.EXIT.value:
-                    self.exits.append(_point)
         if not self.start_points_team_1:
             raise ValueError("Can't find start points for team 1")
         if not self.start_points_team_2:
@@ -110,7 +107,7 @@ class Dungeon(BaseModel):
         random.shuffle(possible_enemy_points)
         for i in range(chests_count):
             point = possible_chest_points[i]
-            self.chests.append(Chest(position=point, gold=random.randint(10, 500)))
+            self.chests.append(Chest(position=point))
             self.map.set(point, CELL_TYPE.CHEST.value)
 
         for i in range(self.enemies_num):
@@ -173,9 +170,6 @@ class Dungeon(BaseModel):
             self.enemies = []
             self._generate_enemies()
 
-        if not self.exits:
-            self._generate_exits()
-
     def remove_dead_enemy(self, enemy: Enemy):
         self.enemies.remove(enemy)
         self.map.set(enemy.position, CELL_TYPE.EMPTY.value)
@@ -186,6 +180,10 @@ class Dungeon(BaseModel):
 
     def remove_dead_player(self, player: Player):
         self.map.set(player.position, CELL_TYPE.EMPTY.value)
+
+    def remove_chest(self, chest: Chest):
+        self.chests.remove(chest)
+        self.map.set(chest.position, CELL_TYPE.EMPTY.value)
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
@@ -285,14 +283,7 @@ class Dungeon(BaseModel):
             choices = self._get_room_border_places(room)
             # Выбираем случайную позицию внутри комнаты, избегая границ
             position = random.choice(choices)
-            # Определяем количество золота
-            # Чем дальше комната, тем больше золота.
-            # Мы можем использовать индекс комнаты как простую меру удаленности
-            distance_factor = self.rooms.index(room)
-            gold_amount = random.randint(
-                10 + distance_factor * 5, 50 + distance_factor * 10
-            )
-            new_chest = Chest(position=position, gold=gold_amount)
+            new_chest = Chest(position=position)
             self.chests.append(new_chest)
             self.map.set(new_chest.position, CELL_TYPE.CHEST.value)
 
@@ -338,7 +329,6 @@ class Dungeon(BaseModel):
         print("rooms:", len(self.rooms))
         for chest in self.chests:
             print(chest)
-        print("full dungeon gold:", sum(chest.gold for chest in self.chests))
         for enemy in self.enemies:
             print("Enemy: stats", enemy.stats)
 
@@ -349,19 +339,3 @@ class Dungeon(BaseModel):
     def _make_v_tunnel(self, y1: int, y2: int, x: int):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.map.set(Point(x, y), CELL_TYPE.EMPTY.value)
-
-    def _generate_exits(self):
-        # найдем самую дальнюю комнату от старта
-        farthest_room = self.start_room
-        largest_distance = 0
-        for room in self.rooms:
-            distance = Point.distance_euklid(self.start_room.center(), room.center())
-            if distance > largest_distance:
-                largest_distance = distance
-                farthest_room = room
-        # генерим точку выхода
-        choices = self._get_room_border_places(farthest_room)
-        # Выбираем случайную позицию внутри комнаты, избегая границ
-        self.exits = [random.choice(choices)]
-        for e in self.exits:
-            self.map.set(e, CELL_TYPE.EXIT.value)

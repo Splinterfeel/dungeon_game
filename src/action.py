@@ -14,7 +14,6 @@ class ActionType(Enum):
     ATTACK = auto()
     HEAVY_ATTACK = auto()
     OPEN_CHEST = auto()
-    EXIT = auto()
     OVERWATCH = auto()
 
 

@@ -29,7 +29,6 @@ from lobby import Lobby
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
-from src.entities.chest import Chest
 from src.entities.base import CharacterStats
 from src.base import Point
 from src.game import Game

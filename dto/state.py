@@ -68,7 +68,7 @@ class TurnState(BaseModel):
 
 class ChestState(BaseModel):
     position: PointState
-    # gold не пробрасываем
+    # loot не пробрасываем клиенту заранее, чтобы не палить содержимое до открытия
 
 
 class MapState(BaseModel):
@@ -81,7 +81,6 @@ class DungeonState(BaseModel):
     chests: list[ChestState]
     enemies: list[ActorState]
     map: MapState
-    exits: List[PointState]
 
 
 class GameState(BaseModel):

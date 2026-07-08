@@ -111,14 +111,6 @@ def restore_dungeon_from_data(dungeon_data: Dict[str, Any]) -> Dungeon:
         start_points_team_2=start_points_team_2,
         enemies=restored_enemies,
         chests=restored_chests,
-        exits=[
-            (
-                Point(x=e["x"], y=e["y"])
-                if isinstance(e, dict)
-                else Point(x=e[0], y=e[1])
-            )
-            for e in dungeon_data["exits"]
-        ],
     )
 
     # Initialize _initial_map since model_construct bypasses validation

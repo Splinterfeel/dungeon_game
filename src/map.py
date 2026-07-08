@@ -71,10 +71,7 @@ class DungeonMap(BaseModel):
             # добавляем соседние точки для анализа
             for offset in directions:
                 next_point = point.on(offset)
-                if next_point not in visited and (
-                    self.is_free(next_point)
-                    or self.get(next_point) == CELL_TYPE.EXIT.value
-                ):
+                if next_point not in visited and self.is_free(next_point):
                     visited.add(next_point)
                     queue.append((next_point, distance + 1))
         return available

@@ -39,42 +39,14 @@ class ActionHandler:
                 return await self.__perform_action_attack(actor=actor, action=action)
             case ActionType.OVERWATCH:
                 return await self.__perform_action_overwatch(actor=actor, action=action)
-            case ActionType.EXIT:
-                return await self.__perform_action_exit(actor=actor, action=action)
+            case ActionType.OPEN_CHEST:
+                return await self.__perform_action_open_chest(actor=actor, action=action)
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell)
                 return ActionResult(action=action)
             case _:
                 print("Performing unknown action", action)
                 return ActionResult(action=action)
-
-    async def __perform_action_exit(self, actor: Actor, action: Action) -> ActionResult:
-        # покинуть можно только самым первым действием на ходу, когда AP на максимуме
-        player: Player = next(x for x in self.game.players if x.position == action.cell)
-        if player.team != 1:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж может только команда 1!",
-            )
-        if self.game.dungeon._initial_map.get(player.position) != CELL_TYPE.EXIT.value:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж можно только на клетке выхода",
-            )
-        if player.current_action_points < player.stats.action_points:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{player.name}, покинуть данж можно только когда AP на максимуме",
-            )
-        self.game.players.remove(player)
-        return ActionResult(
-            action=action,
-            action_cost=30000,
-            detail=f"{player.name} покинул данж!",
-        )
 
     async def __perform_action_end_turn(
         self, actor: Actor, action: Action
@@ -130,6 +102,31 @@ class ActionHandler:
             detail=f"{actor.name} переходит в режим огневого дозора ({weapon.name})",
         )
 
+    async def __perform_action_open_chest(
+        self, actor: Actor, action: Action
+    ) -> ActionResult:
+        chest = next(
+            (c for c in self.game.dungeon.chests if c.position == action.cell), None
+        )
+        if chest is None:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, в клетке {action.cell} нет сундука",
+            )
+        if Point.distance_chebyshev(actor.position, chest.position) > 1:
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, сундук {action.cell} слишком далеко, чтобы его открыть",
+            )
+        actor.trophies.append(chest.loot)
+        self.game.dungeon.remove_chest(chest)
+        return ActionResult(
+            action=action,
+            detail=f"{actor.name} открывает сундук и находит: {chest.loot}",
+        )
+
     async def __perform_action_move(self, actor: Actor, action: Action) -> ActionResult:
         if action.cell not in self.game.turn.available_moves:
             print(f"Can't move player {actor} to cell {action.cell}")
@@ -139,12 +136,11 @@ class ActionHandler:
                 detail=f"{actor.name}, нельзя переместиться в {action.cell}",
             )
         if not self.game.dungeon.map.is_free(action.cell):
-            if self.game.dungeon.map.get(action.cell) != CELL_TYPE.EXIT.value:
-                return ActionResult(
-                    performed=False,
-                    action=action,
-                    detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
-                )
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
+            )
         path = self.game.dungeon.map.bfs_path(
             action.cell, self.game.turn.current_actor.position
         )

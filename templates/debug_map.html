@@ -40,7 +40,6 @@ body {
 .player_current { background: #2c902f; font-weight: bold;}
 .enemy { background: #f44336; }
 .chest { background: gold; color: black; }
-.exit { background: #2196f3; }
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
@@ -141,7 +140,6 @@ body {
 <select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
 <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
 <button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
-<button onclick="send_exit()" style="background: #118db7; color: white; font-weight: bold;">EXIT</button>
 
 <div id="actors" style="margin-top: 20px;"></div>
 <div id="map"></div>
@@ -176,7 +174,6 @@ function select_cell(x, y, cellEl) {
     const players = lastGameState.players || [];
     const enemies = lastGameState.dungeon.enemies || [];
     const chests = lastGameState.dungeon.chests || [];
-    const exit = lastGameState.dungeon.exit;
     let _pre_content = `[${x} ${y}]`;
     const player = players.find(p => p.position.x === x && p.position.y === y);
     if (player) { info.textContent = `${_pre_content} Игрок: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
@@ -186,8 +183,6 @@ function select_cell(x, y, cellEl) {
 
     const chest = chests.find(c => c.position.x === x && c.position.y === y);
     if (chest) { info.textContent = `${_pre_content} Сундук`; return; }
-
-    if (exit && exit.x === x && exit.y === y) { info.textContent = `${_pre_content} Выход`; return; }
 
     const tiles = lastGameState.dungeon.map.tiles;
     info.textContent = tiles[x][y] === " # " ? `${_pre_content} Стена` : `${_pre_content} Пол`;
@@ -495,12 +490,6 @@ function handle_game_state(state){
         visual[c.position.x][c.position.y].entity = "C";
     }
 
-    // // выходы
-
-    for (const c of dungeon.exits) {
-        visual[c.x][c.y].entity = "X";
-    }
-
     // игроки
     for (const p of state.players) {
         let _val = "P";
@@ -581,7 +570,7 @@ function handle_game_state(state){
 
             // entity overlay
             if (cellData.entity) {
-                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy", "C": "chest", "X": "exit" };
+                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy", "C": "chest" };
                 const className = entityMap[cellData.entity];
                 if (className) {
                     cell.classList.add(className);
@@ -720,27 +709,6 @@ async function send_overwatch() {
     socket.send(JSON.stringify(action));
 }
 
-async function send_exit() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        alert("WebSocket не подключен!");
-        return;
-    }
-    if (!lastPlayerState) {
-        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
-        return;
-    }
-    const action = {
-        id: generateUUID(),
-        actor_id: lastPlayerState.id,
-        type: "EXIT",
-        cell: {
-            x: lastPlayerState.position.x,
-            y: lastPlayerState.position.y
-        }
-    };
-    console.log("Sending EXIT action:", action);
-    socket.send(JSON.stringify(action));
-}
 </script>
 
 </body>
