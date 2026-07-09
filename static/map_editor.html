@@ -48,6 +48,27 @@
     .chest { background: #f1c40f; color: #000; }
     .player { background: #9b59b6; }
 
+    #brushes {
+        margin-bottom: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .brush-btn {
+        width: 36px;
+        height: 28px;
+        margin-left: 0;
+        padding: 0;
+        border: 2px solid transparent;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .brush-btn.active {
+        border-color: #fff;
+    }
+
     textarea {
         width: 100%;
         height: 200px;
@@ -65,6 +86,8 @@
     <button onclick="createGrid()">Создать</button>
     <button onclick="exportJSON()">Экспорт JSON</button>
 </div>
+
+<div id="brushes"></div>
 
 <div id="grid"></div>
 
@@ -85,6 +108,32 @@ const CELL_TYPES = [
 let gridData = [];
 let width = 20;
 let height = 15;
+let currentBrush = 0;
+let isPainting = false;
+
+document.addEventListener("mouseup", () => { isPainting = false; });
+
+function renderBrushes() {
+    const container = document.getElementById("brushes");
+    container.innerHTML = "";
+    CELL_TYPES.forEach((t, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "brush-btn " + t.class + (idx === currentBrush ? " active" : "");
+        btn.textContent = t.label || t.key;
+        btn.title = t.key;
+        btn.addEventListener("click", () => {
+            currentBrush = idx;
+            renderBrushes();
+        });
+        container.appendChild(btn);
+    });
+}
+
+function paintCell(x, y, div) {
+    gridData[x][y] = currentBrush;
+    updateCell(div, currentBrush);
+}
 
 function createGrid() {
     width = parseInt(document.getElementById("width").value);
@@ -105,10 +154,17 @@ function createGrid() {
             div.classList.add("cell");
             updateCell(div, 0);
 
-            div.addEventListener("click", () => {
-                // Теперь мы можем безопасно использовать gridData[x][y]
-                gridData[x][y] = (gridData[x][y] + 1) % CELL_TYPES.length;
-                updateCell(div, gridData[x][y]);
+            // Красим выбранной кистью: клик — одна клетка, зажатая кнопка
+            // мыши + протаскивание — заливка нескольких клеток подряд.
+            div.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                isPainting = true;
+                paintCell(x, y, div);
+            });
+            div.addEventListener("mouseenter", () => {
+                if (isPainting) {
+                    paintCell(x, y, div);
+                }
             });
 
             grid.appendChild(div);
@@ -142,6 +198,7 @@ function exportJSON() {
     document.getElementById("output").value = JSON.stringify(result, null, 2);
 }
 // init
+renderBrushes();
 createGrid();
 </script>
 

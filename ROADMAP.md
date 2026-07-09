@@ -170,9 +170,12 @@
      `default_mech()`.
 
 6. **Ручные карты вместо процедурной генерации.**
-   - Инвестируем в 2-3 карты в [src/maps/default.py](src/maps/default.py)
-     через [static/map_editor.html](static/map_editor.html) (возможно,
-     дополнить редактор кистью для клетки "сундук/дроп").
+   - ✅ Редактор дополнен кистью: панель `#brushes` над сеткой позволяет
+     выбрать тип клетки (включая `CHEST`) и красить клик/протаскиванием
+     мыши вместо циклического перебора кликом по клетке — см.
+     [static/map_editor.html](static/map_editor.html).
+   - Сами 2-3 карты в [src/maps/default.py](src/maps/default.py) через
+     редактор — осознанно не сделано агентом, это на пользователе.
    - `Dungeon._procedural_generate` и связанный код (`Room`,
      `_generate_rooms/_generate_chests/_generate_enemies/_generate_exits`)
      не дорабатываем; удаляем по факту, когда/если он начнёт мешать
