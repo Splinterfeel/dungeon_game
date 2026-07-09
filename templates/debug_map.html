@@ -84,7 +84,7 @@ body {
 /* event log */
 #event_log {
     width: 100%;
-    height: calc(100vh - 60px);
+    height: calc(55vh - 60px);
     overflow-y: auto;
     border: 1px solid #555;
     background: #1a1a1a;
@@ -99,6 +99,14 @@ body {
 #event_log .event-time {
     color: #888;
     margin-right: 6px;
+}
+
+/* mech inspector (right panel) */
+#mech_inspector_panel {
+    margin-top: 16px;
+    border: 1px solid #555;
+    background: #1a1a1a;
+    padding: 8px;
 }
 
 </style>
@@ -143,12 +151,6 @@ body {
 
 <div id="actors" style="margin-top: 20px;"></div>
 
-<div style="margin-top: 20px;">
-    <label for="inspect_player_select">Инспектор меха:</label>
-    <select id="inspect_player_select" style="background: #222; color: #eee; padding: 5px;" onchange="render_mech_inspector()"></select>
-</div>
-<div id="mech_inspector" style="margin-top: 8px;"></div>
-
 <div id="map"></div>
 <div id="cell_info" style="margin-top: 10px; min-height: 24px; color: #ccc;"></div>
 
@@ -157,6 +159,11 @@ body {
 
 <div style="color: #aaa; margin-bottom: 8px;">Лог событий</div>
 <div id="event_log"></div>
+
+<div id="mech_inspector_panel">
+    <div style="color: #aaa; margin-bottom: 8px;">Инспектор меха (ЛКМ по клетке на карте)</div>
+    <div id="mech_inspector"></div>
+</div>
 
 </div>
 </div>
@@ -174,6 +181,7 @@ function select_cell(x, y, cellEl) {
     document.querySelectorAll(".cell.selected").forEach(c => c.classList.remove("selected"));
     cellEl.classList.add("selected");
     selectedCell = { x, y };
+    render_mech_inspector();
 
     const info = document.getElementById("cell_info");
     if (!lastGameState) { info.textContent = ""; return; }
@@ -421,64 +429,56 @@ function update_weapon_selector(weapons) {
 const MECH_PART_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
 const MECH_STAT_LABELS = {health: "HP", speed: "Speed", accuracy: "Accuracy", melee_power: "Melee power", view_distance: "View distance"};
 
-function populate_inspect_selector(players) {
-    const select = document.getElementById("inspect_player_select");
-    const currentValue = select.value;
-    const keepCurrent = players.some(p => p.id === currentValue);
-    select.innerHTML = "";
-    players.forEach(p => {
-        const option = document.createElement("option");
-        option.value = p.id;
-        option.textContent = p.name;
-        select.appendChild(option);
-    });
-    const ownPlayerId = document.getElementById("player_id_input").value;
-    if (keepCurrent) {
-        select.value = currentValue;
-    } else if (players.some(p => p.id === ownPlayerId)) {
-        select.value = ownPlayerId;
-    }
+function find_selected_actor() {
+    if (!lastGameState || !selectedCell) return null;
+    const { x, y } = selectedCell;
+    const player = lastGameState.players.find(p => p.position.x === x && p.position.y === y);
+    if (player) return { kind: "player", actor: player };
+    const enemy = (lastGameState.dungeon.enemies || []).find(e => e.position.x === x && e.position.y === y);
+    if (enemy) return { kind: "enemy", actor: enemy };
+    return null;
 }
 
 function render_mech_inspector() {
     const container = document.getElementById("mech_inspector");
-    const select = document.getElementById("inspect_player_select");
-    if (!lastGameState || !select.value) {
-        container.innerHTML = "";
+    const found = find_selected_actor();
+    if (!found) {
+        container.innerHTML = `<div style="color:#888;font-size:12px;">Кликните ЛКМ по игроку (любой команды) или врагу на карте.</div>`;
         return;
     }
-    const player = lastGameState.players.find(p => p.id === select.value);
-    if (!player) {
-        container.innerHTML = "";
-        return;
-    }
+    const { kind, actor } = found;
 
     const statsRows = [
-        ["HP", `${player.stats.health}/${player.stats.max_health}`],
-        ["AP", `${player.current_action_points}/${player.stats.action_points}`],
-        ["Speed", player.stats.speed],
-        ["Accuracy", player.stats.accuracy],
-        ["Melee power", player.stats.melee_power],
-        ["View distance", player.stats.view_distance],
+        ["HP", `${actor.stats.health}/${actor.stats.max_health}`],
+        ["AP", `${actor.current_action_points}/${actor.stats.action_points}`],
+        ["Speed", actor.stats.speed],
+        ["Accuracy", actor.stats.accuracy],
+        ["Melee power", actor.stats.melee_power],
+        ["View distance", actor.stats.view_distance],
     ];
-    let html = `<div style="font-weight:bold;">${player.name} — итоговые характеристики</div>`;
+    const title = kind === "player" ? `Игрок ${actor.name} (команда ${actor.team})` : `Враг (ИИ) ${actor.name}`;
+    let html = `<div style="font-weight:bold;">${title} — итоговые характеристики</div>`;
     html += `<table style="border-collapse:collapse;font-size:12px;margin:4px 0 10px;">`;
     for (const [label, value] of statsRows) {
         html += `<tr><td style="padding:1px 8px 1px 0;color:#aaa;">${label}</td><td>${value}</td></tr>`;
     }
     html += `</table>`;
 
-    html += `<div style="font-weight:bold;">Детали меха</div>`;
-    for (const slot of ["torso", "legs", "arms", "head"]) {
-        const part = player.mech[slot];
-        const nonZeroStats = Object.keys(MECH_STAT_LABELS)
-            .filter(key => part[key] !== 0)
-            .map(key => `${MECH_STAT_LABELS[key]}: ${part[key]}`)
-            .join(", ");
-        html += `<div style="font-size:12px;margin-top:2px;">` +
-            `<span style="color:#8fd88f;">${MECH_PART_LABELS[slot]}</span> — ${part.name}` +
-            (nonZeroStats ? ` (${nonZeroStats})` : " (нет бонусов)") +
-            `</div>`;
+    if (kind === "player") {
+        html += `<div style="font-weight:bold;">Детали меха</div>`;
+        for (const slot of ["torso", "legs", "arms", "head"]) {
+            const part = actor.mech[slot];
+            const nonZeroStats = Object.keys(MECH_STAT_LABELS)
+                .filter(key => part[key] !== 0)
+                .map(key => `${MECH_STAT_LABELS[key]}: ${part[key]}`)
+                .join(", ");
+            html += `<div style="font-size:12px;margin-top:2px;">` +
+                `<span style="color:#8fd88f;">${MECH_PART_LABELS[slot]}</span> — ${part.name}` +
+                (nonZeroStats ? ` (${nonZeroStats})` : " (нет бонусов)") +
+                `</div>`;
+        }
+    } else {
+        html += `<div style="font-size:12px;color:#888;">У врага пока нет меха — плоские характеристики (см. AGENTS.md).</div>`;
     }
     container.innerHTML = html;
 }
@@ -537,7 +537,6 @@ function handle_game_state(state){
         actorsContainer.appendChild(makeActorRow(`Текущий ${ca.name}`, ca.stats, ca.current_action_points, "#99AAEE", !!ca.overwatch));
     }
 
-    populate_inspect_selector(state.players);
     render_mech_inspector();
 
     const container = document.getElementById("map");
