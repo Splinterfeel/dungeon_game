@@ -9,7 +9,7 @@ from src.entities.base import Actor
 from src.base import Point
 from src.entities.player import Player
 from src.entities.enemy import Enemy
-from src.dungeon import Dungeon
+from src.arena import Arena
 from src.constants import CELL_TYPE
 from src.turn import GamePhase, Turn
 from src.game_observer import GameObserver
@@ -21,7 +21,7 @@ ACTIONS_ENDS_TURN = {ActionType.END_TURN, ActionType.OVERWATCH}
 class Game:
     def __init__(
         self,
-        dungeon: Dungeon,
+        arena: Arena,
         players: List[Player],
         turn: Turn = None,
         version: int = 0,
@@ -29,7 +29,7 @@ class Game:
         self._observer: Optional[GameObserver] = None
         self.ended = False
         self.version = version
-        self.dungeon = dungeon
+        self.arena = arena
         self.players = players
         if turn is not None:
             self.turn = turn
@@ -64,7 +64,7 @@ class Game:
         await self._notify_event(GameEvent(message=f"Ход {actor.name}"))
         actor.current_action_points = actor.stats.action_points
         actor.overwatch = None
-        self.turn.available_moves = self.dungeon.map.get_available_moves(actor)
+        self.turn.available_moves = self.arena.map.get_available_moves(actor)
         actor.current_speed_spent = 0
         self.turn.set_current_actor(actor)
 
@@ -78,7 +78,7 @@ class Game:
         return False
 
     async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
-        all_actors: list[Actor] = list(self.players) + list(self.dungeon.enemies)
+        all_actors: list[Actor] = list(self.players) + list(self.arena.enemies)
         for watcher in all_actors:
             if watcher.overwatch is None or watcher.is_dead():
                 continue
@@ -95,7 +95,7 @@ class Game:
             if weapon is None:
                 watcher.overwatch = None
                 continue
-            if self.dungeon.map.can_shoot(watcher, weapon, moving_actor.position):
+            if self.arena.map.can_shoot(watcher, weapon, moving_actor.position):
                 await self._fire_overwatch_shot(watcher, weapon, moving_actor)
                 watcher.overwatch = None
                 return True
@@ -119,16 +119,16 @@ class Game:
         )
         if target.is_dead():
             if isinstance(target, Player):
-                self.dungeon.remove_dead_player(target)
+                self.arena.remove_dead_player(target)
                 self.players.remove(target)
             elif isinstance(target, Enemy):
-                self.dungeon.remove_dead_enemy(target)
+                self.arena.remove_dead_enemy(target)
 
     def move_actor(self, actor: Actor, cell: Point):
-        actor_cell_type = self.dungeon.map.get(actor.position)
-        self.dungeon.reset_map_cell(actor.position)
+        actor_cell_type = self.arena.map.get(actor.position)
+        self.arena.reset_map_cell(actor.position)
         actor.position = cell
-        self.dungeon.map.set(cell, actor_cell_type)
+        self.arena.map.set(cell, actor_cell_type)
 
     def dump_state(self) -> dict:
         return self.to_dict()
@@ -146,7 +146,7 @@ class Game:
         if action.type in ACTIONS_ENDS_TURN and action_result.performed:
             await self.pass_turn_to_next_actor()
         self.check_game_end()
-        self.turn.available_moves = self.dungeon.map.get_available_moves(
+        self.turn.available_moves = self.arena.map.get_available_moves(
             self.turn.current_actor
         )
         return action_result
@@ -157,7 +157,7 @@ class Game:
         elif self.turn.phase == GamePhase.TEAM_2_PHASE:
             actors = [x for x in self.players if x.team == 2]
         else:
-            actors = self.dungeon.enemies
+            actors = self.arena.enemies
         # находим игрока/врага который еще не ходил
         # пока просто по очереди
         next_actor = None
@@ -186,8 +186,7 @@ class Game:
             all(p.is_dead() for p in players_team_2) or len(players_team_2) == 0
         )
         enemies_dead = (
-            all(e.is_dead() for e in self.dungeon.enemies)
-            or len(self.dungeon.enemies) == 0
+            all(e.is_dead() for e in self.arena.enemies) or len(self.arena.enemies) == 0
         )
         if team_1_dead and team_2_dead:
             # все игроки мертвы
@@ -198,8 +197,8 @@ class Game:
 
     def _init_players(self):
         point_choices = {
-            1: copy.deepcopy(self.dungeon.start_points_team_1),
-            2: copy.deepcopy(self.dungeon.start_points_team_2),
+            1: copy.deepcopy(self.arena.start_points_team_1),
+            2: copy.deepcopy(self.arena.start_points_team_2),
         }
 
         players_team_1 = [p for p in self.players if p.team == 1]
@@ -212,13 +211,13 @@ class Game:
             position = random.choice(point_choices[player.team])
             point_choices[player.team].remove(position)
             player.position = position
-            self.dungeon.map.set(player.position, CELL_TYPE.PLAYER.value)
-        self.dungeon.map.clear_start_points()
+            self.arena.map.set(player.position, CELL_TYPE.PLAYER.value)
+        self.arena.map.clear_start_points()
 
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
         dump = {
-            "dungeon": self.dungeon.model_dump(),
+            "arena": self.arena.model_dump(),
             "players": [p.model_dump() for p in self.players],
             "turn": self.turn.model_dump(),
             "version": self.version,

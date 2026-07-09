@@ -97,14 +97,14 @@ class MapState(BaseModel):
     tiles: List[List[str]]
 
 
-class DungeonState(BaseModel):
+class ArenaState(BaseModel):
     chests: list[ChestState]
     enemies: list[ActorState]
     map: MapState
 
 
 class GameState(BaseModel):
-    dungeon: DungeonState
+    arena: ArenaState
     players: list[PlayerState]
     turn: TurnState
     version: int

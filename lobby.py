@@ -10,11 +10,11 @@ from dto.state import GameState, LobbyState, LobbyStatePayload
 from src.constants import Accuracy
 from src.entities.enemy import Enemy
 from src.game import Game
-from src.dungeon import Dungeon
+from src.arena import Arena
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.action import Action
-from src.map import DungeonMap
+from src.map import ArenaMap
 from src.maps import default
 from src.parts_catalog import default_mech
 from src.game_observer import GameObserver
@@ -58,7 +58,7 @@ class Lobby(GameObserver):
                 weapons=[
                     Weapon(
                         type="melee",
-                        name="Кортик",
+                        name="Ударный модуль",
                         damage=3,
                         cost_ap=5,
                         range=1,
@@ -66,7 +66,7 @@ class Lobby(GameObserver):
                     ),
                     Weapon(
                         type="ranged",
-                        name="Пистолет",
+                        name="Мех-винтовка",
                         damage=5,
                         cost_ap=8,
                         range=4,
@@ -90,7 +90,7 @@ class Lobby(GameObserver):
             )
             return False, detail
         # генерация
-        # dungeon = Dungeon(
+        # arena = Arena(
         #     max_chests=3,
         #     enemies_num=2,
         #     width=20,
@@ -102,13 +102,13 @@ class Lobby(GameObserver):
         # )
 
         # готовые карты
-        dungeon_map = DungeonMap(
+        arena_map = ArenaMap(
             width=copy.deepcopy(default.map_2["width"]),
             height=copy.deepcopy(default.map_2["height"]),
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
-        dungeon = Dungeon(max_chests=3, enemies_num=2, map=dungeon_map)
-        self.game = Game(dungeon=dungeon, players=list(self.players.values()))
+        arena = Arena(max_chests=3, enemies_num=2, map=arena_map)
+        self.game = Game(arena=arena, players=list(self.players.values()))
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
         return True, "Game started"
@@ -161,7 +161,7 @@ class Lobby(GameObserver):
 
     async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
-            actors = {str(e.id): e for e in self.game.dungeon.enemies}
+            actors = {str(e.id): e for e in self.game.arena.enemies}
             actors.update(self.players)
             actor = actors[str(_actor.id)]
             action = Action(**payload)
@@ -214,22 +214,22 @@ class Lobby(GameObserver):
         visible_enemies = []
         visible_chests = []
         visible_players = [p for p in team_players]
-        for enemy in game_state.dungeon.enemies:
+        for enemy in game_state.arena.enemies:
             for player in team_players:
-                if self.game.dungeon.map.can_see(player, enemy):
+                if self.game.arena.map.can_see(player, enemy):
                     visible_enemies.append(enemy)
                     break
-        for chest in game_state.dungeon.chests:
+        for chest in game_state.arena.chests:
             for player in team_players:
-                if self.game.dungeon.map.can_see(player, chest):
+                if self.game.arena.map.can_see(player, chest):
                     visible_chests.append(chest)
                     break
         for another_player in another_team_players:
             for player in team_players:
-                if self.game.dungeon.map.can_see(player, another_player):
+                if self.game.arena.map.can_see(player, another_player):
                     visible_players.append(another_player)
                     break
         game_state.players = visible_players
-        game_state.dungeon.enemies = visible_enemies
-        game_state.dungeon.chests = visible_chests
+        game_state.arena.enemies = visible_enemies
+        game_state.arena.chests = visible_chests
         return game_state

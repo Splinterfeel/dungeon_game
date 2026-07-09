@@ -1,1 +1,1 @@
-from .dungeon import Dungeon  # noqa
+from .arena import Arena  # noqa

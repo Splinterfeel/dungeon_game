@@ -108,7 +108,7 @@ class ActionHandler:
         self, actor: Actor, action: Action
     ) -> ActionResult:
         chest = next(
-            (c for c in self.game.dungeon.chests if c.position == action.cell), None
+            (c for c in self.game.arena.chests if c.position == action.cell), None
         )
         if chest is None:
             return ActionResult(
@@ -123,7 +123,7 @@ class ActionHandler:
                 detail=f"{actor.name}, сундук {action.cell} слишком далеко, чтобы его открыть",
             )
         actor.trophies.append(chest.loot)
-        self.game.dungeon.remove_chest(chest)
+        self.game.arena.remove_chest(chest)
         return ActionResult(
             action=action,
             detail=f"{actor.name} открывает сундук и находит: {chest.loot}",
@@ -137,13 +137,13 @@ class ActionHandler:
                 action=action,
                 detail=f"{actor.name}, нельзя переместиться в {action.cell}",
             )
-        if not self.game.dungeon.map.is_free(action.cell):
+        if not self.game.arena.map.is_free(action.cell):
             return ActionResult(
                 performed=False,
                 action=action,
                 detail=f"{actor.name}, клетка {action.cell} занята, нельзя в нее переместиться",  # noqa
             )
-        path = self.game.dungeon.map.bfs_path(
+        path = self.game.arena.map.bfs_path(
             action.cell, self.game.turn.current_actor.position
         )
         if not path:
@@ -186,10 +186,8 @@ class ActionHandler:
         self, actor: Actor, action: Action
     ) -> ActionResult:
         action_ap_cost = 0
-        actor_cell_type = self.game.dungeon.map.get(
-            self.game.turn.current_actor.position
-        )
-        action_cell_type = self.game.dungeon.map.get(action.cell)
+        actor_cell_type = self.game.arena.map.get(self.game.turn.current_actor.position)
+        action_cell_type = self.game.arena.map.get(action.cell)
         attack_params: AttackActionParams = action.params
         try:
             weapon = next(
@@ -208,7 +206,7 @@ class ActionHandler:
         current_dist = Point.distance_chebyshev(actor.position, action.cell)
         # проверка линии видимости
         if weapon.range > 1:
-            if not self.game.dungeon.map.can_shoot(actor, weapon, action.cell):
+            if not self.game.arena.map.can_shoot(actor, weapon, action.cell):
                 return ActionResult(
                     performed=False,
                     action=action,
@@ -243,7 +241,7 @@ class ActionHandler:
                 )
             player.apply_damage(damage)
             if player.is_dead():
-                self.game.dungeon.remove_dead_player(player)
+                self.game.arena.remove_dead_player(player)
                 self.game.players.remove(player)
                 await self.game._notify_event(
                     GameEvent(message=f"Игрок {player.name} погиб!")
@@ -258,7 +256,7 @@ class ActionHandler:
             and action_cell_type == CELL_TYPE.ENEMY.value
         ):
             enemy = next(
-                x for x in self.game.dungeon.enemies if x.position == action.cell
+                x for x in self.game.arena.enemies if x.position == action.cell
             )
             if not attack_hit:
                 return ActionResult(
@@ -268,7 +266,7 @@ class ActionHandler:
                 )
             enemy.apply_damage(damage)
             if enemy.is_dead():
-                self.game.dungeon.remove_dead_enemy(enemy=enemy)
+                self.game.arena.remove_dead_enemy(enemy=enemy)
                 await self.game._notify_event(GameEvent(message=f"{enemy.name} погиб!"))
             return ActionResult(
                 action=action,
@@ -300,7 +298,7 @@ class ActionHandler:
                 )
             player_attacked.apply_damage(damage)
             if player_attacked.is_dead():
-                self.game.dungeon.remove_dead_player(player_attacked)
+                self.game.arena.remove_dead_player(player_attacked)
                 self.game.players.remove(player_attacked)
                 await self.game._notify_event(
                     GameEvent(message=f"Игрок {player_attacked.name} погиб!")

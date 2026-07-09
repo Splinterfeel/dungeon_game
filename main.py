@@ -20,7 +20,7 @@ from dto.debug import (
     DebugRestoreResponse,
 )
 
-from src.dungeon import Dungeon, DungeonMap
+from src.arena import Arena, ArenaMap
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.turn import Turn

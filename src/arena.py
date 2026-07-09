@@ -9,10 +9,10 @@ from src.entities.chest import Chest
 from src.entities.player import Player
 from src.entities.room import Room
 from src.entities.enemy import Enemy
-from src.map import DungeonMap
+from src.map import ArenaMap
 
 
-class Dungeon(BaseModel):
+class Arena(BaseModel):
     max_chests: int
     enemies_num: int
     width: Optional[int] = None
@@ -24,8 +24,8 @@ class Dungeon(BaseModel):
     min_enemy_ap: int = 9
     max_enemy_ap: int = 12
 
-    # Состояние подземелья
-    map: Optional[DungeonMap] = None
+    # Состояние арены
+    map: Optional[ArenaMap] = None
     start_room: Optional[Room] = None
     rooms: List[Room] = Field(default_factory=list)
     chests: List[Chest] = Field(default_factory=list)
@@ -36,7 +36,7 @@ class Dungeon(BaseModel):
     start_points_team_2: List[Point] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def initialize_dungeon(self) -> "Dungeon":
+    def initialize_arena(self) -> "Arena":
         # Если карта уже передана (загрузка), инициализируем из неё
         if self.map is not None:
             # Если списки объектов пусты, значит мы загрузили "сырую" карту и надо их вытащить
@@ -61,8 +61,12 @@ class Dungeon(BaseModel):
         return self
 
     def __save_initial_map(self):
+        # _initial_map — снимок только террейна (стены/пол): по нему
+        # reset_map_cell восстанавливает клетку, которую покидает актор.
+        # Маркеры сущностей (враги/сундуки/игроки/спавны) сюда попадать не
+        # должны, иначе покинутые клетки восстанавливаются как занятые.
         self._initial_map = self.map.model_copy(deep=True)
-        self._initial_map.clear_start_points(clear_players_points=True)
+        self._initial_map.keep_only_terrain()
 
     def _init_from_map(self):
         self.enemies = []
@@ -94,7 +98,7 @@ class Dungeon(BaseModel):
                 elif self.map.get(_point) == CELL_TYPE.ENEMY.value:
                     possible_enemy_points.append(_point)
                     self.map.set(_point, CELL_TYPE.EMPTY.value)
-        # here can set difficulty of dungeon - min and max enemies
+        # here can set difficulty of arena - min and max enemies
 
         chests_count = min(
             random.randint(1, self.max_chests), len(possible_chest_points)
@@ -116,7 +120,7 @@ class Dungeon(BaseModel):
                 weapons=[
                     Weapon(
                         type="melee",
-                        name="Старая сабля",
+                        name="Повреждённый ударный модуль",
                         damage=3,
                         cost_ap=5,
                         range=1,
@@ -124,7 +128,7 @@ class Dungeon(BaseModel):
                     ),
                     Weapon(
                         type="ranged",
-                        name="Старый пистолет",
+                        name="Ржавая мех-винтовка",
                         damage=4,
                         cost_ap=8,
                         range=4,
@@ -151,7 +155,7 @@ class Dungeon(BaseModel):
             self.map.set(point, CELL_TYPE.ENEMY.value)
 
     def _procedural_generate(self):
-        self.map = DungeonMap(self.width, self.height)
+        self.map = ArenaMap(self.width, self.height)
         if self.rooms is None:
             self.rooms = []
             self._generate_rooms()
@@ -253,7 +257,7 @@ class Dungeon(BaseModel):
         distances = {room: 0 for room in self.rooms}
 
         # Мы можем использовать простую эвристику: расстояние от первой комнаты в списке.
-        # Это будет не самый точный способ, но он даст нам смещение к "краю" подземелья.
+        # Это будет не самый точный способ, но он даст нам смещение к "краю" арены.
         # Более сложный подход требует волнового алгоритма, но для начала это сработает.
         first_room = self.rooms[0]
 

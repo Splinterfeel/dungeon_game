@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Dungeon Debug Map</title>
+<title>Arena Debug Map</title>
 
 <style>
 * {
@@ -188,8 +188,8 @@ function select_cell(x, y, cellEl) {
     if (!lastGameState) { info.textContent = ""; return; }
 
     const players = lastGameState.players || [];
-    const enemies = lastGameState.dungeon.enemies || [];
-    const chests = lastGameState.dungeon.chests || [];
+    const enemies = lastGameState.arena.enemies || [];
+    const chests = lastGameState.arena.chests || [];
     let _pre_content = `[${x} ${y}]`;
     const player = players.find(p => p.position.x === x && p.position.y === y);
     if (player) { info.textContent = `${_pre_content} Игрок: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
@@ -200,7 +200,7 @@ function select_cell(x, y, cellEl) {
     const chest = chests.find(c => c.position.x === x && c.position.y === y);
     if (chest) { info.textContent = `${_pre_content} Сундук`; return; }
 
-    const tiles = lastGameState.dungeon.map.tiles;
+    const tiles = lastGameState.arena.map.tiles;
     info.textContent = tiles[x][y] === " # " ? `${_pre_content} Стена` : `${_pre_content} Пол`;
 }
 
@@ -435,7 +435,7 @@ function find_selected_actor() {
     const { x, y } = selectedCell;
     const player = lastGameState.players.find(p => p.position.x === x && p.position.y === y);
     if (player) return { kind: "player", actor: player };
-    const enemy = (lastGameState.dungeon.enemies || []).find(e => e.position.x === x && e.position.y === y);
+    const enemy = (lastGameState.arena.enemies || []).find(e => e.position.x === x && e.position.y === y);
     if (enemy) return { kind: "enemy", actor: enemy };
     return null;
 }
@@ -504,10 +504,10 @@ function handle_game_state(state){
         document.title = lastPlayerState.name;
         update_weapon_selector(lastPlayerState.inventory.weapons);
     }
-    const dungeon = state.dungeon;
-    const tiles = dungeon.map.tiles;
-    const width = dungeon.map.width;
-    const height = dungeon.map.height;
+    const arena = state.arena;
+    const tiles = arena.map.tiles;
+    const width = arena.map.width;
+    const height = arena.map.height;
     const currentActor = state.turn.current_actor;
     if (currentActor && currentActor.id === playerId){
         showToast("Ваш ход!");
@@ -538,7 +538,7 @@ function handle_game_state(state){
         return div;
     }
 
-    for (const e of dungeon.enemies) {
+    for (const e of arena.enemies) {
         actorsContainer.appendChild(makeActorRow(`ИИ/Враг ${e.name}`, e.stats, e.current_action_points, "#AA3344", !!e.overwatch));
     }
     for (const p of state.players) {
@@ -568,11 +568,11 @@ function handle_game_state(state){
 
 
     // враги
-    for (const e of dungeon.enemies) {
+    for (const e of arena.enemies) {
         visual[e.position.x][e.position.y].entity = "E";
         visual[e.position.x][e.position.y].overwatch = !!e.overwatch;
     }
-    for (const c of dungeon.chests) {
+    for (const c of arena.chests) {
         visual[c.position.x][c.position.y].entity = "C";
     }
 

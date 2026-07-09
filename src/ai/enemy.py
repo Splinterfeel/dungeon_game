@@ -27,7 +27,7 @@ class SimpleEnemyAI(AI):
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
             ):
                 for player in self.game.players:
-                    if self.game.dungeon.map.can_shoot(
+                    if self.game.arena.map.can_shoot(
                         self.actor, ranged_weapon, player.position
                     ):
                         if random.random() < 1 / 3:
@@ -46,7 +46,7 @@ class SimpleEnemyAI(AI):
         # фаза движения
         players_distances = []
         for player in self.game.players:
-            path = self.game.dungeon.map.bfs_path(self.actor.position, player.position)
+            path = self.game.arena.map.bfs_path(self.actor.position, player.position)
             if not path:
                 continue
             players_distances.append(

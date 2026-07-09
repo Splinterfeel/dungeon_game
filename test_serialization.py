@@ -9,7 +9,7 @@ from typing import Optional, List
 
 # Import necessary classes
 from src.game import Game
-from src.dungeon import Dungeon, DungeonMap
+from src.arena import Arena, ArenaMap
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.constants import Accuracy
@@ -47,7 +47,7 @@ def create_test_players() -> list[Player]:
             weapons=[
                 Weapon(
                     type="melee",
-                    name="Кортик",
+                    name="Ударный модуль",
                     damage=3,
                     cost_ap=5,
                     range=1,
@@ -55,7 +55,7 @@ def create_test_players() -> list[Player]:
                 ),
                 Weapon(
                     type="ranged",
-                    name="Пистолет",
+                    name="Мех-винтовка",
                     damage=5,
                     cost_ap=8,
                     range=4,
@@ -77,7 +77,7 @@ def create_test_players() -> list[Player]:
             weapons=[
                 Weapon(
                     type="melee",
-                    name="Кортик",
+                    name="Ударный модуль",
                     damage=3,
                     cost_ap=5,
                     range=1,
@@ -85,7 +85,7 @@ def create_test_players() -> list[Player]:
                 ),
                 Weapon(
                     type="ranged",
-                    name="Пистолет",
+                    name="Мех-винтовка",
                     damage=5,
                     cost_ap=8,
                     range=4,
@@ -99,18 +99,18 @@ def create_test_players() -> list[Player]:
     return players
 
 
-def create_test_dungeon() -> Dungeon:
-    """Create a test dungeon with start points"""
+def create_test_arena() -> Arena:
+    """Create a test arena with start points"""
     import copy
     from src.maps import default
 
     # Use the default map from the game
-    dungeon_map = DungeonMap(
+    arena_map = ArenaMap(
         width=copy.deepcopy(default.map_2["width"]),
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    return Dungeon(max_chests=3, enemies_num=2, map=dungeon_map)
+    return Arena(max_chests=3, enemies_num=2, map=arena_map)
 
 
 def test_game_serialization():
@@ -119,10 +119,10 @@ def test_game_serialization():
 
     # Create test data
     players = create_test_players()
-    dungeon = create_test_dungeon()
+    arena = create_test_arena()
 
     # Create game instance
-    game = Game(dungeon=dungeon, players=players)
+    game = Game(arena=arena, players=players)
 
     # Register mock observer
     observer = MockGameObserver()
@@ -130,7 +130,7 @@ def test_game_serialization():
 
     print("[OK] Game created successfully with observer pattern")
     print(f"   Game has {len(game.players)} players")
-    print(f"   Dungeon size: {game.dungeon.map.width}x{game.dungeon.map.height}")
+    print(f"   Arena size: {game.arena.map.width}x{game.arena.map.height}")
 
     # Test serialization
     print("\nTesting serialization...")
@@ -141,7 +141,7 @@ def test_game_serialization():
 
         # Test JSON serialization using Pydantic's model_dump_json
         from src.turn import Turn
-        from src.dungeon import Dungeon as DungeonModel
+        from src.arena import Arena as ArenaModel
 
         # Create a proper GameState for JSON serialization
         from dto.state import GameState
@@ -161,7 +161,7 @@ def test_game_serialization():
         )
 
         # Verify specific fields
-        assert "dungeon" in game_dict, "Missing 'dungeon' in serialized data"
+        assert "arena" in game_dict, "Missing 'arena' in serialized data"
         assert "players" in game_dict, "Missing 'players' in serialized data"
         assert "turn" in game_dict, "Missing 'turn' in serialized data"
         assert "version" in game_dict, "Missing 'version' in serialized data"

@@ -7,13 +7,13 @@ from src.constants import CELL_TYPE
 from src.entities.base import Actor, Entity, Weapon
 
 
-class DungeonMap(BaseModel):
+class ArenaMap(BaseModel):
     width: int
     height: int
     tiles: List[List[str]] = Field(default=None)
 
     @model_validator(mode="after")
-    def initialize_tiles(self) -> "DungeonMap":
+    def initialize_tiles(self) -> "ArenaMap":
         # Если tiles не переданы, создаем пустую карту из стен
         if self.tiles is None:
             self.tiles = [
@@ -42,6 +42,20 @@ class DungeonMap(BaseModel):
             for y in range(self.height):
                 p = Point(x=x, y=y)
                 if self.get(p) in values_to_clear:
+                    self.set(p, CELL_TYPE.EMPTY.value)
+
+    def keep_only_terrain(self):
+        """Оставить на карте только террейн (стены/пол), затерев маркеры всех
+        динамических сущностей и точек старта (враги, сундуки, игроки, спавны)
+        в EMPTY. Нужно для "чистого" снимка карты (_initial_map), по которому
+        восстанавливается клетка при уходе актора: террейн статичен, а сущности
+        двигаются/исчезают, поэтому их маркеры туда попадать не должны —
+        иначе бывшие клетки врагов/сундуков "восстанавливаются" как занятые."""
+        terrain = {CELL_TYPE.WALL.value, CELL_TYPE.EMPTY.value}
+        for x in range(self.width):
+            for y in range(self.height):
+                p = Point(x=x, y=y)
+                if self.get(p) not in terrain:
                     self.set(p, CELL_TYPE.EMPTY.value)
 
     def get_available_moves(self, actor: Actor) -> list[Point]:

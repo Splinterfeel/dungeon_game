@@ -42,7 +42,7 @@ def test_dump_restore_workflow():
     dump = client.post("/debug/dump_game_state", json={"lobby_id": lobby_id})
     assert dump.status_code == 200, dump.text
     game_state = dump.json()["game_state"]
-    assert {"dungeon", "players", "turn"} <= game_state.keys()
+    assert {"arena", "players", "turn"} <= game_state.keys()
     assert game_state["players"], "dump должен содержать игроков"
     assert "mech" in game_state["players"][0], "mech должен попадать в дамп"
 
