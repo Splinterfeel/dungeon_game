@@ -70,6 +70,7 @@ class ActorState(BaseModel):
     current_speed_spent: int
     inventory: InventoryState
     overwatch: Optional[OverwatchStateDTO] = None
+    trophies: list[str] = []
 
 
 class PlayerState(ActorState):
