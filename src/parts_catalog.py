@@ -12,7 +12,7 @@ DEFAULT_ARMS = Part(
     slot=PartSlot.ARMS,
     name="Стандартные руки",
     accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
-    melee_power=5,
+    melee_power=2,
 )
 DEFAULT_HEAD = Part(slot=PartSlot.HEAD, name="Стандартная электроника", view_distance=5)
 

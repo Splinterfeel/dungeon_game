@@ -137,7 +137,7 @@ class Dungeon(BaseModel):
                     position=point,
                     stats=CharacterStats(
                         health=random.randint(8, 12),
-                        melee_power=random.randint(3, 5),
+                        melee_power=random.randint(0, 1),
                         speed=3,
                         view_distance=5,
                         accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
@@ -196,7 +196,7 @@ class Dungeon(BaseModel):
                 position=position,
                 stats=CharacterStats(
                     health=random.randint(10, 20),
-                    melee_power=random.randint(3, 5),
+                    melee_power=random.randint(0, 1),
                     speed=3,
                     view_distance=5,
                     accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,

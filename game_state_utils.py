@@ -17,7 +17,9 @@ from src.game import Game
 from lobby import Lobby
 
 
-def create_debug_dump_response(lobby: Lobby, game_state: Dict[str, Any]) -> DebugDumpResponse:
+def create_debug_dump_response(
+    lobby: Lobby, game_state: Dict[str, Any]
+) -> DebugDumpResponse:
     """Create a debug dump response from lobby and game state"""
     # Get players info
     players_info = [
@@ -62,7 +64,11 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
     )
 
     # Restore current state
-    restored_player.position = Point(**player_data["position"]) if isinstance(player_data["position"], dict) else player_data["position"]
+    restored_player.position = (
+        Point(**player_data["position"])
+        if isinstance(player_data["position"], dict)
+        else player_data["position"]
+    )
     restored_player.current_action_points = player_data["current_action_points"]
     restored_player.current_speed_spent = player_data.get("current_speed_spent", 0)
     restored_player.overwatch = player_data.get("overwatch")
@@ -140,7 +146,9 @@ def restore_turn_from_data(turn_data: Dict[str, Any]) -> Turn:
     return turn
 
 
-def find_current_actor(current_actor_data: Dict[str, Any], players: list, enemies: list):
+def find_current_actor(
+    current_actor_data: Dict[str, Any], players: list, enemies: list
+):
     """Find and restore the current actor reference"""
     actor_id = current_actor_data["id"]
 
@@ -157,9 +165,7 @@ def find_current_actor(current_actor_data: Dict[str, Any], players: list, enemie
 
 
 def restore_game_state(
-    game_data: Dict[str, Any],
-    lobby_id: UUID,
-    lobby_name: str
+    game_data: Dict[str, Any], lobby_id: UUID, lobby_name: str
 ) -> Lobby:
     """Restore complete game state from dump data"""
     # Create a fresh lobby with the provided ID
@@ -197,9 +203,7 @@ def restore_game_state(
     # Restore current actor reference
     if game_data["turn"].get("current_actor"):
         current_actor = find_current_actor(
-            game_data["turn"]["current_actor"],
-            restored_players,
-            dungeon.enemies
+            game_data["turn"]["current_actor"], restored_players, dungeon.enemies
         )
         lobby.game.turn.current_actor = current_actor
     else:

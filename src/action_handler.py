@@ -40,7 +40,9 @@ class ActionHandler:
             case ActionType.OVERWATCH:
                 return await self.__perform_action_overwatch(actor=actor, action=action)
             case ActionType.OPEN_CHEST:
-                return await self.__perform_action_open_chest(actor=actor, action=action)
+                return await self.__perform_action_open_chest(
+                    actor=actor, action=action
+                )
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell)
                 return ActionResult(action=action)
