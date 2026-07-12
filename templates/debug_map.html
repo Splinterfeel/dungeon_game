@@ -109,6 +109,31 @@ body {
     padding: 8px;
 }
 
+/* control groups (left panel) */
+.panel-group {
+    border: 1px solid #555;
+    background: #1a1a1a;
+    margin-bottom: 12px;
+    padding: 10px;
+}
+.panel-group legend {
+    color: #aaa;
+    padding: 0 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.control-row:last-child {
+    margin-bottom: 0;
+}
+
 </style>
 </head>
 
@@ -117,42 +142,63 @@ body {
 <div id="layout">
 <div id="left_panel">
 
-<br>
-<label for="input_players_num">Кол-во игроков</label>
-<input type="number" id="input_players_num" value="1" style="width: 50px">
-<button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
+<fieldset class="panel-group">
+<legend>Лобби</legend>
+<div class="control-row">
+    <label for="input_players_num">Кол-во игроков</label>
+    <input type="number" id="input_players_num" value="1" style="width: 50px">
+    <button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
+</div>
+<div class="control-row">
+    <select id="team_select" style="background: #222; color: #eee; padding: 5px;">
+        <option value="1">1</option>
+        <option value="2">2</option>
+    </select>
+    <label for="mech_preset_select">Пресет меха</label>
+    <select id="mech_preset_select" style="background: #222; color: #eee; padding: 5px;">
+        <option value="">-- случайный --</option>
+    </select>
+    <button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
+</div>
+<div class="control-row">
+    <button onclick="start_game()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
+</div>
+</fieldset>
 
-<select id="team_select" style="background: #222; color: #eee; padding: 5px;">
-    <option value="1">1</option>
-    <option value="2">2</option>
-</select>
-<label for="mech_preset_select">Пресет меха</label>
-<select id="mech_preset_select" style="background: #222; color: #eee; padding: 5px;">
-    <option value="">-- случайный --</option>
-</select>
-<button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
-<button onclick="start_game()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
-<br>
-<br>
-<label for="player_id_input">Player ID</label>
-<input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input"  style="width: 40%;"/>
-<button onclick="generate_new_player_id()">Сгенерить новый</button>
-<br>
-<label for="lobby_id_select">Lobby ID</label>
-<select id="lobby_id_select" style="width: 40%; background: #222; color: #eee; padding: 5px;">
-    <option value="">-- Выберите лобби --</option>
-</select>
-<button onclick="refresh_lobbies_list()">Обновить список</button>
-<input type="hidden" value="" id="lobby_id_input"/>
-<br>
-<button onclick="connect_ws()" style="background: #94941b; color: white; font-weight: bold;">Connect WS</button>
-<button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
-<button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
-<label for="weapon_select">Оружие:</label>
-<select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
-<button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
-<button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
-<button onclick="send_open_chest()" style="background: #b8860b; color: white; font-weight: bold;">OPEN CHEST</button>
+<fieldset class="panel-group">
+<legend>Игрок и WS-соединение</legend>
+<div class="control-row">
+    <label for="player_id_input">Player ID</label>
+    <input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input" style="width: 40%;"/>
+    <button onclick="generate_new_player_id()">Сгенерить новый</button>
+</div>
+<div class="control-row">
+    <label for="lobby_id_select">Lobby ID</label>
+    <select id="lobby_id_select" style="width: 40%; background: #222; color: #eee; padding: 5px;">
+        <option value="">-- Выберите лобби --</option>
+    </select>
+    <button onclick="refresh_lobbies_list()">Обновить список</button>
+    <input type="hidden" value="" id="lobby_id_input"/>
+</div>
+<div class="control-row">
+    <button onclick="connect_ws()" style="background: #94941b; color: white; font-weight: bold;">Connect WS</button>
+</div>
+</fieldset>
+
+<fieldset class="panel-group">
+<legend>Действия в бою</legend>
+<div class="control-row">
+    <button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
+    <button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
+    <button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
+    <button onclick="send_open_chest()" style="background: #b8860b; color: white; font-weight: bold;">OPEN CHEST</button>
+</div>
+<div class="control-row">
+    <label for="weapon_select">Оружие:</label>
+    <select id="weapon_select" style="background: #222; color: #eee; padding: 5px;"></select>
+    <button onclick="send_attack()" style="background: #057514; color: white; font-weight: bold;">ATTACK</button>
+</div>
+</fieldset>
 
 <div id="actors" style="margin-top: 20px;"></div>
 
