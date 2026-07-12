@@ -140,12 +140,20 @@ class Game:
         action_result: ActionResult = await self.action_handler.perform_actor_action(
             actor, action
         )
-        await self._notify_event(GameEvent(message=action_result.detail))
         if action_result.performed:
+            await self._notify_event(GameEvent(message=action_result.detail))
             actor.current_action_points = max(
                 actor.current_action_points - action_result.action_cost, 0
             )
             actor.current_speed_spent += action_result.speed_spent
+        elif isinstance(actor, Player):
+            # неуспешная попытка действия (не хватило AP, недоступная клетка
+            # и т.п.) — обратная связь только тому, кто попытался, остальным
+            # это спам, а не игровое событие
+            await self._notify_event(
+                GameEvent(message=action_result.detail),
+                receiver_player_ids=[actor.id],
+            )
         # актор мог погибнуть от огневого дозора прямо во время своего
         # перемещения (MOVE не входит в ACTIONS_ENDS_TURN, но мёртвый актор
         # не может продолжать ход) — в этом случае ход тоже нужно передать
