@@ -7,16 +7,15 @@ from typing import Optional, List
 from dto.base import PlayerDTO
 from dto.event import GameEvent
 from dto.state import GameState, LobbyState, LobbyStatePayload
-from src.constants import Accuracy
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.arena import Arena
 from src.entities.player import Player
-from src.entities.base import Inventory, Weapon
+from src.entities.base import Inventory
 from src.action import Action
 from src.map import ArenaMap
 from src.maps import default
-from src.parts_catalog import default_mech
+from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
 
 
@@ -48,32 +47,19 @@ class Lobby(GameObserver):
         if len(self.players) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
-        mech = default_mech()
+        if player.mech_preset:
+            preset = get_mech_preset_by_name(player.mech_preset)
+            if preset is None:
+                return False, f"unknown mech preset: {player.mech_preset}"
+        else:
+            preset = get_random_mech_preset()
+        mech = preset.mech
         self.players[str(player.id)] = Player(
             id=player.id,
             team=player.team,
             mech=mech,
             stats=mech.build_character_stats(action_points=10),
-            inventory=Inventory(
-                weapons=[
-                    Weapon(
-                        type="melee",
-                        name="Ударный модуль",
-                        damage=3,
-                        cost_ap=5,
-                        range=1,
-                        accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
-                    ),
-                    Weapon(
-                        type="ranged",
-                        name="Мех-винтовка",
-                        damage=5,
-                        cost_ap=8,
-                        range=4,
-                        accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,
-                    ),
-                ]
-            ),
+            inventory=Inventory(weapons=preset.weapons),
         )
         await self.broadcast_lobby_state()
         return True, "player connected"

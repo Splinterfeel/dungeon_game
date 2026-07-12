@@ -61,6 +61,12 @@ class MechState(BaseModel):
     head: PartState
 
 
+class MechPresetState(BaseModel):
+    name: str
+    mech: MechState
+    weapons: list[WeaponState]
+
+
 class ActorState(BaseModel):
     id: str
     position: PointState

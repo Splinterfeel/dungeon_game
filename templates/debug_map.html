@@ -126,6 +126,10 @@ body {
     <option value="1">1</option>
     <option value="2">2</option>
 </select>
+<label for="mech_preset_select">Пресет меха</label>
+<select id="mech_preset_select" style="background: #222; color: #eee; padding: 5px;">
+    <option value="">-- случайный --</option>
+</select>
 <button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
 <button onclick="start_game()" style="background: #4caf50; color: white;">Старт игры (POST)</button>
 <br>
@@ -215,6 +219,7 @@ document.getElementById("lobby_id_select").addEventListener("change", function()
 
 // Initialize lobbies list on page load
 refresh_lobbies_list();
+refresh_mech_presets();
 
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
@@ -326,10 +331,29 @@ async function start_game() {
     }
 }
 
+async function refresh_mech_presets() {
+    const _select = document.getElementById("mech_preset_select");
+    try {
+        const response = await fetch("http://{{ host }}/mech_presets");
+        const presets = await response.json();
+        // сохраняем опцию "случайный", дальше добавляем пресеты
+        _select.innerHTML = '<option value="">-- случайный --</option>';
+        presets.forEach(preset => {
+            const option = document.createElement("option");
+            option.value = preset.name;
+            option.textContent = preset.name;
+            _select.appendChild(option);
+        });
+    } catch (e) {
+        console.error("Ошибка при получении списка пресетов меха:", e);
+    }
+}
+
 async function connect_to_lobby() {
     const _input_lobby = document.getElementById("lobby_id_input");
     const _player_id_input = document.getElementById("player_id_input");
     const _player_team_select = document.getElementById("team_select");
+    const _mech_preset_select = document.getElementById("mech_preset_select");
     try {
         const response = await fetch("http://{{ host }}/connect_lobby", {
             method: "POST",
@@ -339,6 +363,7 @@ async function connect_to_lobby() {
                 player: {
                     id: _player_id_input.value,
                     team: _player_team_select.value,
+                    mech_preset: _mech_preset_select.value || null,
                 }
             })
         });

@@ -19,8 +19,10 @@ from dto.debug import (
     DebugRestoreRequest,
     DebugRestoreResponse,
 )
+from dto.state import MechPresetState
 
 from src.arena import Arena, ArenaMap
+from src.mech_presets import MECH_PRESETS
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.turn import Turn
@@ -69,6 +71,14 @@ async def debug_map(request: Request):
 @app.get("/lobbies", description="Получить список лобби")
 def get_lobbies_list() -> list[LobbyDTO]:
     return lobby_manager.get_lobbies_list()
+
+
+@app.get(
+    "/mech_presets",
+    description="Список доступных пресетов меха (для выбора при подключении к лобби)",
+)
+def get_mech_presets() -> list[MechPresetState]:
+    return [MechPresetState.model_validate(preset.model_dump()) for preset in MECH_PRESETS]
 
 
 @app.post("/lobbies", description="Создать лобби")

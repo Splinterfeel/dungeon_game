@@ -1,0 +1,100 @@
+{
+  "_comment": "Заглушка/дамп структуры дерева скиллов пилота — зафиксировано с пользователем 2026-07-10, см. ROADMAP.md (Этап 2 п.8, Этап 3 п.3). Не подключено к коду, никакой Skill-модели/каталога ещё нет — это только фиксация 'что и за чем', чтобы не изобретать заново при реализации. Числа proc_chance подобраны на глаз (цель — прок ~раз в 5-15 ходов, т.е. 0.2..0.067), не баланс.",
+  "trigger_types": {
+    "attack": "проверяется, когда актор с этим скиллом сам атакует (ActionType.ATTACK)",
+    "defense": "проверяется, когда актора с этим скиллом атакуют (он цель атаки)",
+    "defense_overwatch": "проверяется, когда актора с этим скиллом атакуют по овервотчу при его движении"
+  },
+  "effect_note": "Эффект скилла всегда временный — действует только на текущий обмен атакой (этот бросок), не меняет статы навсегда. 'buff_self'/'debuff_target' модифицируют стат на время расчёта попадания/урона этой атаки.",
+  "levels": [
+    {
+      "level": 1,
+      "choice": false,
+      "skills": []
+    },
+    {
+      "level": 2,
+      "requires": null,
+      "choices": [
+        {
+          "id": "accurate_shot",
+          "name": "Точный выстрел",
+          "trigger": "attack",
+          "proc_chance": 0.15,
+          "effect": {
+            "type": "buff_self",
+            "stat": "accuracy",
+            "value": 15
+          },
+          "description": "Шанс на этот выстрел: +15 к точности только для текущей атаки."
+        },
+        {
+          "id": "heavy_strike",
+          "name": "Усиленный удар",
+          "trigger": "attack",
+          "proc_chance": 0.15,
+          "effect": {
+            "type": "buff_self",
+            "stat": "melee_power",
+            "value": 3
+          },
+          "description": "Шанс на эту атаку: +3 к силе удара только для текущей атаки (складывается с бонусом arms-детали меха — независимые источники)."
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "branches": {
+        "accurate_shot": [
+          {
+            "id": "double_shot",
+            "name": "Двойной выстрел",
+            "trigger": "attack",
+            "proc_chance": 0.1,
+            "effect": {
+              "type": "extra_attack",
+              "count": 1
+            },
+            "description": "Шанс выполнить атаку ещё раз в рамках того же действия (без доп. траты action points на второй выстрел)."
+          },
+          {
+            "id": "free_shot",
+            "name": "Бесплатный выстрел",
+            "trigger": "attack",
+            "proc_chance": 0.12,
+            "effect": {
+              "type": "refund_action_points",
+              "scope": "this_action"
+            },
+            "description": "Шанс, что текущая атака не потратит action points (полный возврат стоимости действия)."
+          }
+        ],
+        "heavy_strike": [
+          {
+            "id": "reflexes",
+            "name": "Рефлексы",
+            "trigger": "defense_overwatch",
+            "proc_chance": 0.15,
+            "effect": {
+              "type": "evade",
+              "scope": "overwatch_shot"
+            },
+            "description": "Шанс полностью уклониться от выстрела по овервотчу при движении через зону видимости стрелка."
+          },
+          {
+            "id": "defensive_stance",
+            "name": "Защитная стойка",
+            "trigger": "defense",
+            "proc_chance": 0.12,
+            "effect": {
+              "type": "damage_reduction",
+              "value": 0.5,
+              "scope": "incoming_attack"
+            },
+            "description": "Шанс поглотить часть входящего урона (значение 0.5 = 50% — плейсхолдер, подобрать при реализации) без иных последствий."
+          }
+        ]
+      }
+    }
+  ]
+}

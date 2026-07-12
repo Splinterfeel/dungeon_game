@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 class PlayerDTO(BaseModel):
     id: UUID
     team: int
+    # имя пресета меха (см. src/mech_presets.py); если не передано — сервер
+    # выбирает случайный пресет, как и раньше
+    mech_preset: str | None = None
 
 
 class DetailedBoolResponse(BaseModel):

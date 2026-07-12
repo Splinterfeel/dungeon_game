@@ -16,6 +16,32 @@ DEFAULT_ARMS = Part(
 )
 DEFAULT_HEAD = Part(slot=PartSlot.HEAD, name="Стандартная электроника", view_distance=5)
 
+# Детали пресета "SteelMan" — упор в ближний бой: больше здоровья и силы удара,
+# ценой скорости, точности и дальности обзора.
+STEELMAN_TORSO = Part(slot=PartSlot.TORSO, name="Тяжёлый корпус «Голем»", health=20)
+STEELMAN_LEGS = Part(slot=PartSlot.LEGS, name="Усиленные сервоприводы", speed=4)
+STEELMAN_ARMS = Part(
+    slot=PartSlot.ARMS,
+    name="Ударный привод «Молот»",
+    accuracy=70,
+    melee_power=6,
+)
+STEELMAN_HEAD = Part(slot=PartSlot.HEAD, name="Штурмовая электроника", view_distance=4)
+
+# Детали пресета "Fireworks Mk. 1" — упор в стрельбу: точность и обзор,
+# ценой здоровья и силы удара в ближнем бою.
+FIREWORKS_TORSO = Part(slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", health=10)
+FIREWORKS_LEGS = Part(slot=PartSlot.LEGS, name="Манёвренные ноги «Вихрь»", speed=7)
+FIREWORKS_ARMS = Part(
+    slot=PartSlot.ARMS,
+    name="Прицельный привод «Соколиный глаз»",
+    accuracy=97,
+    melee_power=0,
+)
+FIREWORKS_HEAD = Part(
+    slot=PartSlot.HEAD, name="Дальномерная электроника «Горизонт»", view_distance=7
+)
+
 
 def default_mech() -> Mech:
     # каждая деталь копируется со своим id — детали разных мехов не должны его делить
