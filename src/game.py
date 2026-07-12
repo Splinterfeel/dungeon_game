@@ -143,7 +143,12 @@ class Game:
                 actor.current_action_points - action_result.action_cost, 0
             )
             actor.current_speed_spent += action_result.speed_spent
-        if action.type in ACTIONS_ENDS_TURN and action_result.performed:
+        # актор мог погибнуть от огневого дозора прямо во время своего
+        # перемещения (MOVE не входит в ACTIONS_ENDS_TURN, но мёртвый актор
+        # не может продолжать ход) — в этом случае ход тоже нужно передать
+        if (action.type in ACTIONS_ENDS_TURN and action_result.performed) or (
+            actor.is_dead()
+        ):
             await self.pass_turn_to_next_actor()
         self.check_game_end()
         self.turn.available_moves = self.arena.map.get_available_moves(
@@ -177,6 +182,10 @@ class Game:
             await self.prepare_actor_turn(next_actor)
 
     def check_game_end(self):
+        # Победа определяется исключительно исходом PvP: как только одна из
+        # команд полностью уничтожена, матч завершён — независимо от того,
+        # живы ли ещё нейтральные ИИ-враги на карте (это не co-op зачистка
+        # подземелья, а PvP с побочным PvE-элементом, см. AGENTS.md).
         players_team_1 = [x for x in self.players if x.team == 1]
         players_team_2 = [x for x in self.players if x.team == 2]
         team_1_dead = (
@@ -185,14 +194,7 @@ class Game:
         team_2_dead = (
             all(p.is_dead() for p in players_team_2) or len(players_team_2) == 0
         )
-        enemies_dead = (
-            all(e.is_dead() for e in self.arena.enemies) or len(self.arena.enemies) == 0
-        )
-        if team_1_dead and team_2_dead:
-            # все игроки мертвы
-            self.ended = True
-        if enemies_dead and (team_1_dead or team_2_dead):
-            # осталась одна команда игроков
+        if team_1_dead or team_2_dead:
             self.ended = True
 
     def _init_players(self):
