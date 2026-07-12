@@ -2,7 +2,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from uuid import UUID
-from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from dto.action import GameActionState
 from dto.base import (
@@ -21,18 +20,11 @@ from dto.debug import (
 )
 from dto.state import MechPresetState
 
-from src.arena import Arena, ArenaMap
 from src.mech_presets import MECH_PRESETS
-from src.entities.player import Player
-from src.entities.enemy import Enemy
-from src.turn import Turn
 from dto.event import GameEvent
-from lobby import Lobby
 from lobby_manager import LobbyManager
 from src.ai.enemy import SimpleEnemyAI
 from src.turn import GamePhase
-from src.entities.base import CharacterStats
-from src.base import Point
 from src.game import Game
 from fastapi.staticfiles import StaticFiles
 
@@ -78,7 +70,9 @@ def get_lobbies_list() -> list[LobbyDTO]:
     description="Список доступных пресетов меха (для выбора при подключении к лобби)",
 )
 def get_mech_presets() -> list[MechPresetState]:
-    return [MechPresetState.model_validate(preset.model_dump()) for preset in MECH_PRESETS]
+    return [
+        MechPresetState.model_validate(preset.model_dump()) for preset in MECH_PRESETS
+    ]
 
 
 @app.post("/lobbies", description="Создать лобби")
@@ -170,6 +164,12 @@ async def restore_game_state(request: DebugRestoreRequest) -> DebugRestoreRespon
 # =========================
 
 
+def _winner_message(game: Game) -> str:
+    if game.winner is None:
+        return "Ничья: обе команды уничтожены"
+    return f"Победила команда {game.winner}!"
+
+
 @app.websocket("/ws/{lobby_id}/{player_id}")
 async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str):
     await websocket.accept()
@@ -201,6 +201,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             receiver_player_ids=[player.id],
         )
     if lobby.game.ended:
+        await lobby.broadcast_game_event(GameEvent(message=_winner_message(lobby.game)))
         await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
         await websocket.close(code=WSCloseCodes.GAME_ENDED, reason="Game ended")
         return
@@ -249,11 +250,17 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 if lobby.game.ended:
                     print("GAME END")
                     await lobby.broadcast_game_event(
+                        GameEvent(message=_winner_message(lobby.game))
+                    )
+                    await lobby.broadcast_game_event(
                         GameEvent(message="Игра закончилась")
                     )
                     break
-            if lobby.game.ended:
+            if lobby.game and lobby.game.ended:
                 print("GAME END")
+                await lobby.broadcast_game_event(
+                    GameEvent(message=_winner_message(lobby.game))
+                )
                 await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
                 break
     except WebSocketDisconnect:

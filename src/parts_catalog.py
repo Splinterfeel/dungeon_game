@@ -30,8 +30,8 @@ STEELMAN_HEAD = Part(slot=PartSlot.HEAD, name="Штурмовая электро
 
 # Детали пресета "Fireworks Mk. 1" — упор в стрельбу: точность и обзор,
 # ценой здоровья и силы удара в ближнем бою.
-FIREWORKS_TORSO = Part(slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", health=10)
-FIREWORKS_LEGS = Part(slot=PartSlot.LEGS, name="Манёвренные ноги «Вихрь»", speed=7)
+FIREWORKS_TORSO = Part(slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", health=11)
+FIREWORKS_LEGS = Part(slot=PartSlot.LEGS, name="Манёвренные ноги «Вихрь»", speed=6)
 FIREWORKS_ARMS = Part(
     slot=PartSlot.ARMS,
     name="Прицельный привод «Соколиный глаз»",

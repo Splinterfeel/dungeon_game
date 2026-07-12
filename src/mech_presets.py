@@ -35,7 +35,7 @@ STEELMAN_PRESET = MechPreset(
         Weapon(
             type="melee",
             name="Кувалда «SteelMan»",
-            damage=7,
+            damage=6,
             cost_ap=6,
             range=1,
             accuracy=95,
@@ -93,7 +93,9 @@ def _fresh_copy(preset: MechPreset) -> MechPreset:
                 arms=mech.arms.model_copy(update={"id": uuid.uuid4()}),
                 head=mech.head.model_copy(update={"id": uuid.uuid4()}),
             ),
-            "weapons": [w.model_copy(update={"id": uuid.uuid4()}) for w in preset.weapons],
+            "weapons": [
+                w.model_copy(update={"id": uuid.uuid4()}) for w in preset.weapons
+            ],
         }
     )
 

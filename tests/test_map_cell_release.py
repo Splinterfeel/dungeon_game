@@ -25,7 +25,9 @@ from src.parts_catalog import default_mech
 
 
 def _neighbors(p: Point) -> list[Point]:
-    return [Point(x=p.x + dx, y=p.y + dy) for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]]
+    return [
+        Point(x=p.x + dx, y=p.y + dy) for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    ]
 
 
 def _build_game() -> tuple[Game, Arena, Player]:
@@ -86,7 +88,10 @@ def test_initial_map_keeps_terrain():
     for x in range(arena.map.width):
         for y in range(arena.map.height):
             value = arena._initial_map.get(Point(x=x, y=y))
-            assert value in ("   ", " # "), f"В _initial_map попал не террейн: {value!r}"
+            assert value in (
+                "   ",
+                " # ",
+            ), f"В _initial_map попал не террейн: {value!r}"
             if value == " # ":
                 walls += 1
     assert walls > 0, "В _initial_map должны сохраниться стены"

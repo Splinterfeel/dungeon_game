@@ -11,7 +11,7 @@ from src.entities.enemy import Enemy
 from src.entities.chest import Chest
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
-from src.turn import Turn, GamePhase
+from src.turn import Turn
 from src.base import Point
 from src.game import Game
 from lobby import Lobby
@@ -197,6 +197,7 @@ def restore_game_state(
         version=game_data.get("version", 0),
     )
     lobby.game.ended = game_data.get("ended", False)
+    lobby.game.winner = game_data.get("winner")
 
     # Register lobby as observer
     lobby.game.set_observer(lobby)

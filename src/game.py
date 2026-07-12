@@ -28,6 +28,9 @@ class Game:
     ):
         self._observer: Optional[GameObserver] = None
         self.ended = False
+        self.winner: Optional[int] = (
+            None  # 1/2 — команда-победитель, None — ничья/матч не завершён
+        )
         self.version = version
         self.arena = arena
         self.players = players
@@ -196,6 +199,12 @@ class Game:
         )
         if team_1_dead or team_2_dead:
             self.ended = True
+            if team_1_dead and team_2_dead:
+                self.winner = None  # обе команды уничтожены — ничья
+            elif team_1_dead:
+                self.winner = 2
+            else:
+                self.winner = 1
 
     def _init_players(self):
         point_choices = {
@@ -224,6 +233,7 @@ class Game:
             "turn": self.turn.model_dump(),
             "version": self.version,
             "ended": self.ended,
+            "winner": self.winner,
         }
         if self.turn.phase == GamePhase.AI_ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
