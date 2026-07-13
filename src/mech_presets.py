@@ -63,7 +63,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
         Weapon(
             type="ranged",
             name="Штурмовая винтовка «Fireworks»",
-            damage=6,
+            damage=5,
             cost_ap=8,
             range=5,
             accuracy=90,
