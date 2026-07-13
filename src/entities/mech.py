@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, model_validator
 
 from src.entities.base import CharacterStats
@@ -9,6 +11,10 @@ class Mech(BaseModel):
     legs: Part
     arms: Part
     head: Part
+    # имя пресета (см. src/mech_presets.py), из которого собран этот мех -
+    # None для мехов без пресета (default_mech() и т.п.); нужно только для
+    # показа лора пресета в дебаг-инспекторе, на игровую логику не влияет
+    preset_name: Optional[str] = None
 
     @model_validator(mode="after")
     def check_slots(self) -> "Mech":

@@ -23,12 +23,24 @@ from src.parts_catalog import (
 
 class MechPreset(BaseModel):
     name: str
+    # лор пресета для дебаг-инспектора (см. ROADMAP.md) - художественное
+    # описание архетипа + немного псевдо-истории (кем и когда создан, для
+    # каких целей); на игровую логику не влияет
+    description: str
     mech: Mech
     weapons: list[Weapon]
 
 
 STEELMAN_PRESET = MechPreset(
     name="SteelMan",
+    description=(
+        "«СтилМан» — тяжёлый штурмовой мех корпорации «Дюрандаль Индастриз», "
+        "разработанный в 2081 году для взлома укреплённых позиций там, где "
+        "лёгкая техника просто вязнет под огнём. Ставка сделана на прочность "
+        "корпуса и разрушительную силу удара в ближнем бою: пилоты ценят его "
+        "за способность пережить шквал огня и всё-таки дойти до цели, но "
+        "платят за это медлительностью и слабым прицельным оборудованием."
+    ),
     mech=Mech(
         torso=STEELMAN_TORSO,
         legs=STEELMAN_LEGS,
@@ -57,6 +69,15 @@ STEELMAN_PRESET = MechPreset(
 
 FIREWORKS_MK1_PRESET = MechPreset(
     name="Fireworks Mk. 1",
+    description=(
+        "«Fireworks Mk. 1» — лёгкий разведывательно-штурмовой мех независимой "
+        "мастерской «Аэрис Дефенс», выпущенный в 2083 году как ответ на спрос "
+        "наёмных пилотских отрядов на манёвренность и точный огонь на "
+        "дистанции. Облегчённая рама и продвинутый сенсорный комплекс дают "
+        "преимущество в скорости и точности стрельбы, но корпус едва прикрыт "
+        "бронёй — среди пилотов ходит мрачная шутка, что мех назвали в честь "
+        "того, как эффектно он вспыхивает при первом же серьёзном попадании."
+    ),
     mech=Mech(
         torso=FIREWORKS_TORSO,
         legs=FIREWORKS_LEGS,
@@ -90,6 +111,15 @@ FIREWORKS_MK1_PRESET = MechPreset(
 # parts_catalog.py - баланс после того, как появится разброс урона.
 STRIKEFORCE_PRESET = MechPreset(
     name="StrikeForce",
+    description=(
+        "«StrikeForce» — экспериментальный мех-«снайпер» лаборатории вооружений "
+        "«Кастор Дефенс Системс», построенный в 2084 году вокруг единственного "
+        "орудия — рейлгана, изначально проектировавшегося для орбитальных "
+        "оборонных платформ. Всё, что можно было снять с ходовой части и брони, "
+        "ушло на генератор рейлгана. Военные аналитики прозвали его «мех одного "
+        "выстрела»: StrikeForce либо решает бой одним попаданием, либо не "
+        "успевает нанести его вовсе."
+    ),
     mech=Mech(
         torso=STRIKEFORCE_TORSO,
         legs=STRIKEFORCE_LEGS,
@@ -121,6 +151,7 @@ def _fresh_copy(preset: MechPreset) -> MechPreset:
                 legs=mech.legs.model_copy(update={"id": uuid.uuid4()}),
                 arms=mech.arms.model_copy(update={"id": uuid.uuid4()}),
                 head=mech.head.model_copy(update={"id": uuid.uuid4()}),
+                preset_name=preset.name,
             ),
             "weapons": [
                 w.model_copy(update={"id": uuid.uuid4()}) for w in preset.weapons

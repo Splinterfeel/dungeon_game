@@ -60,10 +60,12 @@ class MechState(BaseModel):
     legs: PartState
     arms: PartState
     head: PartState
+    preset_name: Optional[str] = None
 
 
 class MechPresetState(BaseModel):
     name: str
+    description: str
     mech: MechState
     weapons: list[WeaponState]
 

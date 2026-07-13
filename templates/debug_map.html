@@ -377,6 +377,9 @@ async function start_game() {
     }
 }
 
+// name -> description, для показа лора пресета в mech-инспекторе (по клику на актора)
+let mechPresetDescriptions = {};
+
 async function refresh_mech_presets() {
     const _select = document.getElementById("mech_preset_select");
     try {
@@ -389,6 +392,7 @@ async function refresh_mech_presets() {
             option.value = preset.name;
             option.textContent = preset.name;
             _select.appendChild(option);
+            mechPresetDescriptions[preset.name] = preset.description;
         });
     } catch (e) {
         console.error("Ошибка при получении списка пресетов меха:", e);
@@ -531,6 +535,16 @@ function render_mech_inspector() {
     ];
     const title = kind === "player" ? `Игрок ${actor.name} (команда ${actor.team})` : `Враг (ИИ) ${actor.name}`;
     let html = `<div style="font-weight:bold;">${title} — итоговые характеристики</div>`;
+
+    const presetName = kind === "player" ? actor.mech.preset_name : null;
+    const presetDescription = presetName ? mechPresetDescriptions[presetName] : null;
+    if (presetDescription) {
+        html += `<div style="font-size:12px;margin:4px 0 8px;padding:6px 8px;` +
+            `background:#1a1a1a;border-left:2px solid #8fd88f;color:#bbb;font-style:italic;">` +
+            `<span style="font-style:normal;color:#8fd88f;">${presetName}.</span> ${presetDescription}` +
+            `</div>`;
+    }
+
     html += `<table style="border-collapse:collapse;font-size:12px;margin:4px 0 10px;">`;
     for (const [label, value] of statsRows) {
         html += `<tr><td style="padding:1px 8px 1px 0;color:#aaa;">${label}</td><td>${value}</td></tr>`;
