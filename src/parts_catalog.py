@@ -90,6 +90,38 @@ FIREWORKS_HEAD = Part(
     view_distance=7,
 )
 
+# Детали пресета "StrikeForce" — архетип "медленный/малое HP/дамажный":
+# вся ставка на разовый урон рейлгана, ценой самой низкой живучести и
+# самой низкой скорости в игре (см. ROADMAP.md Этап 2 п.1, расширение
+# архетипов сверх "тяжёлый/медленный" и "лёгкий/быстрый"). Числа не
+# сбалансированы намеренно — баланс делаем после того, как появится
+# разброс урона оружия.
+STRIKEFORCE_TORSO = Part(
+    slot=PartSlot.TORSO,
+    name="Облегчённый каркас «Копьё»",
+    rarity=PartRarity.RARE,
+    health=9,
+)
+STRIKEFORCE_LEGS = Part(
+    slot=PartSlot.LEGS,
+    name="Опорная платформа «Такт»",
+    rarity=PartRarity.RARE,
+    speed=3,
+)
+STRIKEFORCE_ARMS = Part(
+    slot=PartSlot.ARMS,
+    name="Привод наведения рейлгана",
+    rarity=PartRarity.RARE,
+    accuracy=78,
+    melee_power=0,
+)
+STRIKEFORCE_HEAD = Part(
+    slot=PartSlot.HEAD,
+    name="Баллистический вычислитель",
+    rarity=PartRarity.RARE,
+    view_distance=6,
+)
+
 
 def default_mech() -> Mech:
     # каждая деталь копируется со своим id — детали разных мехов не должны его делить

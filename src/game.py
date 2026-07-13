@@ -114,10 +114,11 @@ class Game:
                 )
             )
             return
-        target.apply_damage(weapon.damage)
+        damage = weapon.roll_damage()
+        target.apply_damage(damage)
         await self._notify_event(
             GameEvent(
-                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({weapon.damage} урона)"
+                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона)"
             )
         )
         if target.is_dead():

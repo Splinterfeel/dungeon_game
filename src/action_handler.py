@@ -200,7 +200,7 @@ class ActionHandler:
                 detail=f"{actor.name}, в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
             )
         action_ap_cost = weapon.cost_ap
-        damage = weapon.damage
+        damage = weapon.roll_damage()
         if weapon.type == "melee":
             damage += actor.stats.melee_power
         current_dist = Point.distance_chebyshev(actor.position, action.cell)

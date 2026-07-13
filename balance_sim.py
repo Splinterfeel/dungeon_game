@@ -1,7 +1,7 @@
 """
 Headless-симуляция боевого баланса.
 
-Прогоняет много полных 2v2 PvP-матчей между пресетами мехов, водя обе
+Прогоняет много полных 2v2/3v3 PvP-матчей между пресетами мехов, водя обе
 команды напрямую через Game.perform_actor_action - без HTTP/WS/браузера
 (AGENTS.md, "Уровень 0" проверки). Простой rational-бот (адаптация
 SimpleEnemyAI под PvP: стрельба -> сближение -> ближний бой -> овервотч)
@@ -270,6 +270,34 @@ async def main():
         "Mixed vs Mixed",
         ["SteelMan", "Fireworks Mk. 1"],
         ["SteelMan", "Fireworks Mk. 1"],
+        n,
+    )
+
+    # StrikeForce - карта (map_2) даёт по 6 стартовых точек на команду,
+    # так что 3v3 доступно без изменений в Arena/Game - используем его,
+    # чтобы у каждого архетипа была своя мирорка и парные матч-апы разом.
+    await run_matchup(
+        "StrikeForce vs StrikeForce (mirror, 3v3)",
+        ["StrikeForce", "StrikeForce", "StrikeForce"],
+        ["StrikeForce", "StrikeForce", "StrikeForce"],
+        n,
+    )
+    await run_matchup(
+        "SteelMan vs StrikeForce (3v3)",
+        ["SteelMan", "SteelMan", "SteelMan"],
+        ["StrikeForce", "StrikeForce", "StrikeForce"],
+        n,
+    )
+    await run_matchup(
+        "Fireworks vs StrikeForce (3v3)",
+        ["Fireworks Mk. 1", "Fireworks Mk. 1", "Fireworks Mk. 1"],
+        ["StrikeForce", "StrikeForce", "StrikeForce"],
+        n,
+    )
+    await run_matchup(
+        "Mixed (1 of each) vs Mixed (3v3)",
+        ["SteelMan", "Fireworks Mk. 1", "StrikeForce"],
+        ["SteelMan", "Fireworks Mk. 1", "StrikeForce"],
         n,
     )
 

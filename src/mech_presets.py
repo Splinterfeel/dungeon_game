@@ -14,6 +14,10 @@ from src.parts_catalog import (
     FIREWORKS_LEGS,
     FIREWORKS_ARMS,
     FIREWORKS_HEAD,
+    STRIKEFORCE_TORSO,
+    STRIKEFORCE_LEGS,
+    STRIKEFORCE_ARMS,
+    STRIKEFORCE_HEAD,
 )
 
 
@@ -79,7 +83,32 @@ FIREWORKS_MK1_PRESET = MechPreset(
     ],
 )
 
-MECH_PRESETS = [STEELMAN_PRESET, FIREWORKS_MK1_PRESET]
+# Архетип "медленный/малое HP/дамажный": единственное оружие - рейлган,
+# без запасного (в отличие от SteelMan/Fireworks с парой оружий) - весь
+# лоадаут поставлен на один разовый урон, без плана "Б" на ближний бой.
+# Числа не сбалансированы намеренно, см. комментарий у STRIKEFORCE_* в
+# parts_catalog.py - баланс после того, как появится разброс урона.
+STRIKEFORCE_PRESET = MechPreset(
+    name="StrikeForce",
+    mech=Mech(
+        torso=STRIKEFORCE_TORSO,
+        legs=STRIKEFORCE_LEGS,
+        arms=STRIKEFORCE_ARMS,
+        head=STRIKEFORCE_HEAD,
+    ),
+    weapons=[
+        Weapon(
+            type="ranged",
+            name="Рейлган «StrikeForce»",
+            damage=10,
+            cost_ap=8,
+            range=6,
+            accuracy=80,
+        ),
+    ],
+)
+
+MECH_PRESETS = [STEELMAN_PRESET, FIREWORKS_MK1_PRESET, STRIKEFORCE_PRESET]
 
 
 def _fresh_copy(preset: MechPreset) -> MechPreset:

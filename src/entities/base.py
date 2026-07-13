@@ -37,6 +37,11 @@ class CharacterStats(BaseModel):
 
 
 class Weapon(BaseModel):
+    # разброс урона одного попадания: ±DAMAGE_VARIANCE от Weapon.damage
+    # (см. ROADMAP.md, Этап 2, "разброс урона") - убирает полную
+    # детерминированность урона, одинаково для ближнего и дальнего оружия
+    DAMAGE_VARIANCE: ClassVar[float] = 0.125
+
     id: UUIDStr = Field(default_factory=uuid.uuid4)
     type: Literal["melee", "ranged"]
     name: str
@@ -44,6 +49,11 @@ class Weapon(BaseModel):
     cost_ap: int
     range: int
     accuracy: int
+
+    def roll_damage(self) -> int:
+        "Урон одного попадания с разбросом ±DAMAGE_VARIANCE, округление к целому, минимум 1"
+        multiplier = random.uniform(1 - self.DAMAGE_VARIANCE, 1 + self.DAMAGE_VARIANCE)
+        return max(1, round(self.damage * multiplier))
 
     def calculate_hit_chance(self, actor_stats: CharacterStats, distance: int) -> float:
         if distance > self.range:
