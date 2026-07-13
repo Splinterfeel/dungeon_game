@@ -2,44 +2,92 @@ import uuid
 
 from src.constants import Accuracy
 from src.entities.mech import Mech
-from src.entities.part import Part, PartSlot
+from src.entities.part import Part, PartRarity, PartSlot
 
 # Стартовые детали повторяют числа, ранее захардкоженные в lobby.py,
 # чтобы сама реструктуризация на Pilot/Mech/Part не меняла баланс.
-DEFAULT_TORSO = Part(slot=PartSlot.TORSO, name="Лёгкий корпус", health=15)
-DEFAULT_LEGS = Part(slot=PartSlot.LEGS, name="Стандартные ноги", speed=5)
+# Rarity: common - нейтральный/тестовый набор, доступный всем по умолчанию.
+DEFAULT_TORSO = Part(
+    slot=PartSlot.TORSO, name="Лёгкий корпус", rarity=PartRarity.COMMON, health=15
+)
+DEFAULT_LEGS = Part(
+    slot=PartSlot.LEGS, name="Стандартные ноги", rarity=PartRarity.COMMON, speed=5
+)
 DEFAULT_ARMS = Part(
     slot=PartSlot.ARMS,
     name="Стандартные руки",
+    rarity=PartRarity.COMMON,
     accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
     melee_power=2,
 )
-DEFAULT_HEAD = Part(slot=PartSlot.HEAD, name="Стандартная электроника", view_distance=5)
+DEFAULT_HEAD = Part(
+    slot=PartSlot.HEAD,
+    name="Стандартная электроника",
+    rarity=PartRarity.COMMON,
+    view_distance=5,
+)
 
 # Детали пресета "SteelMan" — упор в ближний бой: больше здоровья и силы удара,
-# ценой скорости, точности и дальности обзора.
-STEELMAN_TORSO = Part(slot=PartSlot.TORSO, name="Тяжёлый корпус «Голем»", health=24)
-STEELMAN_LEGS = Part(slot=PartSlot.LEGS, name="Усиленные сервоприводы", speed=6)
+# ценой скорости, точности и дальности обзора. Rarity: rare - именной набор
+# для пресета, доступен не как стартовый common.
+# Аудит компромиссов (2026-07-13, см. ROADMAP.md Этап 2 п.1): STEELMAN_LEGS
+# в ходе прошлых сессий балансировки win rate дошёл до speed=6 - быстрее,
+# чем "манёвренный" FIREWORKS_LEGS (тогда speed=5), что напрямую противоречит
+# заявленному архетипу "тяжёлый = медленный". Возвращено к исходной
+# направленности (SteelMan медленнее Fireworks: 4 против 6), просадка
+# win rate от возросшей уязвимости на подходе скомпенсирована снижением
+# точности рук FIREWORKS_ARMS (92 → 85), а не собственными статами SteelMan
+# — см. FIREWORKS_ARMS ниже и balance_sim.py.
+STEELMAN_TORSO = Part(
+    slot=PartSlot.TORSO,
+    name="Тяжёлый корпус «Голем»",
+    rarity=PartRarity.RARE,
+    health=20,
+)
+STEELMAN_LEGS = Part(
+    slot=PartSlot.LEGS,
+    name="Усиленные сервоприводы",
+    rarity=PartRarity.RARE,
+    speed=4,
+)
 STEELMAN_ARMS = Part(
     slot=PartSlot.ARMS,
     name="Ударный привод «Молот»",
+    rarity=PartRarity.RARE,
     accuracy=85,
     melee_power=6,
 )
-STEELMAN_HEAD = Part(slot=PartSlot.HEAD, name="Штурмовая электроника", view_distance=4)
+STEELMAN_HEAD = Part(
+    slot=PartSlot.HEAD,
+    name="Штурмовая электроника",
+    rarity=PartRarity.RARE,
+    view_distance=4,
+)
 
 # Детали пресета "Fireworks Mk. 1" — упор в стрельбу: точность и обзор,
-# ценой здоровья и силы удара в ближнем бою.
-FIREWORKS_TORSO = Part(slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", health=11)
-FIREWORKS_LEGS = Part(slot=PartSlot.LEGS, name="Манёвренные ноги «Вихрь»", speed=5)
+# ценой здоровья и силы удара в ближнем бою. Rarity: rare - именной набор
+# для пресета, доступен не как стартовый common.
+FIREWORKS_TORSO = Part(
+    slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", rarity=PartRarity.RARE, health=11
+)
+FIREWORKS_LEGS = Part(
+    slot=PartSlot.LEGS,
+    name="Манёвренные ноги «Вихрь»",
+    rarity=PartRarity.RARE,
+    speed=6,
+)
 FIREWORKS_ARMS = Part(
     slot=PartSlot.ARMS,
     name="Прицельный привод «Соколиный глаз»",
-    accuracy=92,
+    rarity=PartRarity.RARE,
+    accuracy=85,
     melee_power=0,
 )
 FIREWORKS_HEAD = Part(
-    slot=PartSlot.HEAD, name="Дальномерная электроника «Горизонт»", view_distance=7
+    slot=PartSlot.HEAD,
+    name="Дальномерная электроника «Горизонт»",
+    rarity=PartRarity.RARE,
+    view_distance=7,
 )
 
 

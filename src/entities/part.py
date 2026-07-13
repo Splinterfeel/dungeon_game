@@ -13,10 +13,17 @@ class PartSlot(str, Enum):
     HEAD = "head"
 
 
+class PartRarity(str, Enum):
+    COMMON = "common"
+    RARE = "rare"
+    EPIC = "epic"
+
+
 class Part(BaseModel):
     id: UUIDStr = Field(default_factory=uuid.uuid4)
     slot: PartSlot
     name: str
+    rarity: PartRarity = PartRarity.COMMON
     health: int = 0
     speed: int = 0
     accuracy: int = 0

@@ -47,6 +47,7 @@ class OverwatchStateDTO(BaseModel):
 class PartState(BaseModel):
     slot: str
     name: str
+    rarity: str
     health: int
     speed: int
     accuracy: int

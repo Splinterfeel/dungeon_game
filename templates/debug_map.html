@@ -500,6 +500,7 @@ function update_weapon_selector(weapons) {
 
 const MECH_PART_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
 const MECH_STAT_LABELS = {health: "HP", speed: "Speed", accuracy: "Accuracy", melee_power: "Melee power", view_distance: "View distance"};
+const PART_RARITY_LABELS = {common: "common", rare: "rare", epic: "epic"};
 
 function find_selected_actor() {
     if (!lastGameState || !selectedCell) return null;
@@ -544,8 +545,10 @@ function render_mech_inspector() {
                 .filter(key => part[key] !== 0)
                 .map(key => `${MECH_STAT_LABELS[key]}: ${part[key]}`)
                 .join(", ");
+            const rarityLabel = PART_RARITY_LABELS[part.rarity] || part.rarity;
             html += `<div style="font-size:12px;margin-top:2px;">` +
-                `<span style="color:#8fd88f;">${MECH_PART_LABELS[slot]}</span> — ${part.name}` +
+                `<span style="color:#8fd88f;">${MECH_PART_LABELS[slot]}</span> — ${part.name} ` +
+                `<span style="color:#888;">[${rarityLabel}]</span>` +
                 (nonZeroStats ? ` (${nonZeroStats})` : " (нет бонусов)") +
                 `</div>`;
         }
