@@ -22,6 +22,16 @@ class ActionHandler:
     def __init__(self, game: "Game"):
         self.game = game
 
+    def __apply_locational_damage(self, player: Player, damage: int) -> str:
+        "Урон случайной живой части меха игрока + пересчёт живых статов; возвращает суффикс для detail"
+        part = player.mech.apply_random_part_damage(damage)
+        if part is None:
+            return ""  # все части уже уничтожены
+        player.mech.recompute_live_stats(player.stats)
+        if part.destroyed:
+            return f" Деталь «{part.name}» ({part.slot.value}) уничтожена!"
+        return ""
+
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
         if self.game.turn.current_actor != actor:
             return ActionResult(
@@ -237,9 +247,11 @@ class ActionHandler:
                 return ActionResult(
                     performed=True,
                     action=action,
+                    action_cost=action_ap_cost,
                     detail=f"{actor.name} промахивается из оружия {weapon.name} по {player.name}",
                 )
             player.apply_damage(damage)
+            part_detail = self.__apply_locational_damage(player, damage)
             if player.is_dead():
                 self.game.arena.remove_dead_player(player)
                 self.game.players.remove(player)
@@ -249,7 +261,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона",
+                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона.{part_detail}",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -262,6 +274,7 @@ class ActionHandler:
                 return ActionResult(
                     performed=True,
                     action=action,
+                    action_cost=action_ap_cost,
                     detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
                 )
             enemy.apply_damage(damage)
@@ -292,11 +305,13 @@ class ActionHandler:
                 )
             if not attack_hit:
                 return ActionResult(
-                    performed=False,
+                    performed=True,
                     action=action,
+                    action_cost=action_ap_cost,
                     detail=f"{player_attacking.name} промахивается из оружия {weapon.name} по {player_attacked.name}",
                 )
             player_attacked.apply_damage(damage)
+            part_detail = self.__apply_locational_damage(player_attacked, damage)
             if player_attacked.is_dead():
                 self.game.arena.remove_dead_player(player_attacked)
                 self.game.players.remove(player_attacked)
@@ -306,7 +321,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона",  # noqa
+                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона.{part_detail}",  # noqa
             )
         else:
             print(

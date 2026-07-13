@@ -56,7 +56,7 @@ lobby_manager = LobbyManager()
 async def debug_map(request: Request):
     host = request.headers.get("host", "localhost:8000")
     return templates.TemplateResponse(
-        "debug_map.html", {"request": request, "host": host}
+        request, "debug_map.html", {"host": host}
     )
 
 

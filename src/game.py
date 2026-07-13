@@ -67,8 +67,8 @@ class Game:
         await self._notify_event(GameEvent(message=f"Ход {actor.name}"))
         actor.current_action_points = actor.stats.action_points
         actor.overwatch = None
-        self.turn.available_moves = self.arena.map.get_available_moves(actor)
         actor.current_speed_spent = 0
+        self.turn.available_moves = self.arena.map.get_available_moves(actor)
         self.turn.set_current_actor(actor)
 
     def _is_hostile(self, watcher: Actor, target: Actor) -> bool:

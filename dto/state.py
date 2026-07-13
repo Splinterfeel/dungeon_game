@@ -53,6 +53,9 @@ class PartState(BaseModel):
     accuracy: int
     melee_power: int
     view_distance: int
+    max_health: int
+    current_health: int
+    destroyed: bool
 
 
 class MechState(BaseModel):
