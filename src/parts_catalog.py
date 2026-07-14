@@ -157,10 +157,13 @@ STRIKEFORCE_HEAD = Part(
 
 
 def default_mech() -> Mech:
-    # каждая деталь копируется со своим id — детали разных мехов не должны его делить
+    # каждая деталь копируется со своим id — детали разных мехов не должны его делить.
+    # Руки - одна деталь-выбор, но две физические руки (ROADMAP.md Этап 2 п.3):
+    # обе копии одного типа DEFAULT_ARMS, каждая со своим id и раздельным HP.
     return Mech(
         torso=DEFAULT_TORSO.model_copy(update={"id": uuid.uuid4()}),
         legs=DEFAULT_LEGS.model_copy(update={"id": uuid.uuid4()}),
-        arms=DEFAULT_ARMS.model_copy(update={"id": uuid.uuid4()}),
+        arms_left=DEFAULT_ARMS.model_copy(update={"id": uuid.uuid4()}),
+        arms_right=DEFAULT_ARMS.model_copy(update={"id": uuid.uuid4()}),
         head=DEFAULT_HEAD.model_copy(update={"id": uuid.uuid4()}),
     )

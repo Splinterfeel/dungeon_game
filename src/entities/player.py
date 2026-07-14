@@ -19,6 +19,33 @@ class Player(Actor):
         return self
 
     @model_validator(mode="after")
+    def check_weapon_loadout(self):
+        # привязка оружия к рукам (ROADMAP.md, Этап 2 п.3-4): у игрока каждое
+        # оружие взято в конкретную руку (left/right), не более одного на руку,
+        # и минимум одно оружие обязательно (иначе меху нечем атаковать).
+        weapons = self.inventory.weapons
+        if not weapons:
+            raise ValueError(
+                f"{self.name or 'Пилот'}: у меха должно быть хотя бы одно оружие"
+            )
+        if len(weapons) > 2:
+            raise ValueError(
+                f"{self.name or 'Пилот'}: у меха две руки, оружия не может быть больше двух"
+            )
+        used_hands = []
+        for w in weapons:
+            if w.hand not in ("left", "right"):
+                raise ValueError(
+                    f"{self.name or 'Пилот'}: оружие «{w.name}» должно быть взято в руку (left/right)"
+                )
+            if w.hand in used_hands:
+                raise ValueError(
+                    f"{self.name or 'Пилот'}: в руку «{w.hand}» взято более одного оружия"
+                )
+            used_hands.append(w.hand)
+        return self
+
+    @model_validator(mode="after")
     def check_weight_budget(self):
         # весовой бюджет (ROADMAP.md, Этап 2 п.9): вес деталей меха + вес
         # оружия в инвентаре не должен превышать грузоподъёмность ног.

@@ -44,7 +44,8 @@ STEELMAN_PRESET = MechPreset(
     mech=Mech(
         torso=STEELMAN_TORSO,
         legs=STEELMAN_LEGS,
-        arms=STEELMAN_ARMS,
+        arms_left=STEELMAN_ARMS,
+        arms_right=STEELMAN_ARMS,
         head=STEELMAN_HEAD,
     ),
     weapons=[
@@ -56,6 +57,7 @@ STEELMAN_PRESET = MechPreset(
             range=1,
             accuracy=95,
             weight=8,
+            hand="right",
         ),
         Weapon(
             type="ranged",
@@ -65,6 +67,7 @@ STEELMAN_PRESET = MechPreset(
             range=3,
             accuracy=75,
             weight=2,
+            hand="left",
         ),
     ],
 )
@@ -83,7 +86,8 @@ FIREWORKS_MK1_PRESET = MechPreset(
     mech=Mech(
         torso=FIREWORKS_TORSO,
         legs=FIREWORKS_LEGS,
-        arms=FIREWORKS_ARMS,
+        arms_left=FIREWORKS_ARMS,
+        arms_right=FIREWORKS_ARMS,
         head=FIREWORKS_HEAD,
     ),
     weapons=[
@@ -95,6 +99,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             range=5,
             accuracy=90,
             weight=5,
+            hand="right",
         ),
         Weapon(
             type="melee",
@@ -104,13 +109,15 @@ FIREWORKS_MK1_PRESET = MechPreset(
             range=1,
             accuracy=90,
             weight=1,
+            hand="left",
         ),
     ],
 )
 
-# Архетип "медленный/малое HP/дамажный": единственное оружие - рейлган,
-# без запасного (в отличие от SteelMan/Fireworks с парой оружий) - весь
-# лоадаут поставлен на один разовый урон, без плана "Б" на ближний бой.
+# Архетип "медленный/малое HP/дамажный": основное оружие - рейлган в правой
+# руке, вся ставка на один разовый урон. Левая рука несёт "Коготь" - аварийное
+# оружие с совсем минимальными статами (2026-07-14): не полноценный план "Б",
+# а последний шанс не остаться совсем безоружным, если правую руку выбьют.
 # Числа не сбалансированы намеренно, см. комментарий у STRIKEFORCE_* в
 # parts_catalog.py - баланс после того, как появится разброс урона.
 STRIKEFORCE_PRESET = MechPreset(
@@ -127,7 +134,8 @@ STRIKEFORCE_PRESET = MechPreset(
     mech=Mech(
         torso=STRIKEFORCE_TORSO,
         legs=STRIKEFORCE_LEGS,
-        arms=STRIKEFORCE_ARMS,
+        arms_left=STRIKEFORCE_ARMS,
+        arms_right=STRIKEFORCE_ARMS,
         head=STRIKEFORCE_HEAD,
     ),
     weapons=[
@@ -139,6 +147,22 @@ STRIKEFORCE_PRESET = MechPreset(
             range=6,
             accuracy=80,
             weight=14,
+            hand="right",
+        ),
+        # намеренно слабое аварийное оружие: хуже "Аварийного клинка" Fireworks
+        # по урону/точности/AP, при этом легче него по весу. Задел под будущий
+        # гараж (Этап 2.5): игрок сможет НЕ брать "Коготь" ради экономии веса,
+        # сознательно рискуя остаться безоружным при потере правой руки - сейчас
+        # выбора нет, пресет фиксирован, но сама механика уже позволяет это.
+        Weapon(
+            type="melee",
+            name="Коготь",
+            damage=2,
+            cost_ap=4,
+            range=1,
+            accuracy=65,
+            weight=2,
+            hand="left",
         ),
     ],
 )
@@ -154,10 +178,14 @@ def _fresh_copy(preset: MechPreset) -> MechPreset:
             "mech": Mech(
                 torso=mech.torso.model_copy(update={"id": uuid.uuid4()}),
                 legs=mech.legs.model_copy(update={"id": uuid.uuid4()}),
-                arms=mech.arms.model_copy(update={"id": uuid.uuid4()}),
+                # руки - две отдельные детали одного типа, каждой свой id и
+                # раздельная прочность (ROADMAP.md Этап 2 п.3)
+                arms_left=mech.arms_left.model_copy(update={"id": uuid.uuid4()}),
+                arms_right=mech.arms_right.model_copy(update={"id": uuid.uuid4()}),
                 head=mech.head.model_copy(update={"id": uuid.uuid4()}),
                 preset_name=preset.name,
             ),
+            # model_copy сохраняет hand у оружия, обновляя только id
             "weapons": [
                 w.model_copy(update={"id": uuid.uuid4()}) for w in preset.weapons
             ],

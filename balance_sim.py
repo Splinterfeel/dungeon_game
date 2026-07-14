@@ -5,9 +5,13 @@ Headless-симуляция боевого баланса.
 команды напрямую через Game.perform_actor_action - без HTTP/WS/браузера
 (AGENTS.md, "Уровень 0" проверки). Простой rational-бот (адаптация
 SimpleEnemyAI под PvP: стрельба -> сближение -> ближний бой -> овервотч)
-играет за всех акторов сразу с обеих сторон. По итогу агрегируются win rate,
-длина матча и остаток HP победителя - чтобы на глаз оценить текущий баланс
-пресетов/оружия без ручного запуска нескольких клиентов.
+играет за всех акторов сразу с обеих сторон; бот учитывает уничтожение рук
+(`PvPBotAI._pick_weapon` пропускает оружие в уничтоженной руке, ROADMAP.md
+Этап 2 п.3-4). По итогу агрегируются win rate, длина матча, остаток HP
+победителя и статистика по уничтожению рук (сколько рук выбито за игру, как
+часто игрок остаётся полностью безоружным и чем это заканчивается для его
+команды) - чтобы на глаз оценить текущий баланс пресетов/оружия без ручного
+запуска нескольких клиентов.
 
 Запуск: python balance_sim.py
 """
@@ -58,15 +62,23 @@ class PvPBotAI(AI):
             if self.game._is_hostile(self.actor, p) and not p.is_dead()
         ]
 
+    def _pick_weapon(self, weapon_type):
+        "Первое оружие нужного типа, чья рука не уничтожена (ROADMAP.md Этап 2 п.3-4)"
+        for w in self.actor.inventory.weapons:
+            if w.type != weapon_type:
+                continue
+            if w.hand and self.actor.mech.arm_for(w.hand).destroyed:
+                continue
+            return w
+        return None
+
     def decide(self) -> Action:
         hostiles = self._hostiles()
         if not hostiles:
             return self.end_turn()
 
         if not self.attacked_on_turn:
-            ranged_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
-            )
+            ranged_weapon = self._pick_weapon("ranged")
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
@@ -114,9 +126,7 @@ class PvPBotAI(AI):
             None,
         )
         if adjacent_target and not self.attacked_on_turn:
-            melee_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "melee"), None
-            )
+            melee_weapon = self._pick_weapon("melee")
             if (
                 melee_weapon
                 and self.actor.current_action_points >= melee_weapon.cost_ap
@@ -130,9 +140,7 @@ class PvPBotAI(AI):
                 )
 
         if self.actor.overwatch is None:
-            ranged_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
-            )
+            ranged_weapon = self._pick_weapon("ranged")
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
@@ -179,8 +187,27 @@ def build_game(team1_presets, team2_presets) -> Game:
     return Game(arena=arena, players=players)
 
 
+def _hand_stats(players, team):
+    "Сколько рук уничтожено и сколько игроков полностью безоружны (обе руки) в команде"
+    team_players = [p for p in players if p.team == team]
+    destroyed = sum(
+        int(p.mech.arms_left.destroyed) + int(p.mech.arms_right.destroyed)
+        for p in team_players
+    )
+    disarmed = sum(
+        1
+        for p in team_players
+        if p.mech.arms_left.destroyed and p.mech.arms_right.destroyed
+    )
+    return destroyed, disarmed
+
+
 async def run_match(team1_presets, team2_presets, max_actions=2000):
     game = build_game(team1_presets, team2_presets)
+    # снимок ДО того, как game.players начнёт терять погибших (remove_dead_player) -
+    # объекты Player переживают удаление из game.players, поэтому по этому списку
+    # можно после матча проверить состояние рук у всех, включая погибших
+    all_players = list(game.players)
     await game.launch()
 
     ai_by_actor = {}
@@ -201,6 +228,8 @@ async def run_match(team1_presets, team2_presets, max_actions=2000):
 
     team1_alive = [p for p in game.players if p.team == 1 and not p.is_dead()]
     team2_alive = [p for p in game.players if p.team == 2 and not p.is_dead()]
+    hands_destroyed_1, disarmed_1 = _hand_stats(all_players, 1)
+    hands_destroyed_2, disarmed_2 = _hand_stats(all_players, 2)
     return {
         "winner": game.winner,
         "rounds": game.turn.number,
@@ -209,6 +238,10 @@ async def run_match(team1_presets, team2_presets, max_actions=2000):
         "team2_hp_left": sum(p.stats.health for p in team2_alive),
         "team1_alive": len(team1_alive),
         "team2_alive": len(team2_alive),
+        "hands_destroyed_team1": hands_destroyed_1,
+        "hands_destroyed_team2": hands_destroyed_2,
+        "disarmed_team1": disarmed_1,
+        "disarmed_team2": disarmed_2,
     }
 
 
@@ -217,6 +250,10 @@ async def run_matchup(name, team1_presets, team2_presets, n_games):
     rounds = []
     hp_left_winner = []
     timeouts = 0
+    hands_destroyed_total = []
+    disarm_games = 0
+    # была ли рука уничтожена именно у ПРОИГРАВШЕЙ команды (риск "рука убила бой")
+    disarm_on_loser_side = 0
     for _ in range(n_games):
         result = await run_match(team1_presets, team2_presets)
         if result["timeout"]:
@@ -227,6 +264,19 @@ async def run_matchup(name, team1_presets, team2_presets, n_games):
             hp_left_winner.append(result["team1_hp_left"])
         elif result["winner"] == 2:
             hp_left_winner.append(result["team2_hp_left"])
+
+        game_hands_destroyed = (
+            result["hands_destroyed_team1"] + result["hands_destroyed_team2"]
+        )
+        hands_destroyed_total.append(game_hands_destroyed)
+        game_disarmed = result["disarmed_team1"] + result["disarmed_team2"]
+        if game_disarmed:
+            disarm_games += 1
+            loser = {1: 2, 2: 1}.get(result["winner"])
+            if loser == 1 and result["disarmed_team1"]:
+                disarm_on_loser_side += 1
+            elif loser == 2 and result["disarmed_team2"]:
+                disarm_on_loser_side += 1
 
     print(f"\n=== {name} ({n_games} games) ===")
     print(
@@ -242,6 +292,16 @@ async def run_matchup(name, team1_presets, team2_presets, n_games):
     if hp_left_winner:
         print(
             f"Avg winner remaining team HP: {sum(hp_left_winner) / len(hp_left_winner):.1f}"
+        )
+    print(
+        f"Avg hands destroyed per game: {sum(hands_destroyed_total) / n_games:.2f} "
+        f"(ROADMAP.md Этап 2 п.3-4)"
+    )
+    if disarm_games:
+        print(
+            f"Full-disarm events (both hands lost by some player): {disarm_games} "
+            f"({disarm_games / n_games:.0%}); disarmed player's team went on to lose: "
+            f"{disarm_on_loser_side}/{disarm_games} ({disarm_on_loser_side / disarm_games:.0%})"
         )
 
 

@@ -15,9 +15,22 @@ from src.map import ArenaMap
 from src.maps import default
 from src.base import Point
 from src.entities.player import Player
-from src.entities.base import Inventory
+from src.entities.base import Inventory, Weapon
 from src.game import Game
 from src.parts_catalog import default_mech
+
+
+def _one_weapon() -> Weapon:
+    # у игрока теперь обязательно хотя бы одно оружие в руке (ROADMAP.md Этап 2 п.3-4)
+    return Weapon(
+        type="melee",
+        name="Тестовый клинок",
+        damage=3,
+        cost_ap=5,
+        range=1,
+        accuracy=90,
+        hand="right",
+    )
 
 
 def test_enemy_vacated_cell_is_free():
@@ -32,7 +45,7 @@ def test_enemy_vacated_cell_is_free():
         team=1,
         mech=mech,
         stats=mech.build_character_stats(action_points=10),
-        inventory=Inventory(weapons=[]),
+        inventory=Inventory(weapons=[_one_weapon()]),
     )
     game = Game(arena=arena, players=[player])
 

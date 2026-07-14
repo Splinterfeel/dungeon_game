@@ -16,6 +16,9 @@ from src.entities.player import Player
 if typing.TYPE_CHECKING:
     from src.game import Game
 
+# человекочитаемые названия сторон рук для боевых сообщений (ROADMAP.md Этап 2 п.3)
+HAND_LABELS_RU = {"left": "левая рука", "right": "правая рука"}
+
 
 class ActionHandler:
     def __init__(self, game: "Game"):
@@ -28,7 +31,10 @@ class ActionHandler:
             return ""  # все части уже уничтожены
         player.mech.recompute_live_stats(player.stats)
         if part.destroyed:
-            return f" Деталь «{part.name}» ({part.slot.value}) уничтожена!"
+            # для рук указываем сторону (левая/правая), т.к. они одного типа
+            side = player.mech.hand_side_of(part)
+            location = HAND_LABELS_RU[side] if side else part.slot.value
+            return f" Деталь «{part.name}» ({location}) уничтожена!"
         return ""
 
     async def perform_actor_action(self, actor: Actor, action: Action) -> ActionResult:
@@ -95,6 +101,17 @@ class ActionHandler:
                 performed=False,
                 action=action,
                 detail=f"{actor.name}, огневой дозор доступен только с дальнобойным оружием",
+            )
+        # оружие в уничтоженной руке недоступно и для огневого дозора
+        if (
+            isinstance(actor, Player)
+            and weapon.hand
+            and actor.mech.arm_for(weapon.hand).destroyed
+        ):
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, {HAND_LABELS_RU[weapon.hand]} уничтожена — оружие «{weapon.name}» недоступно",
             )
         if actor.current_action_points < weapon.cost_ap:
             return ActionResult(
@@ -178,6 +195,18 @@ class ActionHandler:
                 performed=False,
                 action=action,
                 detail=f"{actor.name}, в инвентаре нет указанного оружия для атаки: {attack_params.weapon_id}",
+            )
+        # оружие в уничтоженной руке недоступно (ROADMAP.md Этап 2 п.3-4);
+        # у врагов меха/рук нет (weapon.hand=None) - проверка их не касается
+        if (
+            isinstance(actor, Player)
+            and weapon.hand
+            and actor.mech.arm_for(weapon.hand).destroyed
+        ):
+            return ActionResult(
+                performed=False,
+                action=action,
+                detail=f"{actor.name}, {HAND_LABELS_RU[weapon.hand]} уничтожена — оружие «{weapon.name}» недоступно",
             )
         action_ap_cost = weapon.cost_ap
         damage = weapon.roll_damage()

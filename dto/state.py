@@ -35,6 +35,7 @@ class WeaponState(BaseModel):
     range: int
     accuracy: int
     weight: int
+    hand: Optional[str] = None
 
 
 class InventoryState(BaseModel):
@@ -64,7 +65,8 @@ class PartState(BaseModel):
 class MechState(BaseModel):
     torso: PartState
     legs: PartState
-    arms: PartState
+    arms_left: PartState
+    arms_right: PartState
     head: PartState
     preset_name: Optional[str] = None
     parts_weight: int

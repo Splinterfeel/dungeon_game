@@ -52,6 +52,7 @@ def create_test_players() -> list[Player]:
                     cost_ap=5,
                     range=1,
                     accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
+                    hand="right",
                 ),
                 Weapon(
                     type="ranged",
@@ -60,6 +61,7 @@ def create_test_players() -> list[Player]:
                     cost_ap=8,
                     range=4,
                     accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,
+                    hand="left",
                 ),
             ]
         ),
@@ -82,6 +84,7 @@ def create_test_players() -> list[Player]:
                     cost_ap=5,
                     range=1,
                     accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
+                    hand="right",
                 ),
                 Weapon(
                     type="ranged",
@@ -90,6 +93,7 @@ def create_test_players() -> list[Player]:
                     cost_ap=8,
                     range=4,
                     accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,
+                    hand="left",
                 ),
             ]
         ),

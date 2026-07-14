@@ -98,6 +98,15 @@ class Game:
             if weapon is None:
                 watcher.overwatch = None
                 continue
+            # если рука с оружием огневого дозора уничтожена к моменту срабатывания -
+            # выстрела нет, дозор снимается (ROADMAP.md Этап 2 п.3-4)
+            if (
+                isinstance(watcher, Player)
+                and weapon.hand
+                and watcher.mech.arm_for(weapon.hand).destroyed
+            ):
+                watcher.overwatch = None
+                continue
             if self.arena.map.can_shoot(watcher, weapon, moving_actor.position):
                 await self._fire_overwatch_shot(watcher, weapon, moving_actor)
                 watcher.overwatch = None
