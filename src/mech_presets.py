@@ -55,6 +55,7 @@ STEELMAN_PRESET = MechPreset(
             cost_ap=6,
             range=1,
             accuracy=95,
+            weight=8,
         ),
         Weapon(
             type="ranged",
@@ -63,6 +64,7 @@ STEELMAN_PRESET = MechPreset(
             cost_ap=6,
             range=3,
             accuracy=75,
+            weight=2,
         ),
     ],
 )
@@ -92,6 +94,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             cost_ap=8,
             range=5,
             accuracy=90,
+            weight=5,
         ),
         Weapon(
             type="melee",
@@ -100,6 +103,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             cost_ap=5,
             range=1,
             accuracy=90,
+            weight=1,
         ),
     ],
 )
@@ -134,6 +138,7 @@ STRIKEFORCE_PRESET = MechPreset(
             cost_ap=8,
             range=6,
             accuracy=80,
+            weight=14,
         ),
     ],
 )

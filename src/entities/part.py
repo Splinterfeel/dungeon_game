@@ -37,6 +37,12 @@ class Part(BaseModel):
     view_distance: int = 0
     max_health: int = 0
     current_health: int = 0
+    # вес детали - расходует весовой бюджет меха (ROADMAP.md, Этап 2 п.9),
+    # заполняется у деталей всех слотов
+    weight: int = 0
+    # грузоподъёмность, которую деталь даёт мехам - по конвенции значима
+    # только у slot=LEGS (аналог melee_power, значимого только у ARMS)
+    carry_capacity: int = 0
 
     @model_validator(mode="after")
     def set_durability(self) -> "Part":

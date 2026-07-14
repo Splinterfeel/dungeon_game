@@ -7,11 +7,24 @@ from src.entities.part import Part, PartRarity, PartSlot
 # Стартовые детали повторяют числа, ранее захардкоженные в lobby.py,
 # чтобы сама реструктуризация на Pilot/Mech/Part не меняла баланс.
 # Rarity: common - нейтральный/тестовый набор, доступный всем по умолчанию.
+# weight/carry_capacity (ROADMAP.md Этап 2 п.9) - первая прикидка, не
+# сбалансировано отдельно; carry_capacity задан с запасом над суммой веса
+# деталей+оружия существующих пресетов (см. STEELMAN/FIREWORKS/STRIKEFORCE
+# ниже), не финальные числа.
 DEFAULT_TORSO = Part(
-    slot=PartSlot.TORSO, name="Лёгкий корпус", rarity=PartRarity.COMMON, health=15
+    slot=PartSlot.TORSO,
+    name="Лёгкий корпус",
+    rarity=PartRarity.COMMON,
+    health=15,
+    weight=6,
 )
 DEFAULT_LEGS = Part(
-    slot=PartSlot.LEGS, name="Стандартные ноги", rarity=PartRarity.COMMON, speed=5
+    slot=PartSlot.LEGS,
+    name="Стандартные ноги",
+    rarity=PartRarity.COMMON,
+    speed=5,
+    weight=5,
+    carry_capacity=25,
 )
 DEFAULT_ARMS = Part(
     slot=PartSlot.ARMS,
@@ -19,12 +32,14 @@ DEFAULT_ARMS = Part(
     rarity=PartRarity.COMMON,
     accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
     melee_power=2,
+    weight=4,
 )
 DEFAULT_HEAD = Part(
     slot=PartSlot.HEAD,
     name="Стандартная электроника",
     rarity=PartRarity.COMMON,
     view_distance=5,
+    weight=3,
 )
 
 # Детали пресета "SteelMan" — упор в ближний бой: больше здоровья и силы удара,
@@ -43,12 +58,15 @@ STEELMAN_TORSO = Part(
     name="Тяжёлый корпус «Голем»",
     rarity=PartRarity.RARE,
     health=20,
+    weight=10,
 )
 STEELMAN_LEGS = Part(
     slot=PartSlot.LEGS,
     name="Усиленные сервоприводы",
     rarity=PartRarity.RARE,
     speed=4,
+    weight=8,
+    carry_capacity=42,
 )
 STEELMAN_ARMS = Part(
     slot=PartSlot.ARMS,
@@ -56,25 +74,33 @@ STEELMAN_ARMS = Part(
     rarity=PartRarity.RARE,
     accuracy=85,
     melee_power=6,
+    weight=6,
 )
 STEELMAN_HEAD = Part(
     slot=PartSlot.HEAD,
     name="Штурмовая электроника",
     rarity=PartRarity.RARE,
     view_distance=4,
+    weight=4,
 )
 
 # Детали пресета "Fireworks Mk. 1" — упор в стрельбу: точность и обзор,
 # ценой здоровья и силы удара в ближнем бою. Rarity: rare - именной набор
 # для пресета, доступен не как стартовый common.
 FIREWORKS_TORSO = Part(
-    slot=PartSlot.TORSO, name="Лёгкий корпус «Стриж»", rarity=PartRarity.RARE, health=11
+    slot=PartSlot.TORSO,
+    name="Лёгкий корпус «Стриж»",
+    rarity=PartRarity.RARE,
+    health=11,
+    weight=4,
 )
 FIREWORKS_LEGS = Part(
     slot=PartSlot.LEGS,
     name="Манёвренные ноги «Вихрь»",
     rarity=PartRarity.RARE,
     speed=6,
+    weight=3,
+    carry_capacity=24,
 )
 FIREWORKS_ARMS = Part(
     slot=PartSlot.ARMS,
@@ -82,12 +108,14 @@ FIREWORKS_ARMS = Part(
     rarity=PartRarity.RARE,
     accuracy=85,
     melee_power=0,
+    weight=3,
 )
 FIREWORKS_HEAD = Part(
     slot=PartSlot.HEAD,
     name="Дальномерная электроника «Горизонт»",
     rarity=PartRarity.RARE,
     view_distance=7,
+    weight=3,
 )
 
 # Детали пресета "StrikeForce" — архетип "медленный/малое HP/дамажный":
@@ -101,12 +129,15 @@ STRIKEFORCE_TORSO = Part(
     name="Облегчённый каркас «Копьё»",
     rarity=PartRarity.RARE,
     health=9,
+    weight=3,
 )
 STRIKEFORCE_LEGS = Part(
     slot=PartSlot.LEGS,
     name="Опорная платформа «Такт»",
     rarity=PartRarity.RARE,
     speed=3,
+    weight=9,
+    carry_capacity=40,
 )
 STRIKEFORCE_ARMS = Part(
     slot=PartSlot.ARMS,
@@ -114,12 +145,14 @@ STRIKEFORCE_ARMS = Part(
     rarity=PartRarity.RARE,
     accuracy=78,
     melee_power=0,
+    weight=4,
 )
 STRIKEFORCE_HEAD = Part(
     slot=PartSlot.HEAD,
     name="Баллистический вычислитель",
     rarity=PartRarity.RARE,
     view_distance=6,
+    weight=4,
 )
 
 

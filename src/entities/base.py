@@ -49,6 +49,9 @@ class Weapon(BaseModel):
     cost_ap: int
     range: int
     accuracy: int
+    # вес оружия - расходует весовой бюджет меха наравне с деталями
+    # (ROADMAP.md, Этап 2 п.9)
+    weight: int = 0
 
     def roll_damage(self) -> int:
         "Урон одного попадания с разбросом ±DAMAGE_VARIANCE, округление к целому, минимум 1"

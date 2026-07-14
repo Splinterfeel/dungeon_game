@@ -1,7 +1,7 @@
 import random
 from typing import ClassVar, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, computed_field, model_validator
 
 from src.entities.base import CharacterStats
 from src.entities.part import Part, PartSlot
@@ -42,6 +42,18 @@ class Mech(BaseModel):
                     f"{field_name} ожидает деталь слота {expected_slot}, получена {part.slot}"
                 )
         return self
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def parts_weight(self) -> int:
+        "Суммарный вес 4 деталей меха (без учёта оружия - см. Player.check_weight_budget)"
+        return sum(p.weight for p in (self.torso, self.legs, self.arms, self.head))
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def weight_capacity(self) -> int:
+        "Грузоподъёмность меха - см. ROADMAP.md Этап 2 п.9: берётся от ног (конвенция Armored Core)"
+        return self.legs.carry_capacity
 
     def build_character_stats(self, action_points: int) -> CharacterStats:
         "Совокупные статы меха = сумма характеристик всех деталей + очки действия пилота"

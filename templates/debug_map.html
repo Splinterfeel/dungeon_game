@@ -503,7 +503,7 @@ function update_weapon_selector(weapons) {
 }
 
 const MECH_PART_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
-const MECH_STAT_LABELS = {health: "HP", speed: "Speed", accuracy: "Accuracy", melee_power: "Melee power", view_distance: "View distance"};
+const MECH_STAT_LABELS = {health: "HP", speed: "Speed", accuracy: "Accuracy", melee_power: "Melee power", view_distance: "View distance", weight: "Weight", carry_capacity: "Carry capacity"};
 const PART_RARITY_LABELS = {common: "common", rare: "rare", epic: "epic"};
 
 function find_selected_actor() {
@@ -552,7 +552,9 @@ function render_mech_inspector() {
     html += `</table>`;
 
     if (kind === "player") {
-        html += `<div style="font-weight:bold;">Детали меха</div>`;
+        html += `<div style="font-weight:bold;">Детали меха ` +
+            `<span style="font-weight:normal;color:#888;font-size:12px;">` +
+            `(вес ${actor.mech.parts_weight}/${actor.mech.weight_capacity})</span></div>`;
         for (const slot of ["torso", "legs", "arms", "head"]) {
             const part = actor.mech[slot];
             const nonZeroStats = Object.keys(MECH_STAT_LABELS)

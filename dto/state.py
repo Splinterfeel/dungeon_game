@@ -34,6 +34,7 @@ class WeaponState(BaseModel):
     cost_ap: int
     range: int
     accuracy: int
+    weight: int
 
 
 class InventoryState(BaseModel):
@@ -56,6 +57,8 @@ class PartState(BaseModel):
     max_health: int
     current_health: int
     destroyed: bool
+    weight: int
+    carry_capacity: int
 
 
 class MechState(BaseModel):
@@ -64,6 +67,8 @@ class MechState(BaseModel):
     arms: PartState
     head: PartState
     preset_name: Optional[str] = None
+    parts_weight: int
+    weight_capacity: int
 
 
 class MechPresetState(BaseModel):
