@@ -171,8 +171,8 @@ def build_game(team1_presets, team2_presets) -> Game:
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
     # enemies_num=0: чистый PvP без нейтрального ИИ, чтобы не шуметь поверх
-    # баланса пресетов; max_chests=1 - минимум, который допускает Arena.
-    arena = Arena(max_chests=1, enemies_num=0, map=arena_map)
+    # баланса пресетов.
+    arena = Arena(enemies_num=0, map=arena_map)
     players = [make_player(1, p) for p in team1_presets] + [
         make_player(2, p) for p in team2_presets
     ]

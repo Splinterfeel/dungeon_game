@@ -48,10 +48,6 @@ class ActionHandler:
                 return await self.__perform_action_attack(actor=actor, action=action)
             case ActionType.OVERWATCH:
                 return await self.__perform_action_overwatch(actor=actor, action=action)
-            case ActionType.OPEN_CHEST:
-                return await self.__perform_action_open_chest(
-                    actor=actor, action=action
-                )
             case ActionType.INSPECT:
                 print("INSPECTING", action.cell)
                 return ActionResult(action=action)
@@ -111,31 +107,6 @@ class ActionHandler:
             action=action,
             action_cost=weapon.cost_ap,
             detail=f"{actor.name} переходит в режим огневого дозора ({weapon.name})",
-        )
-
-    async def __perform_action_open_chest(
-        self, actor: Actor, action: Action
-    ) -> ActionResult:
-        chest = next(
-            (c for c in self.game.arena.chests if c.position == action.cell), None
-        )
-        if chest is None:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, в клетке {action.cell} нет сундука",
-            )
-        if Point.distance_chebyshev(actor.position, chest.position) > 1:
-            return ActionResult(
-                performed=False,
-                action=action,
-                detail=f"{actor.name}, сундук {action.cell} слишком далеко, чтобы его открыть",
-            )
-        actor.trophies.append(chest.loot)
-        self.game.arena.remove_chest(chest)
-        return ActionResult(
-            action=action,
-            detail=f"{actor.name} открывает сундук и находит: {chest.loot}",
         )
 
     async def __perform_action_move(self, actor: Actor, action: Action) -> ActionResult:

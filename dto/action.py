@@ -15,7 +15,6 @@ class GameActionState(BaseModel):
         "INSPECT",
         "ATTACK",
         "HEAVY_ATTACK",
-        "OPEN_CHEST",
         "OVERWATCH",
     ]
     cell: PointState

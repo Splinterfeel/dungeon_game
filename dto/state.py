@@ -103,11 +103,6 @@ class TurnState(BaseModel):
     available_moves: list[PointState]
 
 
-class ChestState(BaseModel):
-    position: PointState
-    # loot не пробрасываем клиенту заранее, чтобы не палить содержимое до открытия
-
-
 class MapState(BaseModel):
     width: int
     height: int
@@ -115,7 +110,6 @@ class MapState(BaseModel):
 
 
 class ArenaState(BaseModel):
-    chests: list[ChestState]
     enemies: list[ActorState]
     map: MapState
 

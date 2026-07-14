@@ -6,7 +6,6 @@ class CELL_TYPE(Enum):
     EMPTY = "   "
     START_TEAM_1 = " S1 "
     START_TEAM_2 = " S2 "
-    CHEST = " C "
     ENEMY = " E "
     PLAYER = " P "
 

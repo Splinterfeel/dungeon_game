@@ -2,10 +2,9 @@ import random
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
-from src.base import Point, PointOffset
+from src.base import Point
 from src.constants import CELL_TYPE, Accuracy
 from src.entities.base import CharacterStats, Inventory, Weapon
-from src.entities.chest import Chest
 from src.entities.player import Player
 from src.entities.room import Room
 from src.entities.enemy import Enemy
@@ -13,7 +12,6 @@ from src.map import ArenaMap
 
 
 class Arena(BaseModel):
-    max_chests: int
     enemies_num: int
     width: Optional[int] = None
     height: Optional[int] = None
@@ -28,7 +26,6 @@ class Arena(BaseModel):
     map: Optional[ArenaMap] = None
     start_room: Optional[Room] = None
     rooms: List[Room] = Field(default_factory=list)
-    chests: List[Chest] = Field(default_factory=list)
     enemies: List[Enemy] = Field(default_factory=list)
 
     # Списки стартовых точек
@@ -39,9 +36,9 @@ class Arena(BaseModel):
     def initialize_arena(self) -> "Arena":
         # Если карта уже передана (загрузка), инициализируем из неё
         if self.map is not None:
-            # Если списки объектов пусты, значит мы загрузили "сырую" карту и надо их вытащить
-            # Если же они полные, значит мы просто восстановили объект из БД/JSON
-            if not self.enemies and not self.chests:
+            # Если список пуст, значит мы загрузили "сырую" карту и надо его вытащить
+            # Если же он полный, значит мы просто восстановили объект из БД/JSON
+            if not self.enemies:
                 self._init_from_map()
         else:
             # Процедурная генерация
@@ -63,14 +60,13 @@ class Arena(BaseModel):
     def __save_initial_map(self):
         # _initial_map — снимок только террейна (стены/пол): по нему
         # reset_map_cell восстанавливает клетку, которую покидает актор.
-        # Маркеры сущностей (враги/сундуки/игроки/спавны) сюда попадать не
-        # должны, иначе покинутые клетки восстанавливаются как занятые.
+        # Маркеры сущностей (враги/игроки/спавны) сюда попадать не должны,
+        # иначе покинутые клетки восстанавливаются как занятые.
         self._initial_map = self.map.model_copy(deep=True)
         self._initial_map.keep_only_terrain()
 
     def _init_from_map(self):
         self.enemies = []
-        self.chests = []
         self.rooms = []  # пока непонятно нужно ли, считаем что пока нет
         self.start_room = None
         self.start_points_team_1: list[Point] = []
@@ -86,33 +82,21 @@ class Arena(BaseModel):
             raise ValueError("Can't find start points for team 1")
         if not self.start_points_team_2:
             raise ValueError("Can't find start points for team 2")
-        # find possible chests and enemies positions
-        possible_chest_points: list[Point] = []
+        # find possible enemies positions
         possible_enemy_points: list[Point] = []
         for x in range(self.map.width):
             for y in range(self.map.height):
                 _point = Point(x=x, y=y)
-                if self.map.get(_point) == CELL_TYPE.CHEST.value:
-                    possible_chest_points.append(_point)
-                    self.map.set(_point, CELL_TYPE.EMPTY.value)
-                elif self.map.get(_point) == CELL_TYPE.ENEMY.value:
+                if self.map.get(_point) == CELL_TYPE.ENEMY.value:
                     possible_enemy_points.append(_point)
                     self.map.set(_point, CELL_TYPE.EMPTY.value)
         # here can set difficulty of arena - min and max enemies
 
-        chests_count = min(
-            random.randint(1, self.max_chests), len(possible_chest_points)
-        )
         if self.enemies_num > len(possible_enemy_points):
             raise ValueError(
                 f"enemies num > possible_enemy_points: {self.enemies_num} / {len(possible_enemy_points)}"
             )
-        random.shuffle(possible_chest_points)
         random.shuffle(possible_enemy_points)
-        for i in range(chests_count):
-            point = possible_chest_points[i]
-            self.chests.append(Chest(position=point))
-            self.map.set(point, CELL_TYPE.CHEST.value)
 
         for i in range(self.enemies_num):
             point = possible_enemy_points[i]
@@ -166,10 +150,6 @@ class Arena(BaseModel):
         # пока генерация работает только для 1 команды, и по сути для 1 игрока
         self.start_points_team_2 = []
 
-        if self.chests is None:
-            self.chests = []
-            self._generate_chests()
-
         if self.enemies is None:
             self.enemies = []
             self._generate_enemies()
@@ -184,10 +164,6 @@ class Arena(BaseModel):
 
     def remove_dead_player(self, player: Player):
         self.map.set(player.position, CELL_TYPE.EMPTY.value)
-
-    def remove_chest(self, chest: Chest):
-        self.chests.remove(chest)
-        self.map.set(chest.position, CELL_TYPE.EMPTY.value)
 
     def _generate_enemies(self):
         possible_enemy_rooms = [room for room in self.rooms if room != self.start_room]
@@ -275,64 +251,8 @@ class Arena(BaseModel):
 
         self.start_room = farthest_room
 
-    def _generate_chests(self):
-        # 1. Отфильтруем комнаты, чтобы исключить стартовую
-        possible_chest_rooms = [room for room in self.rooms if room != self.start_room]
-        # 2. Выберем случайные комнаты для размещения сундуков
-        # Убедимся, что не пытаемся разместить больше сундуков, чем комнат
-        num_chests = min(self.max_chests, len(possible_chest_rooms))
-        rooms_with_chests = random.sample(possible_chest_rooms, num_chests)
-        # 3. Разместим сундуки в выбранных комнатах
-        for room in rooms_with_chests:
-            choices = self._get_room_border_places(room)
-            # Выбираем случайную позицию внутри комнаты, избегая границ
-            position = random.choice(choices)
-            new_chest = Chest(position=position)
-            self.chests.append(new_chest)
-            self.map.set(new_chest.position, CELL_TYPE.CHEST.value)
-
-    def _get_room_border_places(self, room: Room) -> list[Point]:
-        _point_choices = []
-        # верхняя стена
-        x_choices = [x for x in range(room.x, room.x + room.width)]
-        y_choices = [room.y for _ in x_choices]
-        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
-        # нижняя стена
-        x_choices = [x for x in range(room.x, room.x + room.width)]
-        y_choices = [room.y + room.height - 1 for _ in x_choices]
-        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
-        # левая стена
-        y_choices = [y for y in range(room.y, room.y + room.height)]
-        x_choices = [room.x for _ in y_choices]
-        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
-        # правая стена
-        y_choices = [y for y in range(room.y, room.y + room.height)]
-        x_choices = [room.x + room.width - 1 for _ in y_choices]
-        _point_choices.extend([Point(x, y) for x, y in zip(x_choices, y_choices)])
-        _point_choices = [p for p in _point_choices if self.map.is_free(p)]
-        # исключить тайлы, которые находятся на проходе
-        result_choices = []
-        for point in _point_choices:
-            if self.map.get(point) != CELL_TYPE.EMPTY.value:
-                continue
-            point_left = self.map.get(point.on(PointOffset.LEFT))
-            point_right = self.map.get(point.on(PointOffset.RIGHT))
-            point_up = self.map.get(point.on(PointOffset.TOP))
-            point_down = self.map.get(point.on(PointOffset.BOTTOM))
-            if all(
-                t == CELL_TYPE.EMPTY.value
-                for t in [point_left, point_right, point_up, point_down]
-            ):
-                continue
-            result_choices.append(point)
-        if not result_choices:
-            raise ValueError("No choices for rooms borders")
-        return result_choices
-
     def print_info(self):
         print("rooms:", len(self.rooms))
-        for chest in self.chests:
-            print(chest)
         for enemy in self.enemies:
             print("Enemy: stats", enemy.stats)
 

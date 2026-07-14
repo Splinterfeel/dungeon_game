@@ -26,7 +26,7 @@ def test_enemy_vacated_cell_is_free():
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(max_chests=1, enemies_num=1, map=arena_map)
+    arena = Arena(enemies_num=1, map=arena_map)
     mech = default_mech()
     player = Player(
         team=1,

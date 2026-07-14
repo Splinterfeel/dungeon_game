@@ -8,7 +8,6 @@ from dto.debug import DebugDumpResponse, DebugRestoreResponse
 from src.arena import Arena, ArenaMap
 from src.entities.player import Player
 from src.entities.enemy import Enemy
-from src.entities.chest import Chest
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
 from src.turn import Turn
@@ -103,24 +102,18 @@ def restore_arena_from_data(arena_data: Dict[str, Any]) -> Arena:
         start_points_team_2=start_points_team_2,
     )
 
-    # Restore enemies and chests
+    # Restore enemies
     restored_enemies = []
     for e in arena_data["enemies"]:
         restored_enemies.append(Enemy.model_validate(e))
 
-    restored_chests = []
-    for c in arena_data["chests"]:
-        restored_chests.append(Chest(**c) if isinstance(c, dict) else c)
-
     # Create Arena
     arena = Arena.model_construct(
-        max_chests=arena_data["max_chests"],
         enemies_num=arena_data["enemies_num"],
         map=arena_map,
         start_points_team_1=start_points_team_1,
         start_points_team_2=start_points_team_2,
         enemies=restored_enemies,
-        chests=restored_chests,
     )
 
     # Initialize _initial_map since model_construct bypasses validation.

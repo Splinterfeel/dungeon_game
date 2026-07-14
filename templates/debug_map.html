@@ -39,7 +39,6 @@ body {
 .player { background: #7ea97f; }
 .player_current { background: #2c902f; font-weight: bold;}
 .enemy { background: #f44336; }
-.chest { background: gold; color: black; }
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
@@ -191,7 +190,6 @@ body {
     <button onclick="send_end_turn()" style="background: #a66606; color: white; font-weight: bold;">END TURN</button>
     <button onclick="send_move()" style="background: #057514; color: white; font-weight: bold;">MOVE</button>
     <button onclick="send_overwatch()" style="background: #8b0000; color: white; font-weight: bold;">OVERWATCH</button>
-    <button onclick="send_open_chest()" style="background: #b8860b; color: white; font-weight: bold;">OPEN CHEST</button>
 </div>
 <div class="control-row">
     <label for="weapon_select">Оружие:</label>
@@ -239,16 +237,12 @@ function select_cell(x, y, cellEl) {
 
     const players = lastGameState.players || [];
     const enemies = lastGameState.arena.enemies || [];
-    const chests = lastGameState.arena.chests || [];
     let _pre_content = `[${x} ${y}]`;
     const player = players.find(p => p.position.x === x && p.position.y === y);
     if (player) { info.textContent = `${_pre_content} Игрок: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
 
     const enemy = enemies.find(e => e.position.x === x && e.position.y === y);
     if (enemy) { info.textContent = `${_pre_content} Враг: ${enemy.name} HP ${enemy.stats.health} Speed ${enemy.stats.speed}`; return; }
-
-    const chest = chests.find(c => c.position.x === x && c.position.y === y);
-    if (chest) { info.textContent = `${_pre_content} Сундук`; return; }
 
     const tiles = lastGameState.arena.map.tiles;
     info.textContent = tiles[x][y] === " # " ? `${_pre_content} Стена` : `${_pre_content} Пол`;
@@ -662,9 +656,6 @@ function handle_game_state(state){
         visual[e.position.x][e.position.y].entity = "E";
         visual[e.position.x][e.position.y].overwatch = !!e.overwatch;
     }
-    for (const c of arena.chests) {
-        visual[c.position.x][c.position.y].entity = "C";
-    }
 
     // игроки
     for (const p of state.players) {
@@ -746,7 +737,7 @@ function handle_game_state(state){
 
             // entity overlay
             if (cellData.entity) {
-                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy", "C": "chest" };
+                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy" };
                 const className = entityMap[cellData.entity];
                 if (className) {
                     cell.classList.add(className);
@@ -851,33 +842,6 @@ async function send_attack() {
         }
     };
     console.log("Sending ATTACK action:", action);
-    socket.send(JSON.stringify(action));
-}
-
-async function send_open_chest() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        alert("WebSocket не подключен!");
-        return;
-    }
-    if (!lastPlayerState) {
-        alert("Данные игрока еще не получены от сервера (state_update) или игрок мёртв");
-        return;
-    }
-    if (!selectedCell){
-        showToast("Клетка ещё не выбрана");
-        return;
-    }
-    const action = {
-        id: generateUUID(),
-        actor_id: lastPlayerState.id,
-        type: "OPEN_CHEST",
-        cell: {
-            x: selectedCell.x,
-            y: selectedCell.y
-        },
-        params: null
-    };
-    console.log("Sending OPEN_CHEST action:", action);
     socket.send(JSON.stringify(action));
 }
 

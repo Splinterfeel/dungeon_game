@@ -110,7 +110,7 @@ def create_test_arena() -> Arena:
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    return Arena(max_chests=3, enemies_num=2, map=arena_map)
+    return Arena(enemies_num=2, map=arena_map)
 
 
 def test_game_serialization():

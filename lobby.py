@@ -77,7 +77,6 @@ class Lobby(GameObserver):
             return False, detail
         # генерация
         # arena = Arena(
-        #     max_chests=3,
         #     enemies_num=2,
         #     width=20,
         #     height=15,
@@ -93,7 +92,7 @@ class Lobby(GameObserver):
             height=copy.deepcopy(default.map_2["height"]),
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
-        arena = Arena(max_chests=3, enemies_num=2, map=arena_map)
+        arena = Arena(enemies_num=2, map=arena_map)
         self.game = Game(arena=arena, players=list(self.players.values()))
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
@@ -198,17 +197,11 @@ class Lobby(GameObserver):
         team_players = [p for p in game_state.players if p.team == team]
         another_team_players = [p for p in game_state.players if p.team != team]
         visible_enemies = []
-        visible_chests = []
         visible_players = [p for p in team_players]
         for enemy in game_state.arena.enemies:
             for player in team_players:
                 if self.game.arena.map.can_see(player, enemy):
                     visible_enemies.append(enemy)
-                    break
-        for chest in game_state.arena.chests:
-            for player in team_players:
-                if self.game.arena.map.can_see(player, chest):
-                    visible_chests.append(chest)
                     break
         for another_player in another_team_players:
             for player in team_players:
@@ -217,5 +210,4 @@ class Lobby(GameObserver):
                     break
         game_state.players = visible_players
         game_state.arena.enemies = visible_enemies
-        game_state.arena.chests = visible_chests
         return game_state
