@@ -1,7 +1,6 @@
 import asyncio
 import typing
 
-from dto.event import GameEvent
 from src.action import (
     Action,
     ActionResult,
@@ -252,16 +251,15 @@ class ActionHandler:
                 )
             player.apply_damage(damage)
             part_detail = self.__apply_locational_damage(player, damage)
+            death_detail = ""
             if player.is_dead():
                 self.game.arena.remove_dead_player(player)
                 self.game.players.remove(player)
-                await self.game._notify_event(
-                    GameEvent(message=f"Игрок {player.name} погиб!")
-                )
+                death_detail = f" Игрок {player.name} погиб!"
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона.{part_detail}",
+                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -278,13 +276,14 @@ class ActionHandler:
                     detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
                 )
             enemy.apply_damage(damage)
+            death_detail = ""
             if enemy.is_dead():
                 self.game.arena.remove_dead_enemy(enemy=enemy)
-                await self.game._notify_event(GameEvent(message=f"{enemy.name} погиб!"))
+                death_detail = f" {enemy.name} погиб!"
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона",
+                detail=f"{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона{death_detail}",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -312,16 +311,15 @@ class ActionHandler:
                 )
             player_attacked.apply_damage(damage)
             part_detail = self.__apply_locational_damage(player_attacked, damage)
+            death_detail = ""
             if player_attacked.is_dead():
                 self.game.arena.remove_dead_player(player_attacked)
                 self.game.players.remove(player_attacked)
-                await self.game._notify_event(
-                    GameEvent(message=f"Игрок {player_attacked.name} погиб!")
-                )
+                death_detail = f" Игрок {player_attacked.name} погиб!"
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона.{part_detail}",  # noqa
+                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",  # noqa
             )
         else:
             print(

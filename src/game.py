@@ -116,17 +116,20 @@ class Game:
             return
         damage = weapon.roll_damage()
         target.apply_damage(damage)
-        await self._notify_event(
-            GameEvent(
-                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона)"
-            )
-        )
+        death_detail = ""
         if target.is_dead():
             if isinstance(target, Player):
                 self.arena.remove_dead_player(target)
                 self.players.remove(target)
+                death_detail = f" Игрок {target.name} погиб!"
             elif isinstance(target, Enemy):
                 self.arena.remove_dead_enemy(target)
+                death_detail = f" {target.name} погиб!"
+        await self._notify_event(
+            GameEvent(
+                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона){death_detail}"
+            )
+        )
 
     def move_actor(self, actor: Actor, cell: Point):
         actor_cell_type = self.arena.map.get(actor.position)
