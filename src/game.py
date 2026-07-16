@@ -28,6 +28,10 @@ class Game:
     ):
         self._observer: Optional[GameObserver] = None
         self.ended = False
+        # Награды начисляет Lobby, но флаг живёт у конкретного матча, чтобы
+        # повторная проверка конца игры не выдала дроп второй раз.
+        self.rewards_granted = False
+        self.end_announced = False
         self.winner: Optional[int] = (
             None  # 1/2 — команда-победитель, None — ничья/матч не завершён
         )

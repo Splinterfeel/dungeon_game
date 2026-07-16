@@ -47,6 +47,8 @@ class OverwatchStateDTO(BaseModel):
 
 
 class PartState(BaseModel):
+    id: str
+    catalog_key: str
     slot: str
     name: str
     rarity: str

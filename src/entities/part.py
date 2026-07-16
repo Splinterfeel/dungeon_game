@@ -27,6 +27,9 @@ class Part(BaseModel):
     DEFAULT_MAX_HEALTH: ClassVar[int] = 10
 
     id: UUIDStr = Field(default_factory=uuid.uuid4)
+    # Идентификатор типа детали в каталоге. Экземплярный id отличает две
+    # полученные детали, а catalog_key нужен для защиты от дублей в гараже.
+    catalog_key: str = ""
     slot: PartSlot
     name: str
     rarity: PartRarity = PartRarity.COMMON

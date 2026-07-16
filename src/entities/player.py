@@ -15,7 +15,8 @@ class Player(Actor):
     def set_team_name(self):
         if not self.name:
             self.name = names.get_full_name()
-        self.name = f"[{self.team}]{self.name}"
+        if not self.name.startswith(f"[{self.team}]"):
+            self.name = f"[{self.team}]{self.name}"
         return self
 
     @model_validator(mode="after")

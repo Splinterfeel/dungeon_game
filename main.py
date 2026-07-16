@@ -12,6 +12,7 @@ from dto.base import (
     StartGameRequest,
     StartGameResponse,
 )
+from dto.garage import EquipGaragePartRequest, GarageState, RematchRequest
 from dto.debug import (
     DebugDumpRequest,
     DebugDumpResponse,
@@ -55,9 +56,7 @@ lobby_manager = LobbyManager()
 @app.get("/", response_class=HTMLResponse)
 async def debug_map(request: Request):
     host = request.headers.get("host", "localhost:8000")
-    return templates.TemplateResponse(
-        request, "debug_map.html", {"host": host}
-    )
+    return templates.TemplateResponse(request, "debug_map.html", {"host": host})
 
 
 @app.get("/lobbies", description="Получить список лобби")
@@ -104,6 +103,46 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
         result=result,
         detail=detail,
     )
+
+
+@app.get(
+    "/debug/lobbies/{lobby_id}/garage/{player_id}",
+    description="Состояние in-memory гаража пилота (debug only)",
+)
+def get_garage(lobby_id: str, player_id: str) -> GarageState:
+    lobby = lobby_manager.get_lobby(lobby_id)
+    if not lobby:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    try:
+        return lobby.get_garage_state(player_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.post(
+    "/debug/garage/equip",
+    description="Установить деталь из гаража в сборку пилота (debug only)",
+)
+def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
+    lobby = lobby_manager.get_lobby(request.lobby_id)
+    if not lobby:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    try:
+        return lobby.equip_garage_part(str(request.player_id), str(request.part_id))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post("/rematch", description="Начать рематч тем же составом (debug only)")
+async def start_rematch(request: RematchRequest) -> StartGameResponse:
+    lobby = lobby_manager.get_lobby(request.lobby_id)
+    if not lobby:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    result, detail = await lobby.start_rematch(str(request.host_player_id))
+    if result:
+        await lobby.broadcast_lobby_state()
+        await lobby.broadcast_game_state()
+    return StartGameResponse(lobby_id=request.lobby_id, result=result, detail=detail)
 
 
 # =========================
@@ -200,11 +239,6 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             GameEvent(message=f"Ход {lobby.game.turn.current_actor.name}"),
             receiver_player_ids=[player.id],
         )
-    if lobby.game.ended:
-        await lobby.broadcast_game_event(GameEvent(message=_winner_message(lobby.game)))
-        await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
-        await websocket.close(code=WSCloseCodes.GAME_ENDED, reason="Game ended")
-        return
     try:
         while True:
             data = await websocket.receive_json()
@@ -247,7 +281,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                         # конец хода ИИ врагов, ход окружения игры
                         print("=== ХОД ОКРУЖЕНИЯ ===")
                     await lobby.broadcast_game_state()
-                if lobby.game.ended:
+                if lobby.game.ended and not lobby.game.end_announced:
                     print("GAME END")
                     await lobby.broadcast_game_event(
                         GameEvent(message=_winner_message(lobby.game))
@@ -255,13 +289,6 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                     await lobby.broadcast_game_event(
                         GameEvent(message="Игра закончилась")
                     )
-                    break
-            if lobby.game and lobby.game.ended:
-                print("GAME END")
-                await lobby.broadcast_game_event(
-                    GameEvent(message=_winner_message(lobby.game))
-                )
-                await lobby.broadcast_game_event(GameEvent(message="Игра закончилась"))
-                break
+                    lobby.game.end_announced = True
     except WebSocketDisconnect:
         lobby.disconnect(player)

@@ -6,7 +6,8 @@ from typing import Optional, List
 
 from dto.base import PlayerDTO
 from dto.event import GameEvent
-from dto.state import GameState, LobbyState, LobbyStatePayload
+from dto.state import GameState, LobbyState, LobbyStatePayload, PartState
+from dto.garage import GarageState, GarageMetricsState
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.arena import Arena
@@ -17,6 +18,7 @@ from src.map import ArenaMap
 from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
+from src.garage import GarageProfile, MATCH_REWARD_CHANCES, roll_match_reward
 
 
 class Lobby(GameObserver):
@@ -26,6 +28,9 @@ class Lobby(GameObserver):
         self.players_num = players_num
         self.created_by_player_id = str(created_by_player_id)
         self.players: dict[str, Player] = {}
+        # Постоянное только в пределах процесса состояние петли лута. Player
+        # ниже — боевой экземпляр текущего матча, профиль — гараж пилота.
+        self.garages: dict[str, GarageProfile] = {}
         self.connections: dict[str, WebSocket] = {}
 
         self.lock = asyncio.Lock()
@@ -54,13 +59,15 @@ class Lobby(GameObserver):
         else:
             preset = get_random_mech_preset()
         mech = preset.mech
-        self.players[str(player.id)] = Player(
+        game_player = Player(
             id=player.id,
             team=player.team,
             mech=mech,
             stats=mech.build_character_stats(action_points=10),
             inventory=Inventory(weapons=preset.weapons),
         )
+        self.players[str(player.id)] = game_player
+        self.garages[str(player.id)] = GarageProfile.from_player(game_player)
         await self.broadcast_lobby_state()
         return True, "player connected"
 
@@ -93,10 +100,33 @@ class Lobby(GameObserver):
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         arena = Arena(enemies_num=2, map=arena_map)
+        # Всегда пересобираем бой из гаража: HP и поломки прошлого матча не
+        # являются прогрессом, а установленная деталь — является.
+        self.players = {
+            player_id: garage.build_player()
+            for player_id, garage in self.garages.items()
+        }
         self.game = Game(arena=arena, players=list(self.players.values()))
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
         return True, "Game started"
+
+    async def start_rematch(self, host_player_id: str) -> tuple[bool, str]:
+        if host_player_id != self.created_by_player_id:
+            return False, "Только хост лобби может начать рематч"
+        if self.game is None or not self.game.ended:
+            return False, "Рематч доступен только после завершения матча"
+        result, detail = await self._start_fresh_game()
+        if result:
+            for garage in self.garages.values():
+                garage.metrics.rematches_started += 1
+        return result, detail
+
+    async def _start_fresh_game(self) -> tuple[bool, str]:
+        # start_game проверяет game is not None, поэтому для рематча временно
+        # освобождаем слот, сохранив завершённый матч только в событиях/метриках.
+        self.game = None
+        return await self.start_game()
 
     def connect(self, player: PlayerDTO, websocket: WebSocket):
         self.connections[player.id] = websocket
@@ -146,6 +176,8 @@ class Lobby(GameObserver):
 
     async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
         async with self.lock:
+            if not self.game or self.game.ended:
+                return False
             actors = {str(e.id): e for e in self.game.arena.enemies}
             actors.update(self.players)
             actor = actors[str(_actor.id)]
@@ -154,7 +186,72 @@ class Lobby(GameObserver):
                 pass
             action_result = await self.game.perform_actor_action(actor, action)
             self.game.version += 1
+            if self.game.ended:
+                await self.finalize_match_rewards()
             return action_result.performed
+
+    async def finalize_match_rewards(self) -> None:
+        """Начисляет награды ровно один раз, в том числе погибшим победителям."""
+        if not self.game or self.game.rewards_granted:
+            return
+        self.game.rewards_granted = True
+        for player_id, garage in self.garages.items():
+            is_winner = self.game.winner is not None and garage.team == self.game.winner
+            garage.metrics.matches_finished += 1
+            reward = roll_match_reward(garage, is_winner)
+            if reward.awarded_part is None:
+                chance_percent = round(reward.chance * 100)
+                await self.broadcast_game_event(
+                    GameEvent(
+                        message=(
+                            f"Награда: ролл {chance_percent}% для {garage.name} — "
+                            f"деталь не выпала. {reward.reason}."
+                        )
+                    ),
+                    receiver_player_ids=[player_id],
+                )
+                continue
+            part_state = PartState.model_validate(
+                reward.awarded_part.model_dump(mode="json")
+            )
+            await self.broadcast_game_event(
+                GameEvent(
+                    message=(
+                        f"Награда: {garage.name} получает {part_state.rarity} "
+                        f"деталь «{part_state.name}»!"
+                    ),
+                    loot_part=part_state,
+                )
+            )
+
+    def get_garage_state(self, player_id: str) -> GarageState:
+        garage = self.garages.get(player_id)
+        if garage is None:
+            raise ValueError("Пилот не найден в лобби")
+        player = garage.build_player()
+        equipped_ids = set(garage.equipped_part_ids.values())
+        return GarageState(
+            player_id=player_id,
+            mech=player.mech.model_dump(mode="json"),
+            stats=player.stats.model_dump(),
+            weapons=[
+                weapon.model_dump(mode="json") for weapon in player.inventory.weapons
+            ],
+            stored_parts=[
+                part.model_dump(mode="json")
+                for part in garage.owned_parts
+                if part.id not in equipped_ids
+            ],
+            reward_chances=MATCH_REWARD_CHANCES,
+            metrics=GarageMetricsState.model_validate(garage.metrics.model_dump()),
+        )
+
+    def equip_garage_part(self, player_id: str, part_id: str) -> GarageState:
+        garage = self.garages.get(player_id)
+        if garage is None:
+            raise ValueError("Пилот не найден в лобби")
+        garage.equip(part_id)
+        return self.get_garage_state(player_id)
 
     def filter_available_moves(
         self, game_state: GameState, player_id: str
