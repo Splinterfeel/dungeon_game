@@ -59,6 +59,12 @@ async def debug_map(request: Request):
     return templates.TemplateResponse(request, "debug_map.html", {"host": host})
 
 
+@app.get("/garage", response_class=HTMLResponse)
+async def debug_garage(request: Request):
+    host = request.headers.get("host", "localhost:8000")
+    return templates.TemplateResponse(request, "debug_garage.html", {"host": host})
+
+
 @app.get("/lobbies", description="Получить список лобби")
 def get_lobbies_list() -> list[LobbyDTO]:
     return lobby_manager.get_lobbies_list()
@@ -106,29 +112,25 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
 
 
 @app.get(
-    "/debug/lobbies/{lobby_id}/garage/{player_id}",
-    description="Состояние in-memory гаража пилота (debug only)",
+    "/debug/garages/{player_id}",
+    description="Состояние общего in-memory гаража пилота (debug only)",
 )
-def get_garage(lobby_id: str, player_id: str) -> GarageState:
-    lobby = lobby_manager.get_lobby(lobby_id)
-    if not lobby:
-        raise HTTPException(status_code=404, detail="Lobby not found")
+def get_garage(player_id: str) -> GarageState:
     try:
-        return lobby.get_garage_state(player_id)
+        return lobby_manager.get_garage_state(player_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
 
 
 @app.post(
-    "/debug/garage/equip",
+    "/debug/garages/equip",
     description="Установить деталь из гаража в сборку пилота (debug only)",
 )
 def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
-    lobby = lobby_manager.get_lobby(request.lobby_id)
-    if not lobby:
-        raise HTTPException(status_code=404, detail="Lobby not found")
     try:
-        return lobby.equip_garage_part(str(request.player_id), str(request.part_id))
+        return lobby_manager.equip_garage_part(
+            str(request.player_id), str(request.part_id)
+        )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 
@@ -184,7 +186,9 @@ async def restore_game_state(request: DebugRestoreRequest) -> DebugRestoreRespon
         lobby_name = request.lobby_name or f"Restored Lobby {request.lobby_id[:8]}"
 
         # Restore game state using utility function
-        lobby = restore_game_state_util(game_data, lobby_id, lobby_name)
+        lobby = restore_game_state_util(
+            game_data, lobby_id, lobby_name, lobby_manager.garages
+        )
 
         # Add the restored lobby to the lobby manager
         lobby_manager.lobbies[str(lobby_id)] = lobby

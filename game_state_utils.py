@@ -7,6 +7,7 @@ from typing import Dict, Any
 from dto.debug import DebugDumpResponse, DebugRestoreResponse
 from src.arena import Arena, ArenaMap
 from src.entities.player import Player
+from src.garage import GarageProfile
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
@@ -159,11 +160,16 @@ def find_current_actor(
 
 
 def restore_game_state(
-    game_data: Dict[str, Any], lobby_id: UUID, lobby_name: str
+    game_data: Dict[str, Any], lobby_id: UUID, lobby_name: str, garages: dict
 ) -> Lobby:
     """Restore complete game state from dump data"""
     # Create a fresh lobby with the provided ID
-    lobby = Lobby(name=lobby_name, players_num=2, created_by_player_id=lobby_id)
+    lobby = Lobby(
+        name=lobby_name,
+        players_num=2,
+        created_by_player_id=lobby_id,
+        garages=garages,
+    )
     lobby.id = lobby_id  # Override the generated ID with the provided one
 
     # Extract and add players from the dump
@@ -172,6 +178,8 @@ def restore_game_state(
     for player_id, player_data in player_states.items():
         restored_player = restore_player_from_data(player_data)
         lobby.players[str(player_id)] = restored_player
+        if str(player_id) not in garages:
+            garages[str(player_id)] = GarageProfile.from_player(restored_player)
 
     # Restore arena
     arena = restore_arena_from_data(game_data["arena"])

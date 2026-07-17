@@ -1,6 +1,6 @@
 """In-memory гараж для вертикального среза петли лута.
 
-Профиль живёт в Lobby и намеренно не является боевым Player: каждый матч
+Профиль живёт в LobbyManager и намеренно не является боевым Player: каждый матч
 получает свежие HP, прочность деталей и экземпляры оружия.
 """
 
@@ -83,7 +83,6 @@ class GarageMetrics(BaseModel):
 
 class GarageProfile(BaseModel):
     player_id: UUIDStr
-    team: int
     name: str
     weapons: list[Weapon]
     owned_parts: list[Part]
@@ -101,7 +100,6 @@ class GarageProfile(BaseModel):
         ]
         return cls(
             player_id=player.id,
-            team=player.team,
             name=player.name,
             weapons=[w.model_copy(deep=True) for w in player.inventory.weapons],
             owned_parts=parts,
@@ -110,7 +108,7 @@ class GarageProfile(BaseModel):
 
     def part_by_id(self, part_id: UUIDStr) -> Part:
         for part in self.owned_parts:
-            if part.id == part_id:
+            if str(part.id) == str(part_id):
                 return part
         raise ValueError("Деталь не найдена в гараже пилота")
 
@@ -127,11 +125,11 @@ class GarageProfile(BaseModel):
             head=fresh_part(self.equipped_part(PartSlot.HEAD)),
         )
 
-    def build_player(self) -> Player:
+    def build_player(self, team: int = 1) -> Player:
         mech = self.build_mech()
         return Player(
             id=self.player_id,
-            team=self.team,
+            team=team,
             name=self.name,
             mech=mech,
             stats=mech.build_character_stats(action_points=10),

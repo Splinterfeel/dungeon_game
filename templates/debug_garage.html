@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Garage</title>
+    <style>
+        body { margin: 24px; background: #111; color: #eee; font-family: Arial, sans-serif; }
+        input, button { background: #222; color: #eee; border: 1px solid #666; padding: 6px; }
+        button { cursor: pointer; }
+        #garage_content { margin-top: 18px; max-width: 850px; }
+        .garage-part { border-top: 1px solid #333; padding: 8px 0; font-size: 14px; }
+        .rarity-common { color: #ddd; }
+        .rarity-rare { color: #70b7ff; }
+        .rarity-epic { color: #c882ff; }
+        .muted { color: #999; }
+    </style>
+</head>
+<body>
+    <h1>Debug Garage</h1>
+    <p class="muted">Гараж появляется только после первого подключения этого player_id через debug-карту.</p>
+    <div>
+        <label for="player_id_input">Player ID</label>
+        <input id="player_id_input" type="text" style="width: 380px;">
+        <button onclick="load_garage()">Открыть гараж</button>
+        <a href="/" style="color:#8fd88f; margin-left:12px;">Вернуться к игре</a>
+    </div>
+    <div id="garage_content" class="muted">Введите player_id и нажмите «Открыть гараж».</div>
+
+<script>
+const GARAGE_SLOT_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
+
+function garage_part_stats(part) {
+    return `HP ${part.health}, Speed ${part.speed}, Acc ${part.accuracy}, Melee ${part.melee_power}, View ${part.view_distance}, вес ${part.weight}`;
+}
+
+function garage_delta(candidate, equipped) {
+    const fields = ["health", "speed", "accuracy", "melee_power", "view_distance", "weight"];
+    return fields.map(field => {
+        const delta = candidate[field] - equipped[field];
+        if (!delta) return null;
+        return `${field}: ${delta > 0 ? "+" : ""}${delta}`;
+    }).filter(Boolean).join(", ") || "без изменения статов";
+}
+
+async function load_garage() {
+    const playerId = document.getElementById("player_id_input").value.trim();
+    const container = document.getElementById("garage_content");
+    if (!playerId) {
+        container.textContent = "Укажите player_id.";
+        return;
+    }
+    try {
+        const response = await fetch(`http://{{ host }}/debug/garages/${playerId}`);
+        if (!response.ok) throw new Error((await response.json()).detail);
+        const garage = await response.json();
+        const equipped = {torso: garage.mech.torso, legs: garage.mech.legs, arms: garage.mech.arms_left, head: garage.mech.head};
+        let html = `<div>Вес ${garage.mech.parts_weight}/${garage.mech.weight_capacity}; шансы: победа ${garage.reward_chances.winner * 100}%, поражение ${garage.reward_chances.loser * 100}%</div>`;
+        html += `<div class="muted" style="margin:6px 0">Матчей ${garage.metrics.matches_finished}, наград ${garage.metrics.rewards_received}, установок ${garage.metrics.parts_equipped}, рематчей ${garage.metrics.rematches_started}</div>`;
+        html += `<h3>Установлено</h3>`;
+        for (const slot of ["torso", "legs", "arms", "head"]) {
+            const part = equipped[slot];
+            html += `<div>${GARAGE_SLOT_LABELS[slot]}: <span class="rarity-${part.rarity}">${part.name}</span> (${garage_part_stats(part)})</div>`;
+        }
+        html += `<h3>Склад (${garage.stored_parts.length})</h3>`;
+        if (!garage.stored_parts.length) html += `<div class="muted">Новых деталей пока нет.</div>`;
+        for (const part of garage.stored_parts) {
+            const current = equipped[part.slot];
+            html += `<div class="garage-part"><span class="rarity-${part.rarity}">${part.name}</span> — ${GARAGE_SLOT_LABELS[part.slot]}<br>` +
+                `<span class="muted">${garage_part_stats(part)}; относительно установленной: ${garage_delta(part, current)}</span><br>` +
+                `<button onclick="equip_garage_part('${part.id}')">Установить</button></div>`;
+        }
+        container.innerHTML = html;
+    } catch (e) {
+        container.textContent = `Гараж недоступен: ${e.message}`;
+    }
+}
+
+async function equip_garage_part(partId) {
+    const playerId = document.getElementById("player_id_input").value.trim();
+    const response = await fetch("http://{{ host }}/debug/garages/equip", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({player_id: playerId, part_id: partId})
+    });
+    if (!response.ok) {
+        alert(`Не удалось установить: ${(await response.json()).detail}`);
+        return;
+    }
+    await load_garage();
+}
+</script>
+</body>
+</html>

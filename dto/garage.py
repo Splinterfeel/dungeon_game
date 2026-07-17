@@ -24,7 +24,6 @@ class GarageState(BaseModel):
 
 
 class EquipGaragePartRequest(BaseModel):
-    lobby_id: str
     player_id: UUID
     part_id: UUID
 
