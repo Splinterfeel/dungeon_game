@@ -129,7 +129,9 @@ def get_garage(player_id: str) -> GarageState:
 def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
     try:
         return lobby_manager.equip_garage_part(
-            str(request.player_id), str(request.part_id)
+            str(request.player_id),
+            str(request.loadout_id),
+            str(request.part_id),
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
@@ -223,14 +225,13 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             code=WSCloseCodes.LOBBY_NOT_FOUND, reason="Lobby not found"
         )
         return
-    if player_id not in lobby.players:
+    if player_id not in lobby.participants:
         await websocket.close(
             code=WSCloseCodes.PLAYER_NOT_IN_LOBBY,
             reason="Player not connected to lobby",
         )
         return
-    player = lobby.players[player_id]
-    lobby.connect(player, websocket)
+    lobby.connect(player_id, websocket)
     # даже до первого сообщения игрока сразу даём ему состояние лобби и состояние игры
     print("BROADCASTING ON CONNECT")
     if not lobby.game:
@@ -241,7 +242,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
         await lobby.broadcast_game_state()
         await lobby.broadcast_game_event(
             GameEvent(message=f"Ход {lobby.game.turn.current_actor.name}"),
-            receiver_player_ids=[player.id],
+            receiver_player_ids=[player_id],
         )
     try:
         while True:
@@ -249,21 +250,21 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
             if not lobby.game:
                 # Игра еще не началась, обрабатываем действия лобби (чат, готовность)
                 print("await lobby.handle_lobby_action(player, data)")
-                await lobby.handle_lobby_action(player, data)
+                await lobby.handle_lobby_action(player_id, data)
                 # Если нужно, уведомляем всех о новом игроке/готовности
                 print("await lobby.broadcast_lobby_state()")
                 await lobby.broadcast_lobby_state()
             else:
                 game_action_state = GameActionState.model_validate(data)
                 performed = await lobby.handle_game_action(
-                    player, game_action_state.model_dump()
+                    player_id, game_action_state.model_dump()
                 )
                 if performed:
                     await lobby.broadcast_game_state()
                     # проверить ход врагов, и если да - выполнить их ходы
                     if lobby.game.turn.phase == GamePhase.AI_ENEMY_PHASE:
                         while (
-                            lobby.game.turn.phase != GamePhase.TEAM_1_PHASE
+                            lobby.game.turn.phase == GamePhase.AI_ENEMY_PHASE
                             and not lobby.game.ended
                         ):
                             actor = lobby.game.turn.current_actor
@@ -295,4 +296,4 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                     )
                     lobby.game.end_announced = True
     except WebSocketDisconnect:
-        lobby.disconnect(player)
+        lobby.disconnect(player_id)

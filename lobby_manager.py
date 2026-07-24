@@ -1,5 +1,5 @@
 from dto.base import CreateLobbyRequest, LobbyDTO
-from dto.garage import GarageMetricsState, GarageState
+from dto.garage import GarageLoadoutState, GarageMetricsState, GarageState
 from lobby import Lobby
 from src.garage import GarageProfile, MATCH_REWARD_CHANCES
 
@@ -33,15 +33,27 @@ class LobbyManager:
             raise ValueError(
                 "Гараж пилота ещё не создан: сначала подключитесь через debug-карту"
             )
-        player = garage.build_player()
-        equipped_ids = set(garage.equipped_part_ids.values())
+        loadout_states = []
+        equipped_ids = set()
+        for loadout in garage.loadouts:
+            player = garage.build_player(loadout_id=loadout.id)
+            equipped_ids.update(loadout.equipped_part_ids.values())
+            loadout_states.append(
+                GarageLoadoutState(
+                    id=str(loadout.id),
+                    name=loadout.name,
+                    preset_name=loadout.preset_name,
+                    mech=player.mech.model_dump(mode="json"),
+                    stats=player.stats.model_dump(),
+                    weapons=[
+                        weapon.model_dump(mode="json")
+                        for weapon in player.inventory.weapons
+                    ],
+                )
+            )
         return GarageState(
             player_id=player_id,
-            mech=player.mech.model_dump(mode="json"),
-            stats=player.stats.model_dump(),
-            weapons=[
-                weapon.model_dump(mode="json") for weapon in player.inventory.weapons
-            ],
+            loadouts=loadout_states,
             stored_parts=[
                 part.model_dump(mode="json")
                 for part in garage.owned_parts
@@ -51,13 +63,15 @@ class LobbyManager:
             metrics=GarageMetricsState.model_validate(garage.metrics.model_dump()),
         )
 
-    def equip_garage_part(self, player_id: str, part_id: str) -> GarageState:
+    def equip_garage_part(
+        self, player_id: str, loadout_id: str, part_id: str
+    ) -> GarageState:
         garage = self.garages.get(player_id)
         if garage is None:
             raise ValueError(
                 "Гараж пилота ещё не создан: сначала подключитесь через debug-карту"
             )
-        garage.equip(part_id)
+        garage.equip(loadout_id, part_id)
         return self.get_garage_state(player_id)
 
     def get_lobbies_list(self) -> list[LobbyDTO]:
@@ -68,10 +82,10 @@ class LobbyManager:
                 players_num=l.players_num,
                 created_by_player_id=l.created_by_player_id,
                 team_1_connected_players=len(
-                    [p for p in l.players.values() if p.team == 1]
+                    [p for p in l.participants.values() if p.team == 1]
                 ),
                 team_2_connected_players=len(
-                    [p for p in l.players.values() if p.team == 2]
+                    [p for p in l.participants.values() if p.team == 2]
                 ),
                 game_started=l.game is not None,
             )

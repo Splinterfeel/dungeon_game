@@ -14,7 +14,7 @@ from src.entities.mech import Mech
 from src.turn import Turn
 from src.base import Point
 from src.game import Game
-from lobby import Lobby
+from lobby import Lobby, LobbyParticipant
 
 
 def create_debug_dump_response(
@@ -24,12 +24,12 @@ def create_debug_dump_response(
     # Get players info
     players_info = [
         {
-            "id": str(player.id),
-            "name": player.name,
-            "team": player.team,
-            "is_connected": str(player.id) in lobby.connections,
+            "id": participant.player_id,
+            "team": participant.team,
+            "actor_ids": participant.actor_ids,
+            "is_connected": participant.player_id in lobby.connections,
         }
-        for player in lobby.players.values()
+        for participant in lobby.participants.values()
     ]
 
     return DebugDumpResponse(
@@ -49,6 +49,9 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
     restored_player = Player(
         id=player_uuid,
         team=player_data["team"],
+        owner_player_id=player_data.get("owner_player_id", player_uuid),
+        loadout_id=player_data.get("loadout_id"),
+        name=player_data.get("name"),
         mech=Mech.model_validate(player_data["mech"]),
         xp=player_data.get("xp", 0),
         level=player_data.get("level", 1),
@@ -72,8 +75,6 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
     restored_player.current_action_points = player_data["current_action_points"]
     restored_player.current_speed_spent = player_data.get("current_speed_spent", 0)
     restored_player.overwatch = player_data.get("overwatch")
-    restored_player.name = player_data.get("name", f"Player {player_data['team']}")
-
     return restored_player
 
 
@@ -131,6 +132,8 @@ def restore_turn_from_data(turn_data: Dict[str, Any]) -> Turn:
         number=turn_data["number"],
         phase=turn_data["phase"],
         actor_ids_passed_turn=set(turn_data.get("actor_ids_passed_turn", [])),
+        player_actor_order=turn_data.get("player_actor_order", []),
+        player_order_index=turn_data.get("player_order_index", -1),
     )
 
     turn.available_moves = [
@@ -164,22 +167,37 @@ def restore_game_state(
 ) -> Lobby:
     """Restore complete game state from dump data"""
     # Create a fresh lobby with the provided ID
+    owner_ids = list(
+        dict.fromkeys(
+            str(player.get("owner_player_id", player["id"]))
+            for player in game_data["players"]
+        )
+    )
     lobby = Lobby(
         name=lobby_name,
-        players_num=2,
-        created_by_player_id=lobby_id,
+        players_num=len(owner_ids),
+        created_by_player_id=owner_ids[0] if owner_ids else lobby_id,
         garages=garages,
     )
     lobby.id = lobby_id  # Override the generated ID with the provided one
 
     # Extract and add players from the dump
-    player_states = {p["id"]: p for p in game_data["players"]}
-
-    for player_id, player_data in player_states.items():
+    restored_by_owner: dict[str, list[Player]] = {}
+    for player_data in game_data["players"]:
         restored_player = restore_player_from_data(player_data)
-        lobby.players[str(player_id)] = restored_player
-        if str(player_id) not in garages:
-            garages[str(player_id)] = GarageProfile.from_player(restored_player)
+        actor_id = str(restored_player.id)
+        owner_id = str(restored_player.owner_player_id)
+        lobby.players[actor_id] = restored_player
+        restored_by_owner.setdefault(owner_id, []).append(restored_player)
+
+    for owner_id, owned_actors in restored_by_owner.items():
+        lobby.participants[owner_id] = LobbyParticipant(
+            player_id=owner_id,
+            team=owned_actors[0].team,
+            actor_ids=[str(actor.id) for actor in owned_actors],
+        )
+        if owner_id not in garages:
+            garages[owner_id] = GarageProfile.from_players(owned_actors)
 
     # Restore arena
     arena = restore_arena_from_data(game_data["arena"])

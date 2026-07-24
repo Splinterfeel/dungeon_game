@@ -1,15 +1,25 @@
 import names
 from pydantic import Field, model_validator
 
-from src.entities.base import Actor
+from src.entities.base import Actor, UUIDStr
 from src.entities.mech import Mech
 
 
 class Player(Actor):
     team: int = 1
+    # id — конкретный боевой мех; owner_player_id — подключённый пилот,
+    # которому разрешено отправлять действия за этого актора.
+    owner_player_id: UUIDStr | None = None
+    loadout_id: UUIDStr | None = None
     mech: Mech
     xp: int = 0
     level: int = 1
+
+    @model_validator(mode="after")
+    def set_default_owner(self):
+        if self.owner_player_id is None:
+            self.owner_player_id = self.id
+        return self
 
     @model_validator(mode="after")
     def set_team_name(self):

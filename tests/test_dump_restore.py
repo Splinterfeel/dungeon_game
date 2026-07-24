@@ -43,7 +43,8 @@ def test_dump_restore_workflow():
     assert dump.status_code == 200, dump.text
     game_state = dump.json()["game_state"]
     assert {"arena", "players", "turn"} <= game_state.keys()
-    assert game_state["players"], "dump должен содержать игроков"
+    assert len(game_state["players"]) == 4
+    assert len({p["owner_player_id"] for p in game_state["players"]}) == 2
     assert "mech" in game_state["players"][0], "mech должен попадать в дамп"
 
     # restore обратно в то же лобби
@@ -59,4 +60,8 @@ def test_dump_restore_workflow():
     assert dump2.status_code == 200, dump2.text
     game_state2 = dump2.json()["game_state"]
     assert len(game_state2["players"]) == len(game_state["players"])
+    assert (
+        game_state2["turn"]["player_actor_order"]
+        == game_state["turn"]["player_actor_order"]
+    )
     assert "mech" in game_state2["players"][0]

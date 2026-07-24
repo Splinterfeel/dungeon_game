@@ -96,6 +96,8 @@ class ActorState(BaseModel):
 
 class PlayerState(ActorState):
     team: int
+    owner_player_id: str
+    loadout_id: str | None = None
     mech: MechState
 
 
@@ -103,7 +105,7 @@ class TurnState(BaseModel):
     number: int
     phase: int
     # current_actor ставим в None если это враг
-    current_actor: ActorState | None
+    current_actor: PlayerState | None
     available_moves: list[PointState]
 
 

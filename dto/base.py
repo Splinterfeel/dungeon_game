@@ -5,9 +5,13 @@ from pydantic import BaseModel, Field
 class PlayerDTO(BaseModel):
     id: UUID
     team: int
-    # имя пресета меха (см. src/mech_presets.py); если не передано — сервер
-    # выбирает случайный пресет, как и раньше
-    mech_preset: str | None = None
+    # Два стартовых меха пилота. None в конкретной позиции означает случайный
+    # пресет. После создания гаража последующие значения игнорируются.
+    mech_presets: list[str | None] = Field(
+        default_factory=lambda: [None, None],
+        min_length=2,
+        max_length=2,
+    )
 
 
 class DetailedBoolResponse(BaseModel):

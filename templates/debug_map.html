@@ -146,8 +146,8 @@ body {
 <fieldset class="panel-group">
 <legend>Лобби</legend>
 <div class="control-row">
-    <label for="input_players_num">Кол-во игроков</label>
-    <input type="number" id="input_players_num" value="1" style="width: 50px">
+    <label for="input_players_num">Кол-во пилотов</label>
+    <input type="number" id="input_players_num" value="2" style="width: 50px">
     <button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
 </div>
 <div class="control-row">
@@ -155,8 +155,12 @@ body {
         <option value="1">1</option>
         <option value="2">2</option>
     </select>
-    <label for="mech_preset_select">Пресет меха</label>
-    <select id="mech_preset_select" style="background: #222; color: #eee; padding: 5px;">
+    <label for="mech_preset_select_1">Мех 1</label>
+    <select id="mech_preset_select_1" style="background: #222; color: #eee; padding: 5px;">
+        <option value="">-- случайный --</option>
+    </select>
+    <label for="mech_preset_select_2">Мех 2</label>
+    <select id="mech_preset_select_2" style="background: #222; color: #eee; padding: 5px;">
         <option value="">-- случайный --</option>
     </select>
     <button onclick="connect_to_lobby()" style="background: #4caf50; color: white;">Присоединиться к лобби (POST)</button>
@@ -243,7 +247,7 @@ function select_cell(x, y, cellEl) {
     const enemies = lastGameState.arena.enemies || [];
     let _pre_content = `[${x} ${y}]`;
     const player = players.find(p => p.position.x === x && p.position.y === y);
-    if (player) { info.textContent = `${_pre_content} Игрок: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
+    if (player) { info.textContent = `${_pre_content} Мех: ${player.name} HP ${player.stats.health} Speed ${player.stats.speed}`; return; }
 
     const enemy = enemies.find(e => e.position.x === x && e.position.y === y);
     if (enemy) { info.textContent = `${_pre_content} Враг: ${enemy.name} HP ${enemy.stats.health} Speed ${enemy.stats.speed}`; return; }
@@ -305,7 +309,8 @@ async function refresh_lobbies_list() {
             const option = document.createElement("option");
             option.value = lobby.id;
             const status = lobby.game_started ? "[Игра идет]" : "[Ожидание]";
-            const playersInfo = `${lobby.team_1_connected_players}/${lobby.players_num} игроков`;
+            const connectedPlayers = lobby.team_1_connected_players + lobby.team_2_connected_players;
+            const playersInfo = `${connectedPlayers}/${lobby.players_num} пилотов`;
             option.textContent = `${lobby.name} (${playersInfo}) ${status}`;
 
             if (lobby.id === currentValue) {
@@ -379,17 +384,23 @@ async function start_game() {
 let mechPresetDescriptions = {};
 
 async function refresh_mech_presets() {
-    const _select = document.getElementById("mech_preset_select");
+    const selects = [
+        document.getElementById("mech_preset_select_1"),
+        document.getElementById("mech_preset_select_2"),
+    ];
     try {
         const response = await fetch("http://{{ host }}/mech_presets");
         const presets = await response.json();
-        // сохраняем опцию "случайный", дальше добавляем пресеты
-        _select.innerHTML = '<option value="">-- случайный --</option>';
+        selects.forEach(select => {
+            select.innerHTML = '<option value="">-- случайный --</option>';
+            presets.forEach(preset => {
+                const option = document.createElement("option");
+                option.value = preset.name;
+                option.textContent = preset.name;
+                select.appendChild(option);
+            });
+        });
         presets.forEach(preset => {
-            const option = document.createElement("option");
-            option.value = preset.name;
-            option.textContent = preset.name;
-            _select.appendChild(option);
             mechPresetDescriptions[preset.name] = preset.description;
         });
     } catch (e) {
@@ -401,7 +412,8 @@ async function connect_to_lobby() {
     const _input_lobby = document.getElementById("lobby_id_input");
     const _player_id_input = document.getElementById("player_id_input");
     const _player_team_select = document.getElementById("team_select");
-    const _mech_preset_select = document.getElementById("mech_preset_select");
+    const _mech_preset_select_1 = document.getElementById("mech_preset_select_1");
+    const _mech_preset_select_2 = document.getElementById("mech_preset_select_2");
     try {
         const response = await fetch("http://{{ host }}/connect_lobby", {
             method: "POST",
@@ -411,7 +423,10 @@ async function connect_to_lobby() {
                 player: {
                     id: _player_id_input.value,
                     team: _player_team_select.value,
-                    mech_preset: _mech_preset_select.value || null,
+                    mech_presets: [
+                        _mech_preset_select_1.value || null,
+                        _mech_preset_select_2.value || null,
+                    ],
                 }
             })
         });
@@ -618,7 +633,13 @@ function render_mech_inspector() {
 function handle_game_state(state){
     lastGameState = state;
     const playerId = document.getElementById("player_id_input").value;
-    lastPlayerState = state.players.find(p => p.id === playerId);
+    const controlledPlayers = state.players.filter(
+        p => p.owner_player_id === playerId
+    );
+    const currentActor = state.turn.current_actor;
+    lastPlayerState = currentActor && currentActor.owner_player_id === playerId
+        ? controlledPlayers.find(p => p.id === currentActor.id)
+        : controlledPlayers[0];
 
     if (lastPlayerState) {
         document.title = lastPlayerState.name;
@@ -628,8 +649,7 @@ function handle_game_state(state){
     const tiles = arena.map.tiles;
     const width = arena.map.width;
     const height = arena.map.height;
-    const currentActor = state.turn.current_actor;
-    if (currentActor && currentActor.id === playerId){
+    if (currentActor && currentActor.owner_player_id === playerId){
         showToast("Ваш ход!");
     }
 
@@ -662,7 +682,7 @@ function handle_game_state(state){
         actorsContainer.appendChild(makeActorRow(`ИИ/Враг ${e.name}`, e.stats, e.current_action_points, "#AA3344", !!e.overwatch));
     }
     for (const p of state.players) {
-        actorsContainer.appendChild(makeActorRow(`Игрок ${p.name}`, p.stats, p.current_action_points, "#338833", !!p.overwatch));
+        actorsContainer.appendChild(makeActorRow(`Мех ${p.name}`, p.stats, p.current_action_points, "#338833", !!p.overwatch));
     }
     if (state.turn.current_actor) {
         const ca = state.turn.current_actor;
@@ -696,17 +716,13 @@ function handle_game_state(state){
     // игроки
     for (const p of state.players) {
         let _val = "P";
-        if (p.id == lastPlayerState.id){
+        if (p.owner_player_id === playerId){
             _val = "P!";
         }
         visual[p.position.x][p.position.y].entity = _val;
         visual[p.position.x][p.position.y].overwatch = !!p.overwatch;
     }
     // === туман войны (евклидова дистанция + луч видимости по Брезенхему) ===
-    const viewDist = lastPlayerState.stats.view_distance;
-    const px = lastPlayerState.position.x;
-    const py = lastPlayerState.position.y;
-
     function bresenham(x1, y1, x2, y2) {
         const points = [];
         let dx = Math.abs(x2 - x1);
@@ -752,8 +768,14 @@ function handle_game_state(state){
     for (let x = 0; x < width; x++) {
         fogMap[x] = [];
         for (let y = 0; y < height; y++) {
-            const inRange = Math.sqrt((x - px) ** 2 + (y - py) ** 2) <= viewDist;
-            fogMap[x][y] = !inRange || !hasLineOfSight(px, py, x, y);
+            const visibleFromOwnedMech = controlledPlayers.some(player => {
+                const distance = Math.sqrt(
+                    (x - player.position.x) ** 2 + (y - player.position.y) ** 2
+                );
+                return distance <= player.stats.view_distance &&
+                    hasLineOfSight(player.position.x, player.position.y, x, y);
+            });
+            fogMap[x][y] = !visibleFromOwnedMech;
         }
     }
 

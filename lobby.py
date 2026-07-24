@@ -1,12 +1,19 @@
 import asyncio
 import copy
+from dataclasses import dataclass, field
 from uuid import uuid4, UUID
 from fastapi import WebSocket
 from typing import Optional, List
 
 from dto.base import PlayerDTO
 from dto.event import GameEvent
-from dto.state import GameState, LobbyState, LobbyStatePayload, PartState
+from dto.state import (
+    GameState,
+    LobbyState,
+    LobbyStatePayload,
+    PartState,
+    PlayerState,
+)
 from src.entities.enemy import Enemy
 from src.game import Game
 from src.arena import Arena
@@ -18,6 +25,13 @@ from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
 from src.garage import GarageProfile, roll_match_reward
+
+
+@dataclass
+class LobbyParticipant:
+    player_id: str
+    team: int
+    actor_ids: list[str] = field(default_factory=list)
 
 
 class Lobby(GameObserver):
@@ -32,6 +46,9 @@ class Lobby(GameObserver):
         self.name = name
         self.players_num = players_num
         self.created_by_player_id = str(created_by_player_id)
+        self.participants: dict[str, LobbyParticipant] = {}
+        # Боевые акторы заполняются при старте матча. Ключ — actor id, а не
+        # player_id подключённого пилота.
         self.players: dict[str, Player] = {}
         # Гаражи живут в LobbyManager и общие для всех лобби процесса.
         self.garages = garages
@@ -51,46 +68,54 @@ class Lobby(GameObserver):
         await self.broadcast_game_state()
 
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
-        if str(player.id) in self.players:
+        player_id = str(player.id)
+        if player_id in self.participants:
             return False, "player already in lobby"
-        if len(self.players) == self.players_num:
+        if len(self.participants) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
-        garage = self.garages.get(str(player.id))
+        garage = self.garages.get(player_id)
         if garage is None:
-            if player.mech_preset:
-                preset = get_mech_preset_by_name(player.mech_preset)
-                if preset is None:
-                    return False, f"unknown mech preset: {player.mech_preset}"
-            else:
-                preset = get_random_mech_preset()
-            mech = preset.mech
-            game_player = Player(
-                id=player.id,
-                team=player.team,
-                mech=mech,
-                stats=mech.build_character_stats(action_points=10),
-                inventory=Inventory(weapons=preset.weapons),
-            )
-            garage = GarageProfile.from_player(game_player)
-            self.garages[str(player.id)] = garage
-        else:
-            # Для уже созданного гаража выбранный в UI пресет намеренно
-            # игнорируется: источником истины служит сборка пилота.
-            game_player = garage.build_player(team=player.team)
-        self.players[str(player.id)] = game_player
+            presets = []
+            for preset_name in player.mech_presets:
+                if preset_name:
+                    preset = get_mech_preset_by_name(preset_name)
+                    if preset is None:
+                        return False, f"unknown mech preset: {preset_name}"
+                else:
+                    preset = get_random_mech_preset()
+                presets.append(preset)
+
+            starting_players = [
+                Player(
+                    id=player.id,
+                    team=player.team,
+                    mech=preset.mech,
+                    stats=preset.mech.build_character_stats(action_points=10),
+                    inventory=Inventory(weapons=preset.weapons),
+                )
+                for preset in presets
+            ]
+            garage = GarageProfile.from_players(starting_players)
+            self.garages[player_id] = garage
+        self.participants[player_id] = LobbyParticipant(
+            player_id=player_id,
+            team=player.team,
+        )
         await self.broadcast_lobby_state()
         return True, "player connected"
 
     async def start_game(self) -> tuple[bool, str]:
         if self.game is not None:
             return False, "Game already started"
-        if len(self.players) != self.players_num:
+        if len(self.participants) != self.players_num:
             detail = (
-                f"Can't start game, players: {len(self.players)} / {self.players_num}"
+                f"Can't start game, players: "
+                f"{len(self.participants)} / {self.players_num}"
             )
             print(
-                f"Can't start game, players: {len(self.players)} / {self.players_num}"
+                f"Can't start game, players: "
+                f"{len(self.participants)} / {self.players_num}"
             )
             return False, detail
         # генерация
@@ -111,12 +136,21 @@ class Lobby(GameObserver):
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         arena = Arena(enemies_num=2, map=arena_map)
-        # Всегда пересобираем бой из гаража: HP и поломки прошлого матча не
-        # являются прогрессом, а установленная деталь — является.
-        self.players = {
-            player_id: self.garages[player_id].build_player(team=player.team)
-            for player_id, player in self.players.items()
-        }
+        # Всегда пересобираем весь отряд из гаража: HP и поломки прошлого
+        # матча не являются прогрессом, а установленные детали — являются.
+        self.players = {}
+        for participant in self.participants.values():
+            participant.actor_ids = []
+            garage = self.garages[participant.player_id]
+            for loadout in garage.loadouts:
+                actor = garage.build_player(
+                    team=participant.team,
+                    loadout_id=loadout.id,
+                    actor_id=uuid4(),
+                )
+                actor_id = str(actor.id)
+                participant.actor_ids.append(actor_id)
+                self.players[actor_id] = actor
         self.game = Game(arena=arena, players=list(self.players.values()))
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
@@ -129,7 +163,7 @@ class Lobby(GameObserver):
             return False, "Рематч доступен только после завершения матча"
         result, detail = await self._start_fresh_game()
         if result:
-            for player_id in self.players:
+            for player_id in self.participants:
                 self.garages[player_id].metrics.rematches_started += 1
         return result, detail
 
@@ -139,11 +173,11 @@ class Lobby(GameObserver):
         self.game = None
         return await self.start_game()
 
-    def connect(self, player: PlayerDTO, websocket: WebSocket):
-        self.connections[player.id] = websocket
+    def connect(self, player_id: str, websocket: WebSocket):
+        self.connections[player_id] = websocket
 
-    def disconnect(self, player: PlayerDTO):
-        self.connections.pop(player.id, None)
+    def disconnect(self, player_id: str):
+        self.connections.pop(player_id, None)
 
     async def handle_lobby_action(self, player, action):
         print("[LOBBY handle lobby action]", player, action)
@@ -152,7 +186,7 @@ class Lobby(GameObserver):
         # Формируем структуру для лобби (до старта игры)
         if self.game:
             status = "game started"
-        elif self.players_num == len(self.players):
+        elif self.players_num == len(self.participants):
             status = "Waiting for host to start the game..."
         else:
             status = "Waiting for all players to connect..."
@@ -160,7 +194,7 @@ class Lobby(GameObserver):
             payload=LobbyStatePayload(
                 status=status,
                 players_num=self.players_num,
-                connected_players=[str(p.id) for p in list(self.players.values())],
+                connected_players=list(self.participants),
                 created_by_player_id=self.created_by_player_id,
             )
         )
@@ -185,16 +219,23 @@ class Lobby(GameObserver):
             except Exception as e:
                 print("broadcast_game_event exception", e)
 
-    async def handle_game_action(self, _actor: PlayerDTO, payload: dict) -> bool:
+    async def handle_game_action(self, requester: str | Enemy, payload: dict) -> bool:
         async with self.lock:
             if not self.game or self.game.ended:
                 return False
+            action = Action(**payload)
             actors = {str(e.id): e for e in self.game.arena.enemies}
             actors.update(self.players)
-            actor = actors[str(_actor.id)]
-            action = Action(**payload)
-            if isinstance(actor, Enemy):
-                pass
+            actor = actors.get(action.actor_id)
+            if actor is None:
+                return False
+            if isinstance(requester, str):
+                if not isinstance(actor, Player):
+                    return False
+                if str(actor.owner_player_id) != requester:
+                    return False
+            elif actor is not requester:
+                return False
             action_result = await self.game.perform_actor_action(actor, action)
             self.game.version += 1
             if self.game.ended:
@@ -206,9 +247,11 @@ class Lobby(GameObserver):
         if not self.game or self.game.rewards_granted:
             return
         self.game.rewards_granted = True
-        for player_id, player in self.players.items():
+        for player_id, participant in self.participants.items():
             garage = self.garages[player_id]
-            is_winner = self.game.winner is not None and player.team == self.game.winner
+            is_winner = (
+                self.game.winner is not None and participant.team == self.game.winner
+            )
             garage.metrics.matches_finished += 1
             reward = roll_match_reward(garage, is_winner)
             if reward.awarded_part is None:
@@ -244,7 +287,11 @@ class Lobby(GameObserver):
             # если нет текущего актора (значит это Enemy AI) - не отдаём доступные клетки
             game_state.turn.available_moves = []
             return game_state
-        if game_state.turn.current_actor.id != player_id:
+        current_actor = game_state.turn.current_actor
+        if (
+            not isinstance(current_actor, PlayerState)
+            or current_actor.owner_player_id != player_id
+        ):
             game_state.turn.available_moves = []
         return game_state
 
@@ -259,8 +306,8 @@ class Lobby(GameObserver):
                 2: self.filter_visible_entities_for_team(state, 2),
             }
             for player_id, ws in self.connections.items():
-                player = self.players[str(player_id)]
-                _state = states_for_teams[player.team]
+                participant = self.participants[player_id]
+                _state = states_for_teams[participant.team]
                 _state = self.filter_available_moves(_state, str(player_id))
                 try:
                     await ws.send_json(
@@ -290,4 +337,16 @@ class Lobby(GameObserver):
                     break
         game_state.players = visible_players
         game_state.arena.enemies = visible_enemies
+        if (
+            game_state.turn.current_actor is not None
+            and game_state.turn.current_actor.team != team
+            and all(
+                player.id != game_state.turn.current_actor.id
+                for player in visible_players
+            )
+        ):
+            # Порядок хода не должен превращаться в радар: скрытый вражеский
+            # мех не отдаём вместе с позицией, статами и оружием.
+            game_state.turn.current_actor = None
+            game_state.turn.available_moves = []
         return game_state

@@ -19,6 +19,7 @@ SimpleEnemyAI под PvP: стрельба -> сближение -> ближни
 import asyncio
 import copy
 import random
+import uuid
 from collections import defaultdict
 
 import src.action_handler as action_handler_module
@@ -161,10 +162,12 @@ class PvPBotAI(AI):
         return self.end_turn()
 
 
-def make_player(team: int, preset_name: str) -> Player:
+def make_player(team: int, preset_name: str, owner_id) -> Player:
     preset = get_mech_preset_by_name(preset_name)
     mech = preset.mech
     return Player(
+        owner_player_id=owner_id,
+        loadout_id=uuid.uuid4(),
         team=team,
         mech=mech,
         stats=mech.build_character_stats(action_points=10),
@@ -181,8 +184,13 @@ def build_game(team1_presets, team2_presets) -> Game:
     # enemies_num=0: чистый PvP без нейтрального ИИ, чтобы не шуметь поверх
     # баланса пресетов.
     arena = Arena(enemies_num=0, map=arena_map)
-    players = [make_player(1, p) for p in team1_presets] + [
-        make_player(2, p) for p in team2_presets
+    # Целевой формат: один пилот на сторону управляет двумя независимыми
+    # лоадаутами. На решения бота владелец не влияет, но модель совпадает с
+    # серверным боем и пригодна для будущих пилотских эффектов.
+    owner_team_1 = uuid.uuid4()
+    owner_team_2 = uuid.uuid4()
+    players = [make_player(1, p, owner_team_1) for p in team1_presets] + [
+        make_player(2, p, owner_team_2) for p in team2_presets
     ]
     return Game(arena=arena, players=players)
 
@@ -307,7 +315,7 @@ async def run_matchup(name, team1_presets, team2_presets, n_games):
 
 
 async def run_counter_matchup(name, preset_a, preset_b, n_games):
-    """Пара в обеих фазовых ориентациях, чтобы отделить силу пресета от порядка ходов."""
+    """Пара в обеих командных ориентациях, чтобы отделить силу от первого хода."""
     team_a = [preset_a, preset_a]
     team_b = [preset_b, preset_b]
     wins_a_first = await run_matchup(
@@ -325,7 +333,7 @@ async def run_counter_matchup(name, preset_a, preset_b, n_games):
     a_wins = wins_a_first[1] + wins_b_first[2]
     b_wins = wins_a_first[2] + wins_b_first[1]
     total = 2 * n_games
-    print(f"\n=== {name}: итог без привязки к порядку фаз ({total} games) ===")
+    print(f"\n=== {name}: итог без привязки к стороне первого хода ({total} games) ===")
     print(f"{preset_a} wins: {a_wins} ({a_wins / total:.0%})")
     print(f"{preset_b} wins: {b_wins} ({b_wins / total:.0%})")
 

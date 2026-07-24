@@ -42,7 +42,22 @@ class Game:
             self.turn = turn
         else:
             self.turn = Turn()
+        if not self.turn.player_actor_order:
+            self.turn.player_actor_order = self._build_player_actor_order()
         self.action_handler = ActionHandler(game=self)
+
+    def _build_player_actor_order(self) -> list[str]:
+        """Стабильная инициатива A1 → B1 → A2 → B2 без смены стороны."""
+        teams = {
+            1: [player for player in self.players if player.team == 1],
+            2: [player for player in self.players if player.team == 2],
+        }
+        order: list[str] = []
+        for index in range(max(len(teams[1]), len(teams[2]))):
+            for team in (1, 2):
+                if index < len(teams[team]):
+                    order.append(str(teams[team][index].id))
+        return order
 
     def set_observer(self, observer: GameObserver) -> None:
         """Register an observer for game events"""
@@ -134,7 +149,7 @@ class Game:
             if isinstance(target, Player):
                 self.arena.remove_dead_player(target)
                 self.players.remove(target)
-                death_detail = f" Игрок {target.name} погиб!"
+                death_detail = f" Мех {target.name} уничтожен!"
             elif isinstance(target, Enemy):
                 self.arena.remove_dead_enemy(target)
                 death_detail = f" {target.name} погиб!"
@@ -169,7 +184,7 @@ class Game:
             # это спам, а не игровое событие
             await self._notify_event(
                 GameEvent(message=action_result.detail),
-                receiver_player_ids=[actor.id],
+                receiver_player_ids=[str(actor.owner_player_id)],
             )
         # актор мог погибнуть от огневого дозора прямо во время своего
         # перемещения (MOVE не входит в ACTIONS_ENDS_TURN, но мёртвый актор
@@ -185,29 +200,30 @@ class Game:
         return action_result
 
     async def pass_turn_to_next_actor(self):
-        if self.turn.phase == GamePhase.TEAM_1_PHASE:
-            actors = [x for x in self.players if x.team == 1]
-        elif self.turn.phase == GamePhase.TEAM_2_PHASE:
-            actors = [x for x in self.players if x.team == 2]
-        else:
-            actors = self.arena.enemies
-        # находим игрока/врага который еще не ходил
-        # пока просто по очереди
-        next_actor = None
-        for actor in actors:
-            if actor.id in self.turn.actor_ids_passed_turn:
+        if self.turn.phase == GamePhase.PLAYER_PHASE:
+            players_by_id = {str(player.id): player for player in self.players}
+            while self.turn.player_order_index + 1 < len(self.turn.player_actor_order):
+                self.turn.player_order_index += 1
+                actor_id = self.turn.player_actor_order[self.turn.player_order_index]
+                actor = players_by_id.get(actor_id)
+                if actor is None or actor.is_dead():
+                    continue
+                await self.prepare_actor_turn(actor)
+                return
+
+            self.turn.phase = GamePhase.AI_ENEMY_PHASE
+            self.turn.current_actor = None
+
+        for enemy in self.arena.enemies:
+            if enemy.is_dead():
                 continue
-            else:
-                next_actor = actor
-                break
-        if not next_actor:
-            if self.turn.has_next_phase():
-                self.turn.switch_phase()
-            else:
-                self.turn.next()
-            await self.pass_turn_to_next_actor()
-        else:
-            await self.prepare_actor_turn(next_actor)
+            if str(enemy.id) in self.turn.actor_ids_passed_turn:
+                continue
+            await self.prepare_actor_turn(enemy)
+            return
+
+        self.turn.next()
+        await self.pass_turn_to_next_actor()
 
     def check_game_end(self):
         # Победа определяется исключительно исходом PvP: как только одна из
@@ -262,4 +278,8 @@ class Game:
         }
         if self.turn.phase == GamePhase.AI_ENEMY_PHASE:
             dump["turn"]["current_actor"] = None
+        elif isinstance(self.turn.current_actor, Player):
+            # Turn.current_actor аннотирован базовым Actor, поэтому обычный
+            # model_dump обрезает поля владельца/команды/меха подкласса.
+            dump["turn"]["current_actor"] = self.turn.current_actor.model_dump()
         return dump

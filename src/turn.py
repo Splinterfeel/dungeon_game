@@ -8,8 +8,7 @@ from src.entities.base import Actor
 
 
 class GamePhase(enum.Enum):
-    TEAM_1_PHASE = enum.auto()
-    TEAM_2_PHASE = enum.auto()
+    PLAYER_PHASE = enum.auto()
     AI_ENEMY_PHASE = enum.auto()
 
     def __str__(self):
@@ -18,33 +17,23 @@ class GamePhase(enum.Enum):
 
 class Turn(BaseModel):
     number: int = 0
-    phase: GamePhase = GamePhase.TEAM_1_PHASE
+    phase: GamePhase = GamePhase.PLAYER_PHASE
     current_actor: Optional[Actor] = None
     available_moves: List[Point] = Field(default_factory=list)
     actor_ids_passed_turn: Set[str] = Field(default_factory=set)
+    player_actor_order: List[str] = Field(default_factory=list)
+    player_order_index: int = -1
 
     def next(self):
         self.number += 1
         self.actor_ids_passed_turn = set()
-        self.phase = GamePhase.TEAM_1_PHASE
+        self.phase = GamePhase.PLAYER_PHASE
+        self.player_order_index = -1
+        self.current_actor = None
 
     def set_current_actor(self, actor: Actor):
-        if actor.id in self.actor_ids_passed_turn:
+        actor_id = str(actor.id)
+        if actor_id in self.actor_ids_passed_turn:
             raise ValueError("actor already ran his turn:", actor.id)
-        self.actor_ids_passed_turn.add(actor.id)
+        self.actor_ids_passed_turn.add(actor_id)
         self.current_actor = actor
-
-    def has_next_phase(self) -> bool:
-        if self.phase == GamePhase.TEAM_1_PHASE:
-            return True
-        if self.phase == GamePhase.TEAM_2_PHASE:
-            return True
-        return False
-
-    def switch_phase(self):
-        if not self.has_next_phase():
-            raise ValueError("can't switch phase")
-        if self.phase == GamePhase.TEAM_1_PHASE:
-            self.phase = GamePhase.TEAM_2_PHASE
-        elif self.phase == GamePhase.TEAM_2_PHASE:
-            self.phase = GamePhase.AI_ENEMY_PHASE

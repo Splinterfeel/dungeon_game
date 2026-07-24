@@ -255,7 +255,7 @@ class ActionHandler:
             if player.is_dead():
                 self.game.arena.remove_dead_player(player)
                 self.game.players.remove(player)
-                death_detail = f" Игрок {player.name} погиб!"
+                death_detail = f" Мех {player.name} уничтожен!"
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
@@ -315,7 +315,7 @@ class ActionHandler:
             if player_attacked.is_dead():
                 self.game.arena.remove_dead_player(player_attacked)
                 self.game.players.remove(player_attacked)
-                death_detail = f" Игрок {player_attacked.name} погиб!"
+                death_detail = f" Мех {player_attacked.name} уничтожен!"
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
