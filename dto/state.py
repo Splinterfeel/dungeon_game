@@ -46,6 +46,14 @@ class OverwatchStateDTO(BaseModel):
     weapon_id: str
 
 
+class SkillState(BaseModel):
+    skill_key: str
+    name: str
+    trigger: str
+    proc_chance: float
+    description: str
+
+
 class PartState(BaseModel):
     id: str
     catalog_key: str
@@ -62,6 +70,9 @@ class PartState(BaseModel):
     destroyed: bool
     weight: int
     carry_capacity: int
+    affix_tier: int
+    affix_stat: str | None
+    affix_value: int
 
 
 class MechState(BaseModel):
@@ -99,6 +110,7 @@ class PlayerState(ActorState):
     owner_player_id: str
     loadout_id: str | None = None
     mech: MechState
+    skills: list[SkillState] = []
 
 
 class TurnState(BaseModel):

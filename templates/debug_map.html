@@ -29,6 +29,7 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 14px;
+    position: relative;
 }
 
 /* base */
@@ -37,8 +38,65 @@ body {
 
 /* entities */
 .player { background: #7ea97f; }
-.player_current { background: #2c902f; font-weight: bold;}
+.player_owned { background: #2c902f; font-weight: bold; }
 .enemy { background: #f44336; }
+.entity-label {
+    position: relative;
+    z-index: 1;
+    line-height: 1;
+}
+.entity-health {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    width: 26px;
+    height: 5px;
+    overflow: hidden;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+    z-index: 2;
+}
+.entity-health-fill {
+    display: block;
+    height: 100%;
+    background: #5bd45f;
+}
+.entity-health-fill.wounded { background: #ffb02e; }
+.entity-health-fill.critical { background: #ff4545; }
+.active-actor {
+    z-index: 3;
+}
+.active-actor::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 3px solid #ffe45e;
+    box-shadow: 0 0 10px #ffe45e;
+    pointer-events: none;
+    animation: active-actor-pulse 1.2s ease-in-out infinite alternate;
+}
+.active-turn-marker {
+    position: absolute;
+    left: 50%;
+    bottom: 1px;
+    transform: translateX(-50%);
+    padding: 0 2px;
+    background: rgba(0, 0, 0, 0.78);
+    color: #fff3a0;
+    font-size: 8px;
+    font-weight: bold;
+    line-height: 9px;
+    pointer-events: none;
+    z-index: 2;
+}
+@keyframes active-actor-pulse {
+    from { box-shadow: 0 0 5px #ffe45e; }
+    to { box-shadow: 0 0 13px #ffe45e; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .active-actor::after { animation: none; }
+}
 
 /* debug */
 .move { outline: 2px solid #00ffff; }
@@ -700,7 +758,13 @@ function handle_game_state(state){
     for (let x = 0; x < width; x++) {
         visual[x] = [];
         for (let y = 0; y < height; y++) {
-            visual[x][y] = { base: normalize_map_value(tiles[x][y]), entity: null };
+            visual[x][y] = {
+                base: normalize_map_value(tiles[x][y]),
+                entity: null,
+                health: null,
+                maxHealth: null,
+                active: false,
+            };
         }
     }
 
@@ -710,6 +774,9 @@ function handle_game_state(state){
     // враги
     for (const e of arena.enemies) {
         visual[e.position.x][e.position.y].entity = "E";
+        visual[e.position.x][e.position.y].health = e.stats.health;
+        visual[e.position.x][e.position.y].maxHealth = e.stats.max_health;
+        visual[e.position.x][e.position.y].active = e.id === currentActor?.id;
         visual[e.position.x][e.position.y].overwatch = !!e.overwatch;
     }
 
@@ -720,6 +787,9 @@ function handle_game_state(state){
             _val = "P!";
         }
         visual[p.position.x][p.position.y].entity = _val;
+        visual[p.position.x][p.position.y].health = p.stats.health;
+        visual[p.position.x][p.position.y].maxHealth = p.stats.max_health;
+        visual[p.position.x][p.position.y].active = p.id === currentActor?.id;
         visual[p.position.x][p.position.y].overwatch = !!p.overwatch;
     }
     // === туман войны (евклидова дистанция + луч видимости по Брезенхему) ===
@@ -795,11 +865,41 @@ function handle_game_state(state){
 
             // entity overlay
             if (cellData.entity) {
-                const entityMap = {"P!" :"player_current", "P": "player", "E": "enemy" };
+                const entityMap = {"P!" :"player_owned", "P": "player", "E": "enemy" };
                 const className = entityMap[cellData.entity];
                 if (className) {
                     cell.classList.add(className);
-                    cell.innerText = cellData.entity;
+                    const entityLabel = document.createElement("span");
+                    entityLabel.classList.add("entity-label");
+                    entityLabel.textContent = cellData.entity;
+                    cell.appendChild(entityLabel);
+                }
+
+                const maxHealth = Math.max(0, Number(cellData.maxHealth) || 0);
+                const health = Math.max(0, Number(cellData.health) || 0);
+                const healthPercent = maxHealth > 0
+                    ? Math.max(0, Math.min(100, health / maxHealth * 100))
+                    : 0;
+                const healthBar = document.createElement("span");
+                healthBar.classList.add("entity-health");
+                healthBar.title = `HP ${health}/${maxHealth}`;
+                const healthFill = document.createElement("span");
+                healthFill.classList.add("entity-health-fill");
+                if (healthPercent <= 25) {
+                    healthFill.classList.add("critical");
+                } else if (healthPercent <= 50) {
+                    healthFill.classList.add("wounded");
+                }
+                healthFill.style.width = `${healthPercent}%`;
+                healthBar.appendChild(healthFill);
+                cell.appendChild(healthBar);
+
+                if (cellData.active) {
+                    cell.classList.add("active-actor");
+                    const turnMarker = document.createElement("span");
+                    turnMarker.classList.add("active-turn-marker");
+                    turnMarker.textContent = "ХОД";
+                    cell.appendChild(turnMarker);
                 }
                 if (cellData.overwatch) {
                     cell.classList.add("overwatch");

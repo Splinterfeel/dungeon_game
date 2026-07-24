@@ -1,5 +1,6 @@
 import asyncio
 import typing
+import random
 
 from src.action import (
     Action,
@@ -23,6 +24,22 @@ HAND_LABELS_RU = {"left": "левая рука", "right": "правая рука
 class ActionHandler:
     def __init__(self, game: "Game"):
         self.game = game
+
+    def __try_proc_skill(
+        self, actor: Actor, skill_key: str, proc_actor_ids: set[str] | None = None
+    ) -> bool:
+        if proc_actor_ids is not None and str(actor.id) in proc_actor_ids:
+            return False
+        if not isinstance(actor, Player):
+            return False
+        skill = next((s for s in actor.skills if s.skill_key == skill_key), None)
+        if skill is None:
+            return False
+        if random.random() >= skill.proc_chance:
+            return False
+        if proc_actor_ids is not None:
+            proc_actor_ids.add(str(actor.id))
+        return True
 
     def __apply_locational_damage(self, player: Player, damage: int) -> str:
         "Урон случайной живой части меха игрока + пересчёт живых статов; возвращает суффикс для detail"
@@ -209,9 +226,31 @@ class ActionHandler:
                 detail=f"{actor.name}, {HAND_LABELS_RU[weapon.hand]} уничтожена — оружие «{weapon.name}» недоступно",
             )
         action_ap_cost = weapon.cost_ap
+        current_dist = Point.distance_chebyshev(actor.position, action.cell)
+        attack_accuracy_bonus = 0
+        damage_bonus = 0
+        proc_actor_ids: set[str] = set()
+        skill_messages: list[str] = []
+        if weapon.type == "ranged" and self.__try_proc_skill(
+            actor, "accurate_shot", proc_actor_ids
+        ):
+            attack_accuracy_bonus += 15
+            skill_messages.append("срабатывает навык «Точный выстрел»")
+        if weapon.type == "melee" and self.__try_proc_skill(
+            actor, "heavy_strike", proc_actor_ids
+        ):
+            damage_bonus += 3
+            skill_messages.append("срабатывает навык «Усиленный удар»")
+        free_action_proc = self.__try_proc_skill(
+            actor, "combat_impulse", proc_actor_ids
+        )
+        if free_action_proc:
+            action_ap_cost = 0
+            skill_messages.append("срабатывает навык «Боевой импульс»")
         damage = weapon.roll_damage()
         if weapon.type == "melee":
             damage += actor.stats.melee_power
+        damage += damage_bonus
         current_dist = Point.distance_chebyshev(actor.position, action.cell)
         # проверка линии видимости
         if weapon.range > 1:
@@ -236,18 +275,27 @@ class ActionHandler:
                 action=action,
                 detail=f"Слишком далеко для атаки ({current_dist} / {weapon.range})",
             )
-        attack_hit = weapon.check_hit(actor_stats=actor.stats, distance=current_dist)
+        attack_stats = actor.stats.model_copy(
+            update={"accuracy": actor.stats.accuracy + attack_accuracy_bonus}
+        )
+        skill_prefix = ""
+        if skill_messages:
+            skill_prefix = f"{', '.join(skill_messages)}; "
+        attack_hit = weapon.check_hit(actor_stats=attack_stats, distance=current_dist)
         if (
             actor_cell_type == CELL_TYPE.ENEMY.value
             and action_cell_type == CELL_TYPE.PLAYER.value
         ):
             player = next(x for x in self.game.players if x.position == action.cell)
+            if attack_hit and self.__try_proc_skill(player, "dodge", proc_actor_ids):
+                attack_hit = False
+                skill_prefix += f"срабатывает навык «Уклонение» у {player.name}; "
             if not attack_hit:
                 return ActionResult(
                     performed=True,
                     action=action,
                     action_cost=action_ap_cost,
-                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {player.name}",
+                    detail=f"{skill_prefix}{actor.name} промахивается из оружия {weapon.name} по {player.name}",
                 )
             player.apply_damage(damage)
             part_detail = self.__apply_locational_damage(player, damage)
@@ -259,7 +307,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",
+                detail=f"{skill_prefix}{actor.name} атакует {player.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -273,7 +321,7 @@ class ActionHandler:
                     performed=True,
                     action=action,
                     action_cost=action_ap_cost,
-                    detail=f"{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
+                    detail=f"{skill_prefix}{actor.name} промахивается из оружия {weapon.name} по {enemy.name}",
                 )
             enemy.apply_damage(damage)
             death_detail = ""
@@ -283,7 +331,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона{death_detail}",
+                detail=f"{skill_prefix}{actor.name} атакует {enemy.name} ({weapon.name}) и наносит {damage} урона{death_detail}",
             )
         elif (
             actor_cell_type == CELL_TYPE.PLAYER.value
@@ -302,12 +350,19 @@ class ActionHandler:
                     action=action,
                     detail=f"{actor.name}, нельзя атаковать своего сокомандника",
                 )
+            if attack_hit and self.__try_proc_skill(
+                player_attacked, "dodge", proc_actor_ids
+            ):
+                attack_hit = False
+                skill_prefix += (
+                    f"срабатывает навык «Уклонение» у {player_attacked.name}; "
+                )
             if not attack_hit:
                 return ActionResult(
                     performed=True,
                     action=action,
                     action_cost=action_ap_cost,
-                    detail=f"{player_attacking.name} промахивается из оружия {weapon.name} по {player_attacked.name}",
+                    detail=f"{skill_prefix}{player_attacking.name} промахивается из оружия {weapon.name} по {player_attacked.name}",
                 )
             player_attacked.apply_damage(damage)
             part_detail = self.__apply_locational_damage(player_attacked, damage)
@@ -319,7 +374,7 @@ class ActionHandler:
             return ActionResult(
                 action=action,
                 action_cost=action_ap_cost,
-                detail=f"{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",  # noqa
+                detail=f"{skill_prefix}{player_attacking.name} атакует {player_attacked.name} ({weapon.name}) и наносит {damage} урона.{part_detail}{death_detail}",  # noqa
             )
         else:
             print(

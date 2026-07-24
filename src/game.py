@@ -134,11 +134,42 @@ class Game:
 
     async def _fire_overwatch_shot(self, watcher: Actor, weapon, target: Actor):
         distance = Point.distance_chebyshev(watcher.position, target.position)
-        attack_hit = weapon.check_hit(actor_stats=watcher.stats, distance=distance)
+        proc_actor_ids: set[str] = set()
+        skill_messages: list[str] = []
+        attack_stats = watcher.stats
+
+        def try_reaction_skill_proc(actor: Actor, skill_key: str) -> bool:
+            if str(actor.id) in proc_actor_ids or not isinstance(actor, Player):
+                return False
+            skill = next((s for s in actor.skills if s.skill_key == skill_key), None)
+            if skill is None:
+                return False
+            if random.random() >= skill.proc_chance:
+                return False
+            proc_actor_ids.add(str(actor.id))
+            return True
+        if (
+            isinstance(watcher, Player)
+            and weapon.type == "ranged"
+            and try_reaction_skill_proc(watcher, "accurate_shot")
+        ):
+            attack_stats = watcher.stats.model_copy(
+                update={"accuracy": watcher.stats.accuracy + 15}
+            )
+            skill_messages.append("срабатывает навык «Точный выстрел»")
+        attack_hit = weapon.check_hit(actor_stats=attack_stats, distance=distance)
+        if (
+            attack_hit
+            and isinstance(target, Player)
+            and try_reaction_skill_proc(target, "dodge")
+        ):
+            attack_hit = False
+            skill_messages.append(f"срабатывает навык «Уклонение» у {target.name}")
+        skill_prefix = f"{', '.join(skill_messages)}; " if skill_messages else ""
         if not attack_hit:
             await self._notify_event(
                 GameEvent(
-                    message=f"Огневой дозор: {watcher.name} промахивается по {target.name} из {weapon.name}"
+                    message=f"Огневой дозор: {skill_prefix}{watcher.name} промахивается по {target.name} из {weapon.name}"
                 )
             )
             return
@@ -155,7 +186,7 @@ class Game:
                 death_detail = f" {target.name} погиб!"
         await self._notify_event(
             GameEvent(
-                message=f"Огневой дозор: {watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона){death_detail}"
+                message=f"Огневой дозор: {skill_prefix}{watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона){death_detail}"
             )
         )
 

@@ -3,6 +3,7 @@ from pydantic import Field, model_validator
 
 from src.entities.base import Actor, UUIDStr
 from src.entities.mech import Mech
+from src.skills_catalog import Skill, fresh_default_player_skills
 
 
 class Player(Actor):
@@ -14,6 +15,7 @@ class Player(Actor):
     mech: Mech
     xp: int = 0
     level: int = 1
+    skills: list[Skill] = Field(default_factory=fresh_default_player_skills)
 
     @model_validator(mode="after")
     def set_default_owner(self):

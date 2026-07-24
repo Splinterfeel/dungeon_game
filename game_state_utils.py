@@ -11,6 +11,7 @@ from src.garage import GarageProfile
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
+from src.skills_catalog import Skill
 from src.turn import Turn
 from src.base import Point
 from src.game import Game
@@ -55,6 +56,7 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
         mech=Mech.model_validate(player_data["mech"]),
         xp=player_data.get("xp", 0),
         level=player_data.get("level", 1),
+        skills=[Skill.model_validate(skill) for skill in player_data.get("skills", [])],
         stats=CharacterStats(
             health=player_data["stats"]["health"],
             melee_power=player_data["stats"]["melee_power"],

@@ -46,54 +46,31 @@
       "level": 3,
       "branches": {
         "accurate_shot": [
-          {
-            "id": "double_shot",
-            "name": "Двойной выстрел",
-            "trigger": "attack",
-            "proc_chance": 0.1,
-            "effect": {
-              "type": "extra_attack",
-              "count": 1
-            },
-            "description": "Шанс выполнить атаку ещё раз в рамках того же действия (без доп. траты action points на второй выстрел)."
+        {
+          "id": "combat_impulse",
+          "name": "Боевой импульс",
+          "trigger": "attack",
+          "proc_chance": 0.12,
+          "effect": {
+            "type": "refund_action_points",
+            "scope": "this_action"
           },
-          {
-            "id": "free_shot",
-            "name": "Бесплатный выстрел",
-            "trigger": "attack",
-            "proc_chance": 0.12,
-            "effect": {
-              "type": "refund_action_points",
-              "scope": "this_action"
-            },
-            "description": "Шанс, что текущая атака не потратит action points (полный возврат стоимости действия)."
-          }
-        ],
-        "heavy_strike": [
-          {
-            "id": "reflexes",
-            "name": "Рефлексы",
-            "trigger": "defense_overwatch",
-            "proc_chance": 0.15,
-            "effect": {
-              "type": "evade",
-              "scope": "overwatch_shot"
-            },
-            "description": "Шанс полностью уклониться от выстрела по овервотчу при движении через зону видимости стрелка."
+          "description": "Шанс, что текущая атака не потратит action points (полный возврат стоимости действия)."
+        }
+      ],
+      "heavy_strike": [
+        {
+          "id": "dodge",
+          "name": "Уклонение",
+          "trigger": "defense",
+          "proc_chance": 0.15,
+          "effect": {
+            "type": "evade",
+            "scope": "incoming_attack"
           },
-          {
-            "id": "defensive_stance",
-            "name": "Защитная стойка",
-            "trigger": "defense",
-            "proc_chance": 0.12,
-            "effect": {
-              "type": "damage_reduction",
-              "value": 0.5,
-              "scope": "incoming_attack"
-            },
-            "description": "Шанс поглотить часть входящего урона (значение 0.5 = 50% — плейсхолдер, подобрать при реализации) без иных последствий."
-          }
-        ]
+          "description": "Шанс полностью уклониться от входящей атаки или выстрела, включая овервотч."
+        }
+      ]
       }
     }
   ]

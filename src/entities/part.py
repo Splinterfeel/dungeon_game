@@ -46,6 +46,9 @@ class Part(BaseModel):
     # грузоподъёмность, которую деталь даёт мехам - по конвенции значима
     # только у slot=LEGS (аналог melee_power, значимого только у ARMS)
     carry_capacity: int = 0
+    affix_tier: int = 0
+    affix_stat: str | None = None
+    affix_value: int = 0
 
     @model_validator(mode="after")
     def set_durability(self) -> "Part":

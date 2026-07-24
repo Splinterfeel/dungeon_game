@@ -12,7 +12,13 @@ from dto.base import (
     StartGameRequest,
     StartGameResponse,
 )
-from dto.garage import EquipGaragePartRequest, GarageState, RematchRequest
+from dto.garage import (
+    ChooseGarageSkillRequest,
+    EquipGaragePartRequest,
+    GarageState,
+    RematchRequest,
+    UpdateGarageTuningRequest,
+)
 from dto.debug import (
     DebugDumpRequest,
     DebugDumpResponse,
@@ -132,6 +138,36 @@ def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
             str(request.player_id),
             str(request.loadout_id),
             str(request.part_id),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post(
+    "/debug/garages/tuning",
+    description="Изменить тюнинг сборки пилота (debug only)",
+)
+def update_garage_tuning(request: UpdateGarageTuningRequest) -> GarageState:
+    try:
+        return lobby_manager.update_garage_tuning(
+            str(request.player_id),
+            str(request.loadout_id),
+            request.reactor_mode,
+            request.fire_control_mode,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post(
+    "/debug/garages/choose_skill",
+    description="Выбрать навык пилота из доступных после level-up (debug only)",
+)
+def choose_garage_skill(request: ChooseGarageSkillRequest) -> GarageState:
+    try:
+        return lobby_manager.choose_garage_skill(
+            str(request.player_id),
+            request.skill_key,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))

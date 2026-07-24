@@ -24,7 +24,7 @@ from src.map import ArenaMap
 from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
-from src.garage import GarageProfile, roll_match_reward
+from src.garage import GarageProfile, MATCH_XP_REWARDS, roll_match_reward
 
 
 @dataclass
@@ -253,6 +253,30 @@ class Lobby(GameObserver):
                 self.game.winner is not None and participant.team == self.game.winner
             )
             garage.metrics.matches_finished += 1
+            progression = garage.award_xp(
+                MATCH_XP_REWARDS["winner" if is_winner else "loser"]
+            )
+            if progression.level_after > progression.level_before:
+                await self.broadcast_game_event(
+                    GameEvent(
+                        message=(
+                            f"Прогресс пилота {garage.name}: +{progression.xp_awarded} XP, "
+                            f"уровень {progression.level_before} → {progression.level_after}. "
+                            f"Новый выбор навыка доступен в гараже."
+                        )
+                    ),
+                    receiver_player_ids=[player_id],
+                )
+            else:
+                await self.broadcast_game_event(
+                    GameEvent(
+                        message=(
+                            f"Прогресс пилота {garage.name}: +{progression.xp_awarded} XP "
+                            f"(всего {garage.xp}), уровень {garage.level}."
+                        )
+                    ),
+                    receiver_player_ids=[player_id],
+                )
             reward = roll_match_reward(garage, is_winner)
             if reward.awarded_part is None:
                 chance_percent = round(reward.chance * 100)

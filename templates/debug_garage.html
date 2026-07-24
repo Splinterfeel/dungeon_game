@@ -29,9 +29,34 @@
 <script>
 const GARAGE_SLOT_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
 const GARAGE_STAT_LABELS = {health: "HP", speed: "speed", accuracy: "accuracy", melee_power: "melee", view_distance: "обзор", weight: "вес", carry_capacity: "грузоподъёмность"};
+const REACTOR_MODE_LABELS = {
+    fortified: "Усиленная бронезащита",
+    neutral: "Норма",
+    overdrive: "Форсаж",
+};
+const FIRE_CONTROL_MODE_LABELS = {
+    precision: "Точная настройка",
+    neutral: "Норма",
+    impact: "Форсированный выстрел",
+};
 
 function garage_part_stats(part) {
     return `HP ${part.health}, Speed ${part.speed}, Acc ${part.accuracy}, Melee ${part.melee_power}, View ${part.view_distance}, вес ${part.weight}, грузоподъёмность ${part.carry_capacity}`;
+}
+
+
+const XP_THRESHOLDS = {2: 100, 3: 250};
+
+function xp_bar(xp, level) {
+    const nextLevel = level >= 3 ? null : level + 1;
+    if (!nextLevel) return `Макс. уровень для MVP`;
+    const prevThreshold = level <= 1 ? 0 : XP_THRESHOLDS[level];
+    const nextThreshold = XP_THRESHOLDS[nextLevel];
+    const span = Math.max(nextThreshold - prevThreshold, 1);
+    const progress = Math.max(0, Math.min(1, (xp - prevThreshold) / span));
+    const filled = Math.round(progress * 12);
+    const bar = '\u2588'.repeat(filled) + '\u2591'.repeat(12 - filled);
+    return `${bar} ${xp - prevThreshold}/${span}`;
 }
 
 function garage_delta(candidate, equipped) {
@@ -89,6 +114,45 @@ function render_garage() {
     html += `<div><b>Вес сборки ${loadoutWeight}/${loadout.mech.weight_capacity}</b> <span class="muted">(детали ${loadout.mech.parts_weight} + оружие ${weaponsWeight})</span></div>`;
     html += `<div class="muted" style="margin:6px 0">Матчей ${garage.metrics.matches_finished}, наград ${garage.metrics.rewards_received}, установок ${garage.metrics.parts_equipped}, рематчей ${garage.metrics.rematches_started}</div>`;
     html += `<div style="margin:10px 0"><b>Шансы дропа</b>: победа ${garage.reward_chances.winner * 100}%, поражение ${garage.reward_chances.loser * 100}%</div>`;
+    html += `<h3>Пилот</h3>`;
+    html += `<div><b>Уровень ${garage.level}</b> <span class="muted">XP: ${garage.xp}</span></div>`;
+    html += `<div class="muted">${xp_bar(garage.xp, garage.level)}</div>`;
+    if (garage.owned_skills.length) {
+        html += `<div style="margin:6px 0"><b>Выбранные навыки</b>: ${garage.owned_skills.map(skill => skill.name).join(", ")}</div>`;
+    } else {
+        html += `<div class="muted" style="margin:6px 0">Пока навыки не выбраны.</div>`;
+    }
+    if (garage.pending_skill_choices.length) {
+        html += `<div style="margin:8px 0"><b>Доступные выборы навыков</b></div>`;
+        for (const pending of garage.pending_skill_choices) {
+            html += `<div class="garage-part"><div><b>Уровень ${pending.level}</b></div>`;
+            if (!pending.options.length) {
+                html += `<div class="muted">Сначала завершите предыдущий выбор по ветке.</div>`;
+            } else {
+                for (const option of pending.options) {
+                    html += `<div style="margin:6px 0"><b>${option.name}</b> <span class="muted">(${Math.round(option.proc_chance * 100)}%)</span><br>` +
+                        `<span class="muted">${option.description}</span><br>` +
+                        `<button onclick="choose_garage_skill('${option.skill_key}')">Выбрать</button></div>`;
+                }
+            }
+            html += `</div>`;
+        }
+    }
+    html += `<h3>Тюнинг меха</h3>`;
+    html += `<div style="margin-bottom:8px"><b>Режим реактора</b> `;
+    html += `<select onchange="update_garage_tuning('reactor_mode', this.value)" style="background:#222;color:#eee;padding:6px">`;
+    for (const [value, label] of Object.entries(REACTOR_MODE_LABELS)) {
+        const selected = value === loadout.reactor_mode ? " selected" : "";
+        html += `<option value="${value}"${selected}>${label}</option>`;
+    }
+    html += `</select> <span class="muted">(HP ↔ AP: +2 HP / -1 AP или наоборот)</span></div>`;
+    html += `<div style="margin-bottom:10px"><b>Режим наведения</b> `;
+    html += `<select onchange="update_garage_tuning('fire_control_mode', this.value)" style="background:#222;color:#eee;padding:6px">`;
+    for (const [value, label] of Object.entries(FIRE_CONTROL_MODE_LABELS)) {
+        const selected = value === loadout.fire_control_mode ? " selected" : "";
+        html += `<option value="${value}"${selected}>${label}</option>`;
+    }
+    html += `</select> <span class="muted">(точность ↔ урон: +5 Acc / -1 dmg или наоборот)</span></div>`;
     html += `<h3>Установленные детали — ${loadout.name}</h3>`;
     for (const slot of ["torso", "legs", "arms", "head"]) {
         const part = equipped[slot];
@@ -126,6 +190,47 @@ async function equip_garage_part(partId) {
         return;
     }
     await load_garage();
+}
+
+async function update_garage_tuning(fieldName, value) {
+    const playerId = document.getElementById("player_id_input").value.trim();
+    const loadout = lastGarageState.loadouts.find(item => item.id === selectedLoadoutId);
+    const payload = {
+        player_id: playerId,
+        loadout_id: selectedLoadoutId,
+        reactor_mode: fieldName === "reactor_mode" ? value : loadout.reactor_mode,
+        fire_control_mode: fieldName === "fire_control_mode" ? value : loadout.fire_control_mode,
+    };
+    const response = await fetch("http://{{ host }}/debug/garages/tuning", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        alert(`Не удалось изменить тюнинг: ${(await response.json()).detail}`);
+        await load_garage();
+        return;
+    }
+    lastGarageState = await response.json();
+    render_garage();
+}
+async function choose_garage_skill(skillKey) {
+    const playerId = document.getElementById("player_id_input").value.trim();
+    const response = await fetch("http://{{ host }}/debug/garages/choose_skill", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            player_id: playerId,
+            skill_key: skillKey,
+        })
+    });
+    if (!response.ok) {
+        alert(`Не удалось выбрать навык: ${(await response.json()).detail}`);
+        await load_garage();
+        return;
+    }
+    lastGarageState = await response.json();
+    render_garage();
 }
 </script>
 </body>
