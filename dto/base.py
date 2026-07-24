@@ -23,6 +23,7 @@ class LobbyDTO(BaseModel):
     id: UUID
     name: str
     players_num: int = Field(gt=0)
+    vs_bot: bool = False
     team_1_connected_players: int
     team_2_connected_players: int
     created_by_player_id: str
@@ -33,6 +34,7 @@ class CreateLobbyRequest(BaseModel):
     name: str | None = None
     players_num: int = Field(gt=0)
     created_by_player_id: UUID
+    vs_bot: bool = False
 
 
 class ConnectLobbyRequest(BaseModel):

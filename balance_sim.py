@@ -6,7 +6,7 @@ Headless-симуляция боевого баланса.
 (AGENTS.md, "Уровень 0" проверки). Простой rational-бот (адаптация
 SimpleEnemyAI под PvP: стрельба -> сближение -> ближний бой -> овервотч)
 играет за всех акторов сразу с обеих сторон; бот учитывает уничтожение рук
-(`PvPBotAI._pick_weapon` пропускает оружие в уничтоженной руке, ROADMAP.md
+(`PlayerBotAI._pick_weapon` пропускает оружие в уничтоженной руке, ROADMAP.md
 Этап 2 п.3-4). По итогу агрегируются win rate, длина матча, остаток HP
 победителя и статистика по уничтожению рук (сколько рук выбито за игру, как
 часто игрок остаётся полностью безоружным и чем это заканчивается для его
@@ -42,10 +42,8 @@ async def _no_sleep(*_args, **_kwargs):
 
 action_handler_module.asyncio.sleep = _no_sleep
 
-from src.action import Action, ActionType, AttackActionParams, OverwatchActionParams
-from src.ai.base import AI
+from src.ai.player import PlayerBotAI
 from src.arena import Arena
-from src.base import Point
 from src.entities.base import Inventory
 from src.entities.part import PartSlot
 from src.entities.player import Player
@@ -77,120 +75,6 @@ AFFIX_SLOT_BY_STAT: dict[str, PartSlot] = {
 }
 BALANCE_AFFIX_PRESETS = ("SteelMan", "Fireworks Mk. 1", "StrikeForce")
 BALANCE_AFFIX_STATS = ("health", "speed", "accuracy", "melee_power", "view_distance")
-
-
-class PvPBotAI(AI):
-    """Team-aware rational-бот: стреляет, если может, иначе сближается,
-    иначе бьёт в ближнем, иначе встаёт в дозор, иначе завершает ход."""
-
-    def __init__(self, actor, game):
-        super().__init__(actor, game)
-        self.attacked_on_turn = False
-
-    def _hostiles(self):
-        return [
-            p
-            for p in self.game.players
-            if self.game._is_hostile(self.actor, p) and not p.is_dead()
-        ]
-
-    def _pick_weapon(self, weapon_type):
-        "Первое оружие нужного типа, чья рука не уничтожена (ROADMAP.md Этап 2 п.3-4)"
-        for w in self.actor.inventory.weapons:
-            if w.type != weapon_type:
-                continue
-            if w.hand and self.actor.mech.arm_for(w.hand).destroyed:
-                continue
-            return w
-        return None
-
-    def decide(self) -> Action:
-        hostiles = self._hostiles()
-        if not hostiles:
-            return self.end_turn()
-
-        if not self.attacked_on_turn:
-            ranged_weapon = self._pick_weapon("ranged")
-            if (
-                ranged_weapon
-                and self.actor.current_action_points >= ranged_weapon.cost_ap
-            ):
-                shootable = [
-                    p
-                    for p in hostiles
-                    if self.game.arena.map.can_shoot(
-                        self.actor, ranged_weapon, p.position
-                    )
-                ]
-                if shootable:
-                    target = min(shootable, key=lambda p: p.stats.health)
-                    self.attacked_on_turn = True
-                    return Action(
-                        actor_id=str(self.actor.id),
-                        type=ActionType.ATTACK,
-                        cell=target.position,
-                        params=AttackActionParams(weapon_id=ranged_weapon.id),
-                    )
-
-        if self.actor.stats.speed - self.actor.current_speed_spent > 0:
-            distances = []
-            for p in hostiles:
-                path = self.game.arena.map.bfs_path(self.actor.position, p.position)
-                if path:
-                    distances.append((len(path), path))
-            if distances:
-                _, path = min(distances, key=lambda x: x[0])
-                rev_path = path[::-1][:-1]
-                for step in rev_path:
-                    if step in self.game.turn.available_moves:
-                        return Action(
-                            actor_id=str(self.actor.id),
-                            type=ActionType.MOVE,
-                            cell=step,
-                        )
-
-        adjacent_target = next(
-            (
-                p
-                for p in hostiles
-                if Point.distance_chebyshev(p.position, self.actor.position) == 1
-            ),
-            None,
-        )
-        if adjacent_target and not self.attacked_on_turn:
-            melee_weapon = self._pick_weapon("melee")
-            if (
-                melee_weapon
-                and self.actor.current_action_points >= melee_weapon.cost_ap
-            ):
-                self.attacked_on_turn = True
-                return Action(
-                    actor_id=str(self.actor.id),
-                    type=ActionType.ATTACK,
-                    cell=adjacent_target.position,
-                    params=AttackActionParams(weapon_id=melee_weapon.id),
-                )
-
-        if self.actor.overwatch is None:
-            ranged_weapon = self._pick_weapon("ranged")
-            if (
-                ranged_weapon
-                and self.actor.current_action_points >= ranged_weapon.cost_ap
-            ):
-                can_see_any = any(
-                    Point.distance_euklid(self.actor.position, p.position)
-                    <= self.actor.stats.view_distance
-                    for p in hostiles
-                )
-                if can_see_any:
-                    return Action(
-                        actor_id=str(self.actor.id),
-                        type=ActionType.OVERWATCH,
-                        cell=self.actor.position,
-                        params=OverwatchActionParams(weapon_id=ranged_weapon.id),
-                    )
-
-        return self.end_turn()
 
 
 def _apply_affix_to_mech_part(mech, affix: AffixSpec) -> None:
@@ -278,7 +162,7 @@ async def run_match(team1_builds, team2_builds, max_actions=2000):
         actor = game.turn.current_actor
         ai = ai_by_actor.get(actor.id)
         if ai is None:
-            ai = PvPBotAI(actor, game)
+            ai = PlayerBotAI(actor, game)
             ai_by_actor[actor.id] = ai
         action = ai.decide()
         await game.perform_actor_action(actor, action)

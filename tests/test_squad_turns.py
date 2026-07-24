@@ -5,6 +5,7 @@ from uuid import uuid4
 from dto.base import CreateLobbyRequest, PlayerDTO
 from lobby_manager import LobbyManager
 from src.action import Action, ActionType
+from src.ai.player import PlayerBotAI
 from src.arena import Arena
 from src.entities.base import Inventory
 from src.entities.player import Player
@@ -109,6 +110,84 @@ def test_neutral_ai_starts_only_after_all_living_player_mechs():
         await end_current_turn(game)
         assert game.turn.phase == GamePhase.PLAYER_PHASE
         assert game.turn.current_actor == players[0]
+
+    asyncio.run(scenario())
+
+
+def test_player_bot_actively_hunts_opposing_team():
+    async def scenario():
+        game, players = build_squad_game()
+        await game.launch()
+        bot_actor = players[2]
+        await game.prepare_actor_turn(bot_actor)
+
+        action = PlayerBotAI(bot_actor, game).decide()
+
+        assert action.type in {ActionType.MOVE, ActionType.ATTACK}
+        assert action.type != ActionType.END_TURN
+
+    asyncio.run(scenario())
+
+
+def test_solo_lobby_fills_team_two_and_runs_bot_turn():
+    async def scenario():
+        manager = LobbyManager()
+        owner_id = uuid4()
+        lobby = manager.create_lobby(
+            CreateLobbyRequest(
+                players_num=2,
+                created_by_player_id=owner_id,
+                vs_bot=True,
+            )
+        )
+        connected, _ = await lobby.connect_player(
+            PlayerDTO(
+                id=owner_id,
+                team=1,
+                mech_presets=["SteelMan", "Fireworks Mk. 1"],
+            )
+        )
+        assert connected
+
+        started, detail = await lobby.start_game()
+        assert started, detail
+        bot_participants = [
+            participant
+            for participant in lobby.participants.values()
+            if participant.is_bot
+        ]
+        assert len(bot_participants) == 1
+        assert bot_participants[0].team == 2
+        assert bot_participants[0].player_id not in manager.garages
+        assert len(lobby.players) == 4
+
+        first_human_actor = lobby.game.turn.current_actor
+        assert str(first_human_actor.owner_player_id) == str(owner_id)
+        ended = Action(
+            actor_id=str(first_human_actor.id),
+            type=ActionType.END_TURN,
+            cell=first_human_actor.position,
+        )
+        assert await lobby.handle_game_action(
+            str(owner_id), ended.model_dump(mode="json")
+        )
+
+        bot_actor = lobby.game.turn.current_actor
+        assert str(bot_actor.owner_player_id) == bot_participants[0].player_id
+        await lobby.run_automated_turns()
+
+        next_human_actor = lobby.game.turn.current_actor
+        assert str(next_human_actor.owner_player_id) == str(owner_id)
+        assert next_human_actor.id != first_human_actor.id
+
+        lobby.game.ended = True
+        lobby.game.winner = 1
+        await lobby.finalize_match_rewards()
+        assert manager.garages[str(owner_id)].metrics.matches_finished == 1
+        assert (
+            lobby.bot_garages[bot_participants[0].player_id].metrics.matches_finished
+            == 0
+        )
 
     asyncio.run(scenario())
 

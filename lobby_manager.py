@@ -31,6 +31,7 @@ class LobbyManager:
             players_num=request.players_num,
             created_by_player_id=request.created_by_player_id,
             garages=self.garages,
+            vs_bot=request.vs_bot,
         )
         self.lobbies[str(lobby.id)] = lobby
         return lobby
@@ -137,6 +138,7 @@ class LobbyManager:
                 id=l.id,
                 name=l.name,
                 players_num=l.players_num,
+                vs_bot=l.vs_bot,
                 created_by_player_id=l.created_by_player_id,
                 team_1_connected_players=len(
                     [p for p in l.participants.values() if p.team == 1]

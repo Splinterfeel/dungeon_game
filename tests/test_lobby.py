@@ -50,6 +50,40 @@ def test_join_lobby():
     assert response.json()["detail"] == "player connected"
 
 
+def test_solo_lobby_starts_with_one_human_pilot():
+    player_id = str(uuid4())
+    lobby_id = client.post(
+        "/lobbies",
+        json={
+            "players_num": 2,
+            "created_by_player_id": player_id,
+            "vs_bot": True,
+        },
+    ).json()["lobby_id"]
+    connected = client.post(
+        "/connect_lobby",
+        json={
+            "lobby_id": lobby_id,
+            "player": {
+                "id": player_id,
+                "team": 1,
+                "mech_presets": ["SteelMan", "Fireworks Mk. 1"],
+            },
+        },
+    )
+    assert connected.json()["result"] is True
+
+    started = client.post("/start_game", json={"lobby_id": lobby_id})
+
+    assert started.json()["result"] is True
+    lobby_state = next(
+        lobby for lobby in client.get("/lobbies").json() if lobby["id"] == lobby_id
+    )
+    assert lobby_state["vs_bot"] is True
+    assert lobby_state["team_1_connected_players"] == 1
+    assert lobby_state["team_2_connected_players"] == 1
+
+
 def test_connect_to_full_lobby():
     # Create a lobby with 1 player slot
     resp = client.post(

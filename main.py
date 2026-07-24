@@ -30,8 +30,6 @@ from dto.state import MechPresetState
 from src.mech_presets import MECH_PRESETS
 from dto.event import GameEvent
 from lobby_manager import LobbyManager
-from src.ai.enemy import SimpleEnemyAI
-from src.turn import GamePhase
 from src.game import Game
 from fastapi.staticfiles import StaticFiles
 
@@ -110,6 +108,8 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
     result, detail = await lobby.start_game()
     await lobby.broadcast_lobby_state()
     await lobby.broadcast_game_state()
+    if result:
+        await lobby.run_automated_turns()
     return StartGameResponse(
         lobby_id=request.lobby_id,
         result=result,
@@ -182,6 +182,7 @@ async def start_rematch(request: RematchRequest) -> StartGameResponse:
     if result:
         await lobby.broadcast_lobby_state()
         await lobby.broadcast_game_state()
+        await lobby.run_automated_turns()
     return StartGameResponse(lobby_id=request.lobby_id, result=result, detail=detail)
 
 
@@ -297,30 +298,7 @@ async def websocket_endpoint(websocket: WebSocket, lobby_id: str, player_id: str
                 )
                 if performed:
                     await lobby.broadcast_game_state()
-                    # проверить ход врагов, и если да - выполнить их ходы
-                    if lobby.game.turn.phase == GamePhase.AI_ENEMY_PHASE:
-                        while (
-                            lobby.game.turn.phase == GamePhase.AI_ENEMY_PHASE
-                            and not lobby.game.ended
-                        ):
-                            actor = lobby.game.turn.current_actor
-                            ai = SimpleEnemyAI(actor, lobby.game)
-                            while (
-                                lobby.game.turn.current_actor == actor
-                                and not lobby.game.ended
-                            ):
-                                action = ai.decide()
-                                performed = await lobby.handle_game_action(
-                                    actor, action.model_dump(mode="json")
-                                )
-                                if not performed:
-                                    print(
-                                        f"enemy action was not performed: {action.type}"
-                                    )
-                                await lobby.broadcast_game_state()
-                            await lobby.broadcast_game_state()
-                        # конец хода ИИ врагов, ход окружения игры
-                        print("=== ХОД ОКРУЖЕНИЯ ===")
+                    await lobby.run_automated_turns()
                     await lobby.broadcast_game_state()
                 if lobby.game.ended and not lobby.game.end_announced:
                     print("GAME END")

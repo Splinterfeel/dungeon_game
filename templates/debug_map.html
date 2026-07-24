@@ -206,6 +206,10 @@ body {
 <div class="control-row">
     <label for="input_players_num">Кол-во пилотов</label>
     <input type="number" id="input_players_num" value="2" style="width: 50px">
+    <label>
+        <input type="checkbox" id="vs_bot_input">
+        Против бота
+    </label>
     <button onclick="create_lobby()" style="background: #4caf50; color: white;">Создать лобби (POST)</button>
 </div>
 <div class="control-row">
@@ -327,6 +331,17 @@ document.getElementById("lobby_id_select").addEventListener("change", function()
 refresh_lobbies_list();
 refresh_mech_presets();
 
+document.getElementById("vs_bot_input").addEventListener("change", function() {
+    const playersInput = document.getElementById("input_players_num");
+    const teamSelect = document.getElementById("team_select");
+    if (this.checked) {
+        playersInput.value = 2;
+        teamSelect.value = 1;
+    }
+    playersInput.disabled = this.checked;
+    teamSelect.disabled = this.checked;
+});
+
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
     _input.value = generateUUID();
@@ -368,7 +383,9 @@ async function refresh_lobbies_list() {
             option.value = lobby.id;
             const status = lobby.game_started ? "[Игра идет]" : "[Ожидание]";
             const connectedPlayers = lobby.team_1_connected_players + lobby.team_2_connected_players;
-            const playersInfo = `${connectedPlayers}/${lobby.players_num} пилотов`;
+            const playersInfo = lobby.vs_bot
+                ? `${lobby.team_1_connected_players} + бот/${lobby.players_num} пилотов`
+                : `${connectedPlayers}/${lobby.players_num} пилотов`;
             option.textContent = `${lobby.name} (${playersInfo}) ${status}`;
 
             if (lobby.id === currentValue) {
@@ -393,13 +410,15 @@ async function create_lobby() {
     const _player_id_input = document.getElementById("player_id_input");
     const _input_lobby = document.getElementById("lobby_id_input");
     const _players_num = document.getElementById("input_players_num");
+    const _vs_bot = document.getElementById("vs_bot_input");
     try {
         const response = await fetch("http://{{ host }}/lobbies", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 players_num: _players_num.value,
-                created_by_player_id: _player_id_input.value
+                created_by_player_id: _player_id_input.value,
+                vs_bot: _vs_bot.checked
             })
         });
         const data = await response.json();
