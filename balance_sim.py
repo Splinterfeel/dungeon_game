@@ -1,7 +1,7 @@
 """
 Headless-симуляция боевого баланса.
 
-Прогоняет много полных 2v2/3v3 PvP-матчей между пресетами мехов, водя обе
+Прогоняет много полных 2v2 PvP-матчей между пресетами мехов, водя обе
 команды напрямую через Game.perform_actor_action - без HTTP/WS/браузера
 (AGENTS.md, "Уровень 0" проверки). Простой rational-бот (адаптация
 SimpleEnemyAI под PvP: стрельба -> сближение -> ближний бой -> овервотч)
@@ -303,6 +303,31 @@ async def run_matchup(name, team1_presets, team2_presets, n_games):
             f"({disarm_games / n_games:.0%}); disarmed player's team went on to lose: "
             f"{disarm_on_loser_side}/{disarm_games} ({disarm_on_loser_side / disarm_games:.0%})"
         )
+    return wins
+
+
+async def run_counter_matchup(name, preset_a, preset_b, n_games):
+    """Пара в обеих фазовых ориентациях, чтобы отделить силу пресета от порядка ходов."""
+    team_a = [preset_a, preset_a]
+    team_b = [preset_b, preset_b]
+    wins_a_first = await run_matchup(
+        f"{name}: {preset_a} (team 1) vs {preset_b} (team 2)",
+        team_a,
+        team_b,
+        n_games,
+    )
+    wins_b_first = await run_matchup(
+        f"{name}: {preset_b} (team 1) vs {preset_a} (team 2)",
+        team_b,
+        team_a,
+        n_games,
+    )
+    a_wins = wins_a_first[1] + wins_b_first[2]
+    b_wins = wins_a_first[2] + wins_b_first[1]
+    total = 2 * n_games
+    print(f"\n=== {name}: итог без привязки к порядку фаз ({total} games) ===")
+    print(f"{preset_a} wins: {a_wins} ({a_wins / total:.0%})")
+    print(f"{preset_b} wins: {b_wins} ({b_wins / total:.0%})")
 
 
 async def main():
@@ -321,43 +346,20 @@ async def main():
         n,
     )
     await run_matchup(
-        "SteelMan team vs Fireworks team",
-        ["SteelMan", "SteelMan"],
-        ["Fireworks Mk. 1", "Fireworks Mk. 1"],
+        "StrikeForce vs StrikeForce (mirror)",
+        ["StrikeForce", "StrikeForce"],
+        ["StrikeForce", "StrikeForce"],
         n,
     )
+    await run_counter_matchup("SteelMan vs Fireworks", "SteelMan", "Fireworks Mk. 1", n)
+    await run_counter_matchup(
+        "Fireworks vs StrikeForce", "Fireworks Mk. 1", "StrikeForce", n
+    )
+    await run_counter_matchup("StrikeForce vs SteelMan", "StrikeForce", "SteelMan", n)
     await run_matchup(
         "Mixed vs Mixed",
         ["SteelMan", "Fireworks Mk. 1"],
         ["SteelMan", "Fireworks Mk. 1"],
-        n,
-    )
-
-    # StrikeForce - карта (map_2) даёт по 6 стартовых точек на команду,
-    # так что 3v3 доступно без изменений в Arena/Game - используем его,
-    # чтобы у каждого архетипа была своя мирорка и парные матч-апы разом.
-    await run_matchup(
-        "StrikeForce vs StrikeForce (mirror, 3v3)",
-        ["StrikeForce", "StrikeForce", "StrikeForce"],
-        ["StrikeForce", "StrikeForce", "StrikeForce"],
-        n,
-    )
-    await run_matchup(
-        "SteelMan vs StrikeForce (3v3)",
-        ["SteelMan", "SteelMan", "SteelMan"],
-        ["StrikeForce", "StrikeForce", "StrikeForce"],
-        n,
-    )
-    await run_matchup(
-        "Fireworks vs StrikeForce (3v3)",
-        ["Fireworks Mk. 1", "Fireworks Mk. 1", "Fireworks Mk. 1"],
-        ["StrikeForce", "StrikeForce", "StrikeForce"],
-        n,
-    )
-    await run_matchup(
-        "Mixed (1 of each) vs Mixed (3v3)",
-        ["SteelMan", "Fireworks Mk. 1", "StrikeForce"],
-        ["SteelMan", "Fireworks Mk. 1", "StrikeForce"],
         n,
     )
 

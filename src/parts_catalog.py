@@ -57,7 +57,7 @@ STEELMAN_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Тяжёлый корпус «Голем»",
     rarity=PartRarity.RARE,
-    health=20,
+    health=19,
     weight=10,
 )
 STEELMAN_LEGS = Part(
@@ -73,7 +73,7 @@ STEELMAN_ARMS = Part(
     name="Ударный привод «Молот»",
     rarity=PartRarity.RARE,
     accuracy=85,
-    melee_power=6,
+    melee_power=4,
     weight=6,
 )
 STEELMAN_HEAD = Part(

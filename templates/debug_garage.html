@@ -28,17 +28,18 @@
 
 <script>
 const GARAGE_SLOT_LABELS = {torso: "Корпус", legs: "Ноги", arms: "Руки", head: "Голова"};
+const GARAGE_STAT_LABELS = {health: "HP", speed: "speed", accuracy: "accuracy", melee_power: "melee", view_distance: "обзор", weight: "вес", carry_capacity: "грузоподъёмность"};
 
 function garage_part_stats(part) {
-    return `HP ${part.health}, Speed ${part.speed}, Acc ${part.accuracy}, Melee ${part.melee_power}, View ${part.view_distance}, вес ${part.weight}`;
+    return `HP ${part.health}, Speed ${part.speed}, Acc ${part.accuracy}, Melee ${part.melee_power}, View ${part.view_distance}, вес ${part.weight}, грузоподъёмность ${part.carry_capacity}`;
 }
 
 function garage_delta(candidate, equipped) {
-    const fields = ["health", "speed", "accuracy", "melee_power", "view_distance", "weight"];
+    const fields = ["health", "speed", "accuracy", "melee_power", "view_distance", "weight", "carry_capacity"];
     return fields.map(field => {
         const delta = candidate[field] - equipped[field];
         if (!delta) return null;
-        return `${field}: ${delta > 0 ? "+" : ""}${delta}`;
+        return `${GARAGE_STAT_LABELS[field]}: ${delta > 0 ? "+" : ""}${delta}`;
     }).filter(Boolean).join(", ") || "без изменения статов";
 }
 
@@ -54,12 +55,20 @@ async function load_garage() {
         if (!response.ok) throw new Error((await response.json()).detail);
         const garage = await response.json();
         const equipped = {torso: garage.mech.torso, legs: garage.mech.legs, arms: garage.mech.arms_left, head: garage.mech.head};
-        let html = `<div>Вес ${garage.mech.parts_weight}/${garage.mech.weight_capacity}; шансы: победа ${garage.reward_chances.winner * 100}%, поражение ${garage.reward_chances.loser * 100}%</div>`;
+        const weaponsWeight = garage.weapons.reduce((total, weapon) => total + weapon.weight, 0);
+        const loadoutWeight = garage.mech.parts_weight + weaponsWeight;
+        let html = `<div><b>Вес сборки ${loadoutWeight}/${garage.mech.weight_capacity}</b> <span class="muted">(детали ${garage.mech.parts_weight} + оружие ${weaponsWeight})</span></div>`;
         html += `<div class="muted" style="margin:6px 0">Матчей ${garage.metrics.matches_finished}, наград ${garage.metrics.rewards_received}, установок ${garage.metrics.parts_equipped}, рематчей ${garage.metrics.rematches_started}</div>`;
-        html += `<h3>Установлено</h3>`;
+        html += `<div style="margin:10px 0"><b>Шансы дропа</b>: победа ${garage.reward_chances.winner * 100}%, поражение ${garage.reward_chances.loser * 100}%</div>`;
+        html += `<h3>Установленные детали</h3>`;
         for (const slot of ["torso", "legs", "arms", "head"]) {
             const part = equipped[slot];
             html += `<div>${GARAGE_SLOT_LABELS[slot]}: <span class="rarity-${part.rarity}">${part.name}</span> (${garage_part_stats(part)})</div>`;
+        }
+        html += `<h3>Оружие <span class="muted" style="font-size:14px;font-weight:normal">(смена пока недоступна)</span></h3>`;
+        for (const weapon of garage.weapons) {
+            const hand = weapon.hand === "left" ? "левая рука" : "правая рука";
+            html += `<div>${weapon.name} — ${hand}; урон ${weapon.damage}, дальность ${weapon.range}, вес ${weapon.weight}</div>`;
         }
         html += `<h3>Склад (${garage.stored_parts.length})</h3>`;
         if (!garage.stored_parts.length) html += `<div class="muted">Новых деталей пока нет.</div>`;
