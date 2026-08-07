@@ -79,7 +79,7 @@ async function load_garage() {
         return;
     }
     try {
-        const response = await fetch(`http://{{ host }}/debug/garages/${playerId}`);
+        const response = await fetch(`http://{{ host }}/garages/${playerId}`);
         if (!response.ok) throw new Error((await response.json()).detail);
         lastGarageState = await response.json();
         if (!lastGarageState.loadouts.some(loadout => loadout.id === selectedLoadoutId)) {
@@ -176,7 +176,7 @@ function render_garage() {
 
 async function equip_garage_part(partId) {
     const playerId = document.getElementById("player_id_input").value.trim();
-    const response = await fetch("http://{{ host }}/debug/garages/equip", {
+    const response = await fetch("http://{{ host }}/garages/equip", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -201,7 +201,7 @@ async function update_garage_tuning(fieldName, value) {
         reactor_mode: fieldName === "reactor_mode" ? value : loadout.reactor_mode,
         fire_control_mode: fieldName === "fire_control_mode" ? value : loadout.fire_control_mode,
     };
-    const response = await fetch("http://{{ host }}/debug/garages/tuning", {
+    const response = await fetch("http://{{ host }}/garages/tuning", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload)
@@ -216,7 +216,7 @@ async function update_garage_tuning(fieldName, value) {
 }
 async function choose_garage_skill(skillKey) {
     const playerId = document.getElementById("player_id_input").value.trim();
-    const response = await fetch("http://{{ host }}/debug/garages/choose_skill", {
+    const response = await fetch("http://{{ host }}/garages/choose_skill", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({

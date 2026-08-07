@@ -170,6 +170,7 @@ def test_game_serialization():
         assert "turn" in game_dict, "Missing 'turn' in serialized data"
         assert "version" in game_dict, "Missing 'version' in serialized data"
         assert "ended" in game_dict, "Missing 'ended' in serialized data"
+        assert "winner" in game_dict, "Missing 'winner' in serialized data"
 
         print("[OK] All required fields present in serialized data")
 

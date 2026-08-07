@@ -3,6 +3,9 @@
 - type: state_update
 Обновление состояния игры `dto.state.GameState`
 
+`ended` сообщает, завершён ли матч. `winner` содержит номер команды-победителя
+(`1` или `2`), а до завершения матча и при ничьей равен `null`.
+
 У боевого `PlayerState.id` теперь UUID конкретного меха, а
 `PlayerState.owner_player_id` — `player_id` пилота из URL WebSocket. Один
 пилот получает обоих своих мехов в `players`, но `turn.available_moves`

@@ -37,7 +37,7 @@ def connect_player(
 
 
 def test_garage_requires_first_connection():
-    response = client.get(f"/debug/garages/{uuid4()}")
+    response = client.get(f"/garages/{uuid4()}")
 
     assert response.status_code == 404
     assert "сначала подключитесь" in response.json()["detail"]
@@ -58,7 +58,7 @@ def test_garage_is_shared_between_lobbies_and_ignores_later_preset():
         ["SteelMan", "Fireworks Mk. 1"],
     )
 
-    first_garage = client.get(f"/debug/garages/{player_id}")
+    first_garage = client.get(f"/garages/{player_id}")
     assert first_garage.status_code == 200
     assert [loadout["preset_name"] for loadout in first_garage.json()["loadouts"]] == [
         "SteelMan",
@@ -71,7 +71,7 @@ def test_garage_is_shared_between_lobbies_and_ignores_later_preset():
         ["StrikeForce", "StrikeForce"],
     )
 
-    second_garage = client.get(f"/debug/garages/{player_id}")
+    second_garage = client.get(f"/garages/{player_id}")
     assert second_garage.status_code == 200
     assert [loadout["preset_name"] for loadout in second_garage.json()["loadouts"]] == [
         "SteelMan",
@@ -87,7 +87,7 @@ def test_identical_presets_create_independent_physical_parts():
         ["SteelMan", "SteelMan"],
     )
 
-    garage = client.get(f"/debug/garages/{player_id}").json()
+    garage = client.get(f"/garages/{player_id}").json()
     first_torso = garage["loadouts"][0]["mech"]["torso"]
     second_torso = garage["loadouts"][1]["mech"]["torso"]
 
@@ -107,7 +107,7 @@ def test_equipped_garage_part_is_used_when_match_starts():
     garage.owned_parts.append(stored_part)
     first_loadout_id = str(garage.loadouts[0].id)
     response = client.post(
-        "/debug/garages/equip",
+        "/garages/equip",
         json={
             "player_id": player_id,
             "loadout_id": first_loadout_id,
@@ -143,11 +143,11 @@ def test_garage_tuning_is_saved_and_reflected_in_garage_state():
         ["SteelMan", "Fireworks Mk. 1"],
     )
 
-    garage = client.get(f"/debug/garages/{player_id}").json()
+    garage = client.get(f"/garages/{player_id}").json()
     loadout_id = garage["loadouts"][0]["id"]
 
     response = client.post(
-        "/debug/garages/tuning",
+        "/garages/tuning",
         json={
             "player_id": player_id,
             "loadout_id": loadout_id,
@@ -170,7 +170,7 @@ def test_garage_tuning_is_applied_when_match_starts():
     lobby_id = create_lobby(player_id)
     connect_player(lobby_id, player_id, ["SteelMan", "Fireworks Mk. 1"])
 
-    garage = client.get(f"/debug/garages/{player_id}").json()
+    garage = client.get(f"/garages/{player_id}").json()
     first_loadout_id = garage["loadouts"][0]["id"]
     second_loadout_id = garage["loadouts"][1]["id"]
 
@@ -179,7 +179,7 @@ def test_garage_tuning_is_applied_when_match_starts():
         (second_loadout_id, "overdrive", "precision"),
     ):
         response = client.post(
-            "/debug/garages/tuning",
+            "/garages/tuning",
             json={
                 "player_id": player_id,
                 "loadout_id": loadout_id,
@@ -227,7 +227,7 @@ def test_one_physical_part_cannot_be_equipped_on_two_loadouts():
     second_loadout_id = str(garage.loadouts[1].id)
 
     first_response = client.post(
-        "/debug/garages/equip",
+        "/garages/equip",
         json={
             "player_id": player_id,
             "loadout_id": first_loadout_id,
@@ -237,7 +237,7 @@ def test_one_physical_part_cannot_be_equipped_on_two_loadouts():
     assert first_response.status_code == 200
 
     second_response = client.post(
-        "/debug/garages/equip",
+        "/garages/equip",
         json={
             "player_id": player_id,
             "loadout_id": second_loadout_id,
@@ -274,7 +274,7 @@ def test_match_reward_can_drop_affixed_copy_of_known_base_part(monkeypatch):
     from main import lobby_manager
 
     garage = lobby_manager.garages[player_id]
-    existing_keys = [part["catalog_key"] for part in client.get(f"/debug/garages/{player_id}").json()["loadouts"][0]["mech"].values() if isinstance(part, dict) and "catalog_key" in part]
+    existing_keys = [part["catalog_key"] for part in client.get(f"/garages/{player_id}").json()["loadouts"][0]["mech"].values() if isinstance(part, dict) and "catalog_key" in part]
 
     random_values = iter((0.0, 0.95, 0.10))
     monkeypatch.setattr("src.garage.random.random", lambda: next(random_values))
@@ -297,7 +297,7 @@ def test_garage_shows_xp_level_and_pending_skill_choice():
     progression = garage.award_xp(100)
 
     assert progression.level_after == 2
-    state = client.get(f"/debug/garages/{player_id}").json()
+    state = client.get(f"/garages/{player_id}").json()
     assert state["xp"] == 100
     assert state["level"] == 2
     assert state["owned_skills"] == []
@@ -320,12 +320,12 @@ def test_skill_choice_is_saved_and_used_when_match_starts():
     garage.award_xp(250)
 
     response = client.post(
-        "/debug/garages/choose_skill",
+        "/garages/choose_skill",
         json={"player_id": player_id, "skill_key": "accurate_shot"},
     )
     assert response.status_code == 200
     response = client.post(
-        "/debug/garages/choose_skill",
+        "/garages/choose_skill",
         json={"player_id": player_id, "skill_key": "combat_impulse"},
     )
     assert response.status_code == 200

@@ -138,3 +138,4 @@ class GameState(BaseModel):
     turn: TurnState
     version: int
     ended: bool
+    winner: Literal[1, 2] | None

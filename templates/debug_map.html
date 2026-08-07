@@ -579,7 +579,7 @@ function handle_ws_msg(msg) {
 }
 
 async function start_rematch() {
-    const response = await fetch("http://{{ host }}/rematch", {
+    const response = await fetch("http://{{ host }}/debug/rematch", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({lobby_id: document.getElementById("lobby_id_input").value, host_player_id: document.getElementById("player_id_input").value})
     });

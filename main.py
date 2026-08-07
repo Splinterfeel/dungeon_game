@@ -118,8 +118,8 @@ async def start_game(request: StartGameRequest) -> StartGameResponse:
 
 
 @app.get(
-    "/debug/garages/{player_id}",
-    description="Состояние общего in-memory гаража пилота (debug only)",
+    "/garages/{player_id}",
+    description="Состояние общего in-memory гаража пилота",
 )
 def get_garage(player_id: str) -> GarageState:
     try:
@@ -129,8 +129,8 @@ def get_garage(player_id: str) -> GarageState:
 
 
 @app.post(
-    "/debug/garages/equip",
-    description="Установить деталь из гаража в сборку пилота (debug only)",
+    "/garages/equip",
+    description="Установить деталь из гаража в сборку пилота",
 )
 def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
     try:
@@ -144,8 +144,8 @@ def equip_garage_part(request: EquipGaragePartRequest) -> GarageState:
 
 
 @app.post(
-    "/debug/garages/tuning",
-    description="Изменить тюнинг сборки пилота (debug only)",
+    "/garages/tuning",
+    description="Изменить тюнинг сборки пилота",
 )
 def update_garage_tuning(request: UpdateGarageTuningRequest) -> GarageState:
     try:
@@ -160,8 +160,8 @@ def update_garage_tuning(request: UpdateGarageTuningRequest) -> GarageState:
 
 
 @app.post(
-    "/debug/garages/choose_skill",
-    description="Выбрать навык пилота из доступных после level-up (debug only)",
+    "/garages/choose_skill",
+    description="Выбрать навык пилота из доступных после level-up",
 )
 def choose_garage_skill(request: ChooseGarageSkillRequest) -> GarageState:
     try:
@@ -173,7 +173,9 @@ def choose_garage_skill(request: ChooseGarageSkillRequest) -> GarageState:
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@app.post("/rematch", description="Начать рематч тем же составом (debug only)")
+@app.post(
+    "/debug/rematch", description="Начать рематч тем же составом (debug only)"
+)
 async def start_rematch(request: RematchRequest) -> StartGameResponse:
     lobby = lobby_manager.get_lobby(request.lobby_id)
     if not lobby:

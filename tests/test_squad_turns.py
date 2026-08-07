@@ -3,6 +3,7 @@ import copy
 from uuid import uuid4
 
 from dto.base import CreateLobbyRequest, PlayerDTO
+from dto.state import GameState
 from lobby_manager import LobbyManager
 from src.action import Action, ActionType
 from src.ai.player import PlayerBotAI
@@ -237,6 +238,7 @@ def test_match_ends_only_after_all_mechs_of_team_are_destroyed():
     game.check_game_end()
     assert game.ended
     assert game.winner == 2
+    assert GameState.model_validate(game.to_dict()).winner == 2
 
 
 def test_match_reward_is_granted_once_per_pilot_not_per_mech():
