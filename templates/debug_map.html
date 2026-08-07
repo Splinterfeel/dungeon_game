@@ -39,6 +39,7 @@ body {
 /* entities */
 .player { background: #7ea97f; }
 .player_owned { background: #2c902f; font-weight: bold; }
+.player_opponent { background: #f44336; }
 .enemy { background: #f44336; }
 .entity-label {
     position: relative;
@@ -804,6 +805,8 @@ function handle_game_state(state){
         let _val = "P";
         if (p.owner_player_id === playerId){
             _val = "P!";
+        } else if (controlledPlayers.length && p.team !== controlledPlayers[0].team) {
+            _val = "P*";
         }
         visual[p.position.x][p.position.y].entity = _val;
         visual[p.position.x][p.position.y].health = p.stats.health;
@@ -884,7 +887,7 @@ function handle_game_state(state){
 
             // entity overlay
             if (cellData.entity) {
-                const entityMap = {"P!" :"player_owned", "P": "player", "E": "enemy" };
+                const entityMap = {"P!" :"player_owned", "P": "player", "P*": "player_opponent", "E": "enemy" };
                 const className = entityMap[cellData.entity];
                 if (className) {
                     cell.classList.add(className);
