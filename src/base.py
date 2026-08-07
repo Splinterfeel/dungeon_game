@@ -33,7 +33,7 @@ class Point(BaseModel):
         return self.x == value.x and self.y == value.y
 
     @staticmethod
-    def distance_euklid(point_1: Self, point_2: Self) -> int:
+    def distance_euklid(point_1: Self, point_2: Self) -> float:
         delta_x = point_2.x - point_1.x
         delta_y = point_2.y - point_1.y
         squared_delta_x = delta_x**2

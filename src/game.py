@@ -11,6 +11,7 @@ from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.arena import Arena
 from src.constants import CELL_TYPE
+from src.combat import AttackKind, CombatResolver
 from src.turn import GamePhase, Turn
 from src.game_observer import GameObserver
 
@@ -44,6 +45,7 @@ class Game:
             self.turn = Turn()
         if not self.turn.player_actor_order:
             self.turn.player_actor_order = self._build_player_actor_order()
+        self.combat = CombatResolver(game=self)
         self.action_handler = ActionHandler(game=self)
 
     def _build_player_actor_order(self) -> list[str]:
@@ -90,7 +92,15 @@ class Game:
         self.turn.available_moves = self.arena.map.get_available_moves(actor)
         self.turn.set_current_actor(actor)
 
-    def _is_hostile(self, watcher: Actor, target: Actor) -> bool:
+    def get_actors(self) -> list[Actor]:
+        return [*self.players, *self.arena.enemies]
+
+    def get_actor_at(self, cell: Point) -> Actor | None:
+        return next(
+            (actor for actor in self.get_actors() if actor.position == cell), None
+        )
+
+    def is_hostile(self, watcher: Actor, target: Actor) -> bool:
         if isinstance(watcher, Enemy) and isinstance(target, Player):
             return True
         if isinstance(watcher, Player) and isinstance(target, Enemy):
@@ -99,31 +109,28 @@ class Game:
             return watcher.team != target.team
         return False
 
+    def remove_dead_actor(self, actor: Actor) -> None:
+        if not actor.is_dead():
+            raise ValueError(f"Нельзя удалить живого актора {actor.name}")
+        if isinstance(actor, Player):
+            self.arena.remove_dead_player(actor)
+            self.players.remove(actor)
+        elif isinstance(actor, Enemy):
+            self.arena.remove_dead_enemy(actor)
+
     async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
-        all_actors: list[Actor] = list(self.players) + list(self.arena.enemies)
-        for watcher in all_actors:
+        for watcher in self.get_actors():
             if watcher.overwatch is None or watcher.is_dead():
                 continue
-            if not self._is_hostile(watcher, moving_actor):
+            if not self.is_hostile(watcher, moving_actor):
                 continue
-            weapon = next(
-                (
-                    w
-                    for w in watcher.inventory.weapons
-                    if w.id == watcher.overwatch.weapon_id
-                ),
-                None,
-            )
+            weapon = watcher.get_weapon(watcher.overwatch.weapon_id)
             if weapon is None:
                 watcher.overwatch = None
                 continue
             # если рука с оружием огневого дозора уничтожена к моменту срабатывания -
             # выстрела нет, дозор снимается (ROADMAP.md Этап 2 п.3-4)
-            if (
-                isinstance(watcher, Player)
-                and weapon.hand
-                and watcher.mech.arm_for(weapon.hand).destroyed
-            ):
+            if not watcher.is_weapon_usable(weapon):
                 watcher.overwatch = None
                 continue
             if self.arena.map.can_shoot(watcher, weapon, moving_actor.position):
@@ -133,60 +140,32 @@ class Game:
         return False
 
     async def _fire_overwatch_shot(self, watcher: Actor, weapon, target: Actor):
-        distance = Point.distance_chebyshev(watcher.position, target.position)
-        proc_actor_ids: set[str] = set()
-        skill_messages: list[str] = []
-        attack_stats = watcher.stats
-
-        def try_reaction_skill_proc(actor: Actor, skill_key: str) -> bool:
-            if str(actor.id) in proc_actor_ids or not isinstance(actor, Player):
-                return False
-            skill = next((s for s in actor.skills if s.skill_key == skill_key), None)
-            if skill is None:
-                return False
-            if random.random() >= skill.proc_chance:
-                return False
-            proc_actor_ids.add(str(actor.id))
-            return True
-        if (
-            isinstance(watcher, Player)
-            and weapon.type == "ranged"
-            and try_reaction_skill_proc(watcher, "accurate_shot")
-        ):
-            attack_stats = watcher.stats.model_copy(
-                update={"accuracy": watcher.stats.accuracy + 15}
-            )
-            skill_messages.append("срабатывает навык «Точный выстрел»")
-        attack_hit = weapon.check_hit(actor_stats=attack_stats, distance=distance)
-        if (
-            attack_hit
-            and isinstance(target, Player)
-            and try_reaction_skill_proc(target, "dodge")
-        ):
-            attack_hit = False
-            skill_messages.append(f"срабатывает навык «Уклонение» у {target.name}")
-        skill_prefix = f"{', '.join(skill_messages)}; " if skill_messages else ""
-        if not attack_hit:
+        # Дальнобойная атака формирует визуальный круг, поэтому и обычный
+        # выстрел, и огневой дозор используют евклидово расстояние.
+        distance = Point.distance_euklid(watcher.position, target.position)
+        outcome = self.combat.resolve_attack(
+            attacker=watcher,
+            target=target,
+            weapon=weapon,
+            distance=distance,
+            kind=AttackKind.OVERWATCH,
+        )
+        if not outcome.hit:
             await self._notify_event(
                 GameEvent(
-                    message=f"Огневой дозор: {skill_prefix}{watcher.name} промахивается по {target.name} из {weapon.name}"
+                    message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} промахивается по {target.name} из {weapon.name}"
                 )
             )
             return
-        damage = weapon.roll_damage()
-        target.apply_damage(damage)
         death_detail = ""
-        if target.is_dead():
+        if outcome.killed:
             if isinstance(target, Player):
-                self.arena.remove_dead_player(target)
-                self.players.remove(target)
                 death_detail = f" Мех {target.name} уничтожен!"
             elif isinstance(target, Enemy):
-                self.arena.remove_dead_enemy(target)
                 death_detail = f" {target.name} погиб!"
         await self._notify_event(
             GameEvent(
-                message=f"Огневой дозор: {skill_prefix}{watcher.name} попадает по {target.name} из {weapon.name} ({damage} урона){death_detail}"
+                message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} попадает по {target.name} из {weapon.name} ({outcome.damage} урона){outcome.part_detail}{death_detail}"
             )
         )
 

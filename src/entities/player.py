@@ -1,7 +1,7 @@
 import names
 from pydantic import Field, model_validator
 
-from src.entities.base import Actor, UUIDStr
+from src.entities.base import Actor, UUIDStr, Weapon
 from src.entities.mech import Mech
 from src.skills_catalog import Skill, fresh_default_player_skills
 
@@ -73,6 +73,11 @@ class Player(Actor):
                 f"превышен грузоподъём меха ({self.mech.weight_capacity})"
             )
         return self
+
+    def is_weapon_usable(self, weapon: Weapon) -> bool:
+        if not super().is_weapon_usable(weapon):
+            return False
+        return weapon.hand is None or not self.mech.arm_for(weapon.hand).destroyed
 
     def __str__(self):
         return "PLAYER " + super().__str__()

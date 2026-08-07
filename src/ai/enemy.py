@@ -20,7 +20,7 @@ class SimpleEnemyAI(AI):
         # сначала проверяем ranged-атаку (до движения, чтобы хватило AP)
         if not self.attacked_on_turn:
             ranged_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
+                iter(self.actor.get_usable_weapons("ranged")), None
             )
             if (
                 ranged_weapon
@@ -88,9 +88,7 @@ class SimpleEnemyAI(AI):
                 nearest_player_for_attack = player
                 break
         if nearest_player_for_attack and not self.attacked_on_turn:
-            melee_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "melee"), None
-            )
+            melee_weapon = next(iter(self.actor.get_usable_weapons("melee")), None)
             if (
                 melee_weapon
                 and self.actor.current_action_points >= melee_weapon.cost_ap
@@ -108,7 +106,7 @@ class SimpleEnemyAI(AI):
         # если не атаковали и не двигались — пробуем огневой дозор
         if self.actor.overwatch is None:
             ranged_weapon = next(
-                (w for w in self.actor.inventory.weapons if w.type == "ranged"), None
+                iter(self.actor.get_usable_weapons("ranged")), None
             )
             if (
                 ranged_weapon

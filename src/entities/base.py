@@ -63,7 +63,9 @@ class Weapon(BaseModel):
         multiplier = random.uniform(1 - self.DAMAGE_VARIANCE, 1 + self.DAMAGE_VARIANCE)
         return max(1, round(self.damage * multiplier))
 
-    def calculate_hit_chance(self, actor_stats: CharacterStats, distance: int) -> float:
+    def calculate_hit_chance(
+        self, actor_stats: CharacterStats, distance: float
+    ) -> float:
         if distance > self.range:
             return 0.0
         base_chance = actor_stats.accuracy * (self.accuracy / 100.0)
@@ -74,7 +76,7 @@ class Weapon(BaseModel):
             hit_chance = base_chance
         return max(0.05, min(0.95, hit_chance / 100.0))
 
-    def check_hit(self, actor_stats: CharacterStats, distance: int) -> bool:
+    def check_hit(self, actor_stats: CharacterStats, distance: float) -> bool:
         chance = self.calculate_hit_chance(actor_stats=actor_stats, distance=distance)
         return random.random() <= chance
 
@@ -112,6 +114,29 @@ class Actor(Entity):
 
     def apply_damage(self, damage: int):
         self.stats.health = max(self.stats.health - damage, 0)
+
+    def get_weapon(self, weapon_id: uuid.UUID | str) -> Weapon | None:
+        return next(
+            (
+                weapon
+                for weapon in self.inventory.weapons
+                if str(weapon.id) == str(weapon_id)
+            ),
+            None,
+        )
+
+    def is_weapon_usable(self, weapon: Weapon) -> bool:
+        return self.get_weapon(weapon.id) is not None
+
+    def get_usable_weapons(
+        self, weapon_type: Literal["melee", "ranged"] | None = None
+    ) -> list[Weapon]:
+        return [
+            weapon
+            for weapon in self.inventory.weapons
+            if (weapon_type is None or weapon.type == weapon_type)
+            and self.is_weapon_usable(weapon)
+        ]
 
     def __str__(self):
         return f"[{self.id}] {self.name}"

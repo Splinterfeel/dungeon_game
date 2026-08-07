@@ -117,9 +117,13 @@ WebSocket для игры**. Хранение состояния — тольк�
   пропускаются) → `AI_ENEMY_PHASE` → следующий раунд с тем же порядком.
 - [src/action.py](src/action.py) — `Action`/`ActionType`/`ActionResult` —
   контракт "что игрок/ИИ хочет сделать" и результат выполнения.
-- [src/action_handler.py](src/action_handler.py) — вся игровая логика по
-  типам действий: `MOVE`, `ATTACK`, `OVERWATCH`, `END_TURN`, `INSPECT`.
-  Движение выполняется пошагово с проверкой overwatch на каждой клетке.
+- [src/action_handler.py](src/action_handler.py) — валидация и выполнение
+  действий `MOVE`, `ATTACK`, `OVERWATCH`, `END_TURN`, `INSPECT`. Движение
+  выполняется пошагово с проверкой overwatch на каждой клетке; общий расчёт
+  обычной и реакционной атаки делегирован `CombatResolver`.
+- [src/combat.py](src/combat.py) — единый `CombatResolver` для обычной атаки
+  и overwatch: проки атакующего/цели, попадание, урон, locational damage и
+  удаление погибшего; возвращает типизированный `AttackOutcome`.
 - [src/arena.py](src/arena.py) — `Arena`: карта боя + сущности на ней
   (враги, точки спавна). Поддерживает загрузку готовой карты
   (`_init_from_map`, сейчас используется в `lobby.py`) и процедурную

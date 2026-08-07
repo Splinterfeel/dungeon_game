@@ -17,17 +17,11 @@ class PlayerBotAI(AI):
         return [
             player
             for player in self.game.players
-            if self.game._is_hostile(self.actor, player) and not player.is_dead()
+            if self.game.is_hostile(self.actor, player) and not player.is_dead()
         ]
 
     def _pick_weapon(self, weapon_type: str):
-        for weapon in self.actor.inventory.weapons:
-            if weapon.type != weapon_type:
-                continue
-            if weapon.hand and self.actor.mech.arm_for(weapon.hand).destroyed:
-                continue
-            return weapon
-        return None
+        return next(iter(self.actor.get_usable_weapons(weapon_type)), None)
 
     def decide(self) -> Action:
         hostiles = self._hostiles()

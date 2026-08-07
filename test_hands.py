@@ -185,8 +185,8 @@ async def check_1_and_2():
     part.apply_damage(999)
     side = tmech.hand_side_of(part)
     assert side == "left", side
-    # сообщение локального урона строится в ActionHandler; проверим маппинг метки
-    from src.action_handler import HAND_LABELS_RU
+    # сообщение локального урона строится CombatResolver; проверим маппинг метки
+    from src.combat import HAND_LABELS_RU
 
     assert HAND_LABELS_RU["left"] == "левая рука"
     assert HAND_LABELS_RU["right"] == "правая рука"
