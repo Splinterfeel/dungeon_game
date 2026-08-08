@@ -67,10 +67,8 @@ async def start_game(
     if not lobby:
         raise HTTPException(status_code=404, detail="Lobby not found")
     result, detail = await lobby.start_game()
-    await lobby.broadcast_lobby_state()
-    await lobby.broadcast_game_state()
     if result:
-        await lobby.run_automated_turns()
+        await lobby.publish_started_game()
     return StartGameResponse(
         lobby_id=request.lobby_id,
         result=result,

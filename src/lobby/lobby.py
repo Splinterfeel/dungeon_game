@@ -240,9 +240,6 @@ class Lobby(GameObserver):
     def disconnect(self, player_id: str):
         self.connections.pop(player_id, None)
 
-    async def handle_lobby_action(self, player, action):
-        print("[LOBBY handle lobby action]", player, action)
-
     async def broadcast_lobby_state(self):
         if self.game:
             status = "game started"
@@ -317,6 +314,21 @@ class Lobby(GameObserver):
 
     async def run_automated_turns(self) -> None:
         await LobbyAutomation(self).run_automated_turns()
+
+    async def publish_started_game(self) -> None:
+        await self.broadcast_lobby_state()
+        await self.broadcast_game_state()
+        await self.run_automated_turns()
+        await self.broadcast_game_state()
+        await self.announce_game_end_once()
+
+    async def publish_after_game_action(self, performed: bool) -> None:
+        if not performed:
+            return
+        await self.broadcast_game_state()
+        await self.run_automated_turns()
+        await self.broadcast_game_state()
+        await self.announce_game_end_once()
 
     async def finalize_match_rewards(self) -> None:
         await LobbyRewards(self).finalize_match_rewards()

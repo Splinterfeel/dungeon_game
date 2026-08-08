@@ -32,9 +32,7 @@ async def start_rematch(
         raise HTTPException(status_code=404, detail="Lobby not found")
     result, detail = await lobby.start_rematch(str(request.host_player_id))
     if result:
-        await lobby.broadcast_lobby_state()
-        await lobby.broadcast_game_state()
-        await lobby.run_automated_turns()
+        await lobby.publish_started_game()
     return StartGameResponse(lobby_id=request.lobby_id, result=result, detail=detail)
 
 

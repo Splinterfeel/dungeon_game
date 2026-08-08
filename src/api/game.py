@@ -45,17 +45,13 @@ async def websocket_endpoint(
         while True:
             data = await websocket.receive_json()
             if not lobby.game:
-                await lobby.handle_lobby_action(player_id, data)
                 await lobby.broadcast_lobby_state()
-            else:
-                game_action_state = GameActionState.model_validate(data)
-                performed = await lobby.handle_game_action(
-                    player_id, game_action_state.model_dump()
-                )
-                if performed:
-                    await lobby.broadcast_game_state()
-                    await lobby.run_automated_turns()
-                    await lobby.broadcast_game_state()
-                await lobby.announce_game_end_once()
+                continue
+
+            game_action_state = GameActionState.model_validate(data)
+            performed = await lobby.handle_game_action(
+                player_id, game_action_state.model_dump()
+            )
+            await lobby.publish_after_game_action(performed)
     except WebSocketDisconnect:
         lobby.disconnect(player_id)
