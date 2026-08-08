@@ -278,6 +278,20 @@ class Lobby(GameObserver):
             except Exception as e:
                 print("broadcast_game_event exception", e)
 
+    def _winner_message(self) -> str:
+        if self.game is None or self.game.winner is None:
+            return "Ничья: обе команды уничтожены"
+        return f"Победила команда {self.game.winner}!"
+
+    async def announce_game_end_once(self) -> None:
+        if self.game is None or not self.game.ended or self.game.end_announced:
+            return
+
+        print("GAME END")
+        await self.broadcast_game_event(GameEvent(message=self._winner_message()))
+        await self.broadcast_game_event(GameEvent(message="Игра закончилась"))
+        self.game.end_announced = True
+
     async def handle_game_action(self, requester: str | Actor, payload: dict) -> bool:
         async with self.lock:
             if not self.game or self.game.ended:

@@ -93,13 +93,12 @@ WebSocket для игры**. Хранение состояния — тольк�
 
 ### Основные модули
 
-- [main.py](main.py) — FastAPI-приложение, HTTP-роуты лобби, debug dump/restore,
-  единственный WS-эндпоинт `/ws/{lobby_id}/{player_id}`. Игровое API гаража —
-  `/garages/{player_id}`, `/garages/equip`, `/garages/tuning` и
-  `/garages/choose_skill`; мгновенный рематч без согласования сторон остаётся
-  debug-маршрутом `/debug/rematch`. WS-хендлер принимает действие игрока, а
-  автоматические ходы PvP-бота и нейтральных врагов делегирует
-  `Lobby.run_automated_turns`.
+- [main.py](main.py) — сборка FastAPI-приложения: CORS, static mount,
+  общий in-memory `LobbyManager` в `app.state` и подключение роутеров.
+- [src/api/](src/api) — HTTP/WS boundary приложения: `web.py` (debug UI),
+  `lobby.py` (лобби и старт игры), `game.py` (WS `/ws/{lobby_id}/{player_id}`),
+  `garage.py` (`/garages/*`, включая выбор навыка), `debug.py` (dump/restore
+  и `/debug/rematch`), `deps.py` (доступ роутеров к `LobbyManager`).
 - [src/lobby/lobby.py](src/lobby/lobby.py) — `Lobby`: отдельно хранит подключённых
   `LobbyParticipant` (пилот → команда → actor ids), боевых `Player` и
   вебсокеты пилотов, создаёт `Game` при старте, реализует `GameObserver`

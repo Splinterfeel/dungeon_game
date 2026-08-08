@@ -367,3 +367,42 @@ def test_move_into_overwatch_can_kill_actor_and_pass_turn_to_next_slot():
             action_handler_module.asyncio.sleep = original_sleep
 
     asyncio.run(scenario())
+
+
+def test_lobby_announces_game_end_once():
+    async def scenario():
+        manager = LobbyManager()
+        owner_a = uuid4()
+        owner_b = uuid4()
+        lobby = manager.create_lobby(
+            CreateLobbyRequest(players_num=2, created_by_player_id=owner_a)
+        )
+        for owner_id, team in ((owner_a, 1), (owner_b, 2)):
+            connected, detail = await lobby.connect_player(
+                PlayerDTO(
+                    id=owner_id,
+                    team=team,
+                    mech_presets=["SteelMan", "Fireworks Mk. 1"],
+                )
+            )
+            assert connected, detail
+
+        started, detail = await lobby.start_game()
+        assert started, detail
+
+        messages = []
+
+        async def collect_event(event, receiver_player_ids=None):
+            messages.append(event.message)
+
+        lobby.broadcast_game_event = collect_event
+        lobby.game.ended = True
+        lobby.game.winner = 2
+
+        await lobby.announce_game_end_once()
+        await lobby.announce_game_end_once()
+
+        assert messages == ["Победила команда 2!", "Игра закончилась"]
+        assert lobby.game.end_announced
+
+    asyncio.run(scenario())
