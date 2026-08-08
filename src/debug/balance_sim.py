@@ -1,4 +1,4 @@
-"""
+﻿"""
 Headless-симуляция боевого баланса.
 
 Прогоняет много полных 2v2 PvP-матчей между пресетами мехов, водя обе
@@ -14,8 +14,8 @@ SimpleEnemyAI под PvP: стрельба -> сближение -> ближни
 запуска нескольких клиентов.
 
 Запуск:
-- `python balance_sim.py` — базовые матч-апы пресетов.
-- `python balance_sim.py --affix-suite` — плюс грубая оценка силы аффиксов
+- `python -m src.debug.balance_sim` — базовые матч-апы пресетов.
+- `python -m src.debug.balance_sim --affix-suite` — плюс грубая оценка силы аффиксов
   против зеркала того же пресета.
 """
 
@@ -23,10 +23,16 @@ import argparse
 import asyncio
 import copy
 import random
+import sys
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from statistics import mean
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import src.action_handler as action_handler_module
 

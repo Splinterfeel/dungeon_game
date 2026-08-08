@@ -1,13 +1,16 @@
 import asyncio
 import copy
+import random
 from uuid import uuid4
 
 from dto.base import CreateLobbyRequest, PlayerDTO
 from dto.state import GameState
-from lobby_manager import LobbyManager
+from src.lobby.manager import LobbyManager
 from src.action import Action, ActionType
+from src.base import Point
 from src.ai.player import PlayerBotAI
 from src.arena import Arena
+from src.constants import CELL_TYPE
 from src.entities.base import Inventory
 from src.entities.player import Player
 from src.game import Game
@@ -48,6 +51,31 @@ def build_squad_game(enemies_num: int = 0) -> tuple[Game, list[Player]]:
         Game(arena=Arena(enemies_num=enemies_num, map=arena_map), players=players),
         players,
     )
+
+
+def build_overwatch_kill_game() -> tuple[Game, list[Player]]:
+    tiles = [[CELL_TYPE.WALL.value for _ in range(5)] for _ in range(8)]
+    for x in range(1, 7):
+        for y in range(1, 4):
+            tiles[x][y] = CELL_TYPE.EMPTY.value
+
+    start_team_1 = [Point(x=1, y=1), Point(x=1, y=3)]
+    start_team_2 = [Point(x=6, y=1), Point(x=6, y=3)]
+    for point in start_team_1:
+        tiles[point.x][point.y] = CELL_TYPE.START_TEAM_1.value
+    for point in start_team_2:
+        tiles[point.x][point.y] = CELL_TYPE.START_TEAM_2.value
+
+    arena_map = ArenaMap(width=8, height=5, tiles=tiles)
+    owner_a = uuid4()
+    owner_b = uuid4()
+    players = [
+        make_player(1, "Fireworks Mk. 1", owner_a),
+        make_player(1, "SteelMan", owner_a),
+        make_player(2, "SteelMan", owner_b),
+        make_player(2, "Fireworks Mk. 1", owner_b),
+    ]
+    return Game(arena=Arena(enemies_num=0, map=arena_map), players=players), players
 
 
 async def end_current_turn(game: Game) -> None:
@@ -270,5 +298,72 @@ def test_match_reward_is_granted_once_per_pilot_not_per_mech():
         assert manager.garages[str(owner_a)].metrics.matches_finished == 1
         assert manager.garages[str(owner_b)].metrics.matches_finished == 1
         assert len(lobby.players) == 4
+
+    asyncio.run(scenario())
+
+
+def test_move_into_overwatch_can_kill_actor_and_pass_turn_to_next_slot():
+    async def scenario():
+        import src.action_handler as action_handler_module
+
+        async def fast_sleep(*args, **kwargs):
+            return None
+
+        original_sleep = action_handler_module.asyncio.sleep
+        action_handler_module.asyncio.sleep = fast_sleep
+        try:
+            game, players = build_overwatch_kill_game()
+            watcher = players[0]
+            next_teammate = players[1]
+            moving_target = players[2]
+
+            await game.launch()
+            game.arena.map.clear_start_points(clear_players_points=True)
+            watcher.position = Point(x=2, y=2)
+            next_teammate.position = Point(x=1, y=1)
+            moving_target.position = Point(x=5, y=2)
+            players[3].position = Point(x=5, y=3)
+            for player in players:
+                game.arena.map.set(player.position, CELL_TYPE.PLAYER.value)
+
+            ranged_weapon = watcher.inventory.weapons[0]
+            ranged_weapon.accuracy = 100
+            ranged_weapon.damage = 999
+            watcher.skills = []
+            moving_target.skills = []
+            moving_target.stats.health = 1
+
+            overwatch_result = await game.perform_actor_action(
+                watcher,
+                Action(
+                    actor_id=str(watcher.id),
+                    type=ActionType.OVERWATCH,
+                    cell=watcher.position,
+                    params={"weapon_id": str(ranged_weapon.id)},
+                ),
+            )
+            assert overwatch_result.performed, overwatch_result.detail
+            assert game.turn.current_actor == moving_target
+
+            random.seed(1)
+            move_result = await game.perform_actor_action(
+                moving_target,
+                Action(
+                    actor_id=str(moving_target.id),
+                    type=ActionType.MOVE,
+                    cell=Point(x=4, y=2),
+                ),
+            )
+
+            assert move_result.performed, move_result.detail
+            assert "огнев" in move_result.detail.lower()
+            assert moving_target.is_dead()
+            assert moving_target not in game.players
+            assert watcher.overwatch is None
+            assert game.turn.current_actor == next_teammate
+            assert game.turn.phase == GamePhase.PLAYER_PHASE
+            assert str(game.turn.current_actor.id) == str(next_teammate.id)
+        finally:
+            action_handler_module.asyncio.sleep = original_sleep
 
     asyncio.run(scenario())

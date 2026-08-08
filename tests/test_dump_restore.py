@@ -1,8 +1,8 @@
-"""Round-trip тест debug-эндпоинтов dump/restore.
+﻿"""Round-trip тест debug-эндпоинтов dump/restore.
 
 In-process через TestClient — внешний сервер на localhost:8000 не нужен.
 Помимо самих эндпоинтов проверяет, что mech переживает сериализацию и
-восстановление (регрессия на game_state_utils.restore_player_from_data).
+восстановление (регрессия на src.debug.game_state_utils.restore_player_from_data).
 """
 
 from uuid import uuid4

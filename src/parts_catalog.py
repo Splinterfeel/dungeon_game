@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 
 from src.constants import Accuracy
 from src.entities.mech import Mech
@@ -52,7 +52,7 @@ DEFAULT_HEAD = Part(
 # направленности (SteelMan медленнее Fireworks: 4 против 6), просадка
 # win rate от возросшей уязвимости на подходе скомпенсирована снижением
 # точности рук FIREWORKS_ARMS (92 → 85), а не собственными статами SteelMan
-# — см. FIREWORKS_ARMS ниже и balance_sim.py.
+# — см. FIREWORKS_ARMS ниже и src/debug/balance_sim.py.
 STEELMAN_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Тяжёлый корпус «Голем»",

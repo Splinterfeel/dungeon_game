@@ -1,11 +1,20 @@
 """
-Test script to verify Game serialization without circular reference errors.
+Pytest-compatible smoke test for Game serialization.
+
+Direct run:
+    python tests/test_serialization.py
 """
 
 import json
 import asyncio
+import sys
+from pathlib import Path
 from uuid import uuid4, UUID
 from typing import Optional, List
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Import necessary classes
 from src.game import Game
@@ -190,17 +199,14 @@ def test_game_serialization():
         print("\nCircular dependency has been successfully broken.")
         print("Game state can now be serialized for debugging purposes.")
 
-        return True
-
     except Exception as e:
         print(f"[FAIL] Serialization failed with error: {e}")
         print(f"   Error type: {type(e).__name__}")
         import traceback
 
         traceback.print_exc()
-        return False
+        raise
 
 
 if __name__ == "__main__":
-    success = test_game_serialization()
-    exit(0 if success else 1)
+    test_game_serialization()

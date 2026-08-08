@@ -1,8 +1,10 @@
 """Smoke-скрипт (уровень 0 из AGENTS.md) на разделение рук + привязку оружия.
 
 Проверяет поведенческий контракт напрямую, без HTTP/WS/браузера. Запуск:
-    PYTHONIOENCODING=utf-8 python test_hands.py
-Не часть pytest-сьюта (домен ещё меняется) - рабочий smoke, как test_serialization.py.
+    pytest tests/test_hands.py
+или как ручной smoke:
+    PYTHONIOENCODING=utf-8 python tests/test_hands.py
+Теперь это часть pytest-сьюта; прямой запуск оставлен для быстрой отладки.
 
 Проверяемое (ROADMAP.md Этап 2 п.3-4, решения пользователя 2026-07-14):
 1. Уничтожение конкретной руки делает её оружие недоступным в атаке; оружие
@@ -15,6 +17,12 @@
 
 import asyncio
 import copy
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.arena import Arena
 from src.map import ArenaMap
@@ -221,6 +229,22 @@ async def main():
     await check_1_and_2()
     await check_5_overwatch()
     print("\nSUCCESS: все проверки разделения рук пройдены")
+
+
+def test_weapon_loadout_validation():
+    check_4_validation()
+
+
+def test_arm_stats_recompute():
+    check_3_stats()
+
+
+def test_destroyed_arm_weapon_availability_and_labels():
+    asyncio.run(check_1_and_2())
+
+
+def test_overwatch_from_destroyed_arm_does_not_fire():
+    asyncio.run(check_5_overwatch())
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from src.skills_catalog import Skill
 from src.turn import Turn
 from src.base import Point
 from src.game import Game
-from lobby import Lobby, LobbyParticipant
+from src.lobby.lobby import Lobby, LobbyParticipant
 
 
 def create_debug_dump_response(

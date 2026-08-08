@@ -6,7 +6,7 @@ from dto.garage import (
     PendingSkillChoiceState,
 )
 from dto.state import SkillState
-from lobby import Lobby
+from src.lobby.lobby import Lobby
 from src.garage import (
     FireControlMode,
     GarageProfile,

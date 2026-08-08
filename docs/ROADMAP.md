@@ -1,8 +1,8 @@
-# ROADMAP.md
+﻿# ROADMAP.md
 
 Пошаговый план перехода от текущего боевого прототипа (данж-сеттинг,
 без персистентности) к играбельному прототипу с мехами/деталями, а затем
-к БД, аккаунтам и прокачке. Основа для планирования — [AGENTS.md](AGENTS.md).
+к БД, аккаунтам и прокачке. Основа для планирования — [AGENTS.md](../AGENTS.md).
 
 Решения, зафиксированные с пользователем на момент написания плана:
 
@@ -16,7 +16,7 @@
   деталей на уровне во время боя не нужен — лут только по итогам матча:
   страж/Баррон (Этап 2 п.11) и пост-матчевая награда (Этап 3).
 - Процедурная генерация уровней — **не приоритет**, курс на ручные карты
-  через [static/map_editor.html](static/map_editor.html). Жертвуем
+  через [static/map_editor.html](../static/map_editor.html). Жертвуем
   процедурной генерацией, если она будет мешать рефакторингу.
 - Золото — убираем как отдельную сущность, награда после боя = валюта
   + дроп деталей, начисляется на этапе БД (Этап 3).
@@ -38,20 +38,20 @@
 - **Скиллы остаются независимыми от деталей.** Идея «скилл выучивается с
   надетой детали» (как в Front Mission 3: дроп детали = потенциально новый
   скилл) рассмотрена и **отклонена** пользователем — скиллы принадлежат
-  пилоту (дерево из Этапа 2 п.8 / [skills_tree.json](skills_tree.json)),
+  пилоту (дерево из Этапа 2 п.8 / [docs/design/skills_tree.json](design/skills_tree.json)),
   лут и скиллы — раздельные системы. Не возвращаться к идее без
   отдельного запроса.
 
 ## Этап 0 — сделано
 
-- [AGENTS.md](AGENTS.md): описан сеттинг, зафиксировано расхождение
+- [AGENTS.md](../AGENTS.md): описан сеттинг, зафиксировано расхождение
   кода с сеттингом.
 
 ## Этап 1 — минимальный меха/детали core (без БД, всё ещё in-memory)
 
 Цель этапа: убрать то, что явно не нужно от данж-сеттинга, и завести
 минимальную, но настоящую систему "пилот + меха из деталей" вместо плоских
-`CharacterStats`, которые сейчас руками прописаны в [lobby.py](lobby.py).
+`CharacterStats`, которые сейчас руками прописаны в [src/lobby/lobby.py](../src/lobby/lobby.py).
 БД пока не трогаем — лоадаут при старте боя всё ещё выдаётся из
 захардкоженного каталога в коде.
 
@@ -59,8 +59,8 @@
    - Удалены `ActionType.EXIT`, `ActionHandler.__perform_action_exit`,
      `CELL_TYPE.EXIT`, `Dungeon.exits`/`_generate_exits`, спец-случай для
      клетки выхода в `__perform_action_move`, поле `exits` в `dto/state.py`,
-     кнопка/рендер/хендлер в [templates/debug_map.html](templates/debug_map.html)
-     и палитра в [static/map_editor.html](static/map_editor.html).
+     кнопка/рендер/хендлер в [templates/debug_map.html](../templates/debug_map.html)
+     и палитра в [static/map_editor.html](../static/map_editor.html).
      Клетки бывших выходов на `map_1`/`map_2` стали обычным полом.
    - Условие конца игры не зависело от "выхода" и не менялось
      (`Game.check_game_end` считает только смерти команд/врагов).
@@ -75,18 +75,18 @@
    - **Отменено целиком (2026-07-14, решение пользователя):** сундуки на
      уровнях больше не нужны вообще — лут только по итогам матча (страж/
      Баррон, п.11 Этапа 2, и пост-матчевая награда, Этап 3), не во время
-     самого боя. Удалены: `Chest` ([src/entities/chest.py](src/entities/chest.py),
+     самого боя. Удалены: `Chest` (`src/entities/chest.py`,
      файл целиком), `CELL_TYPE.CHEST`, `ActionType.OPEN_CHEST` +
      `ActionHandler.__perform_action_open_chest`, `Arena.chests`/
      `Arena.max_chests`/`Arena.remove_chest`/`Arena._generate_chests`/
      `Arena._get_room_border_places` (последний использовался только
      генерацией сундуков), `dto.state.ChestState` + поле `chests` в
-     `ArenaState`, фильтрация видимости сундуков в `lobby.py`, восстановление
-     сундуков в `game_state_utils.py`, UI/JS сундука в
-     [templates/debug_map.html](templates/debug_map.html) (кнопка OPEN CHEST,
+     `ArenaState`, фильтрация видимости сундуков в `src/lobby/lobby.py`, восстановление
+     сундуков в `src/debug/game_state_utils.py`, UI/JS сундука в
+     [templates/debug_map.html](../templates/debug_map.html) (кнопка OPEN CHEST,
      рендер на карте, `send_open_chest()`) и кисть `CHEST` в
-     [static/map_editor.html](static/map_editor.html). Клетки `" C "` на
-     `map_1`/`map_2` ([src/maps/default.py](src/maps/default.py)) заменены
+     [static/map_editor.html](../static/map_editor.html). Клетки `" C "` на
+     `map_1`/`map_2` ([src/maps/default.py](../src/maps/default.py)) заменены
      на обычный пол.
    - `Actor.trophies: list[str]` **оставлен** как задел под пост-матчевую
      систему наград (Этап 2.5 п.1 ниже — первая in-memory версия, Этап 3 —
@@ -118,31 +118,31 @@
      "точечный ребрендинг", отдельной задачей.
    - `Enemy` на этой итерации `Mech` не получает, остаётся на плоских
      `CharacterStats`/`Inventory` (только `damage` → `melee_power` в
-     местах создания в [src/arena.py](src/arena.py) (тогда ещё
+     местах создания в [src/arena.py](../src/arena.py) (тогда ещё
      `src/dungeon.py`, переименован в п. 7), для единообразия с
      переименованным полем).
 
    Реализация:
-   - [src/entities/part.py](src/entities/part.py) (новый): `PartSlot`
+   - [src/entities/part.py](../src/entities/part.py) (новый): `PartSlot`
      (`TORSO`/`LEGS`/`ARMS`/`HEAD`) + `Part` (id, slot, name, и
      `health`/`speed`/`accuracy`/`melee_power`/`view_distance`, все `= 0`
      по умолчанию — деталь заполняет только то, что относится к её слоту
      по конвенции, модель этого не форсирует).
-   - [src/entities/mech.py](src/entities/mech.py) (новый): `Mech`
+   - [src/entities/mech.py](../src/entities/mech.py) (новый): `Mech`
      (`torso`/`legs`/`arms`/`head`: `Part`) + метод
      `build_character_stats(action_points: int) -> CharacterStats`,
      суммирующий соответствующие поля всех 4 деталей и добавляющий
      переданные очки действия (единственный стат, который на этой
      итерации остаётся "от пилота", а не от детали).
-   - [src/entities/base.py](src/entities/base.py): `CharacterStats.damage`
+   - [src/entities/base.py](../src/entities/base.py): `CharacterStats.damage`
      → `CharacterStats.melee_power`.
-   - [src/action_handler.py](src/action_handler.py): в
+   - [src/action_handler.py](../src/action_handler.py): в
      `__perform_action_attack` — бонус силы удара для melee-оружия (см. выше).
-   - [src/entities/player.py](src/entities/player.py): добавить
+   - [src/entities/player.py](../src/entities/player.py): добавить
      `mech: Mech`, `xp: int = 0`, `level: int = 1`. Без pydantic-магии
      авто-сборки `stats` из `mech` в валидаторе — рассматривали, но
      отказались: `stats` должен на этой итерации оставаться обычным явным
-     полем, потому что restore игры из дампа ([game_state_utils.py](game_state_utils.py))
+     полем, потому что restore игры из дампа ([src/debug/game_state_utils.py](../src/debug/game_state_utils.py))
      передаёт уже "просевший" в бою `stats` (health меньше максимума), и
      авто-пересборка из `mech` при каждой валидации молча затёрла бы
      прогресс боя. Вместо этого — явный вызов
@@ -151,40 +151,40 @@
      дампа, где `stats` передаётся как есть).
 
 4. ✅ **Каталог деталей (пока в коде, не в БД).** — сделано (2026-07-08).
-   - [src/parts_catalog.py](src/parts_catalog.py) (по аналогии с
-     [src/maps/default.py](src/maps/default.py)): по одной стартовой
+   - [src/parts_catalog.py](../src/parts_catalog.py) (по аналогии с
+     [src/maps/default.py](../src/maps/default.py)): по одной стартовой
      детали на слот с текущими числами (torso.health=15, legs.speed=5,
      arms.accuracy=87 + arms.melee_power=5, head.view_distance=5 — те же
-     значения, что раньше были захардкожены в `lobby.py`, чтобы сама
+     значения, что раньше были захардкожены в `src/lobby/lobby.py`, чтобы сама
      реструктуризация не меняла баланс) + `default_mech()`.
      Побочный эффект, о котором стоит знать: `melee_power=5` раньше был
      мёртвым числом (`damage`, нигде не учитывалось), теперь оно реально
      добавляется к урону ближнего оружия — стартовый "Ударный модуль" (damage 3)
      будет наносить 8, а не 3. Если это нежелательно — обнулить
      `melee_power` у стартовой детали или подобрать баланс отдельно.
-   - `lobby.py`: `connect_player` берёт `default_mech()` из каталога,
+   - `src/lobby/lobby.py`: `connect_player` берёт `default_mech()` из каталога,
      считает `stats = mech.build_character_stats(action_points=10)`;
      `Inventory.weapons` собирается как раньше (независимо от меха, см. выше).
-   - [dto/state.py](dto/state.py): `CharacherStatsState.damage` →
+   - [dto/state.py](../dto/state.py): `CharacherStatsState.damage` →
      `melee_power` (иначе клиент получит невалидную форму статов).
-   - [game_state_utils.py](game_state_utils.py):
+   - [src/debug/game_state_utils.py](../src/debug/game_state_utils.py):
      `restore_player_from_data` — восстанавливать `mech` из дампа
      (`Mech.model_validate(...)`) и передавать в `Player(...)`;
      переименовать `damage` → `melee_power` при восстановлении `stats`.
-   - [templates/debug_map.html](templates/debug_map.html): строка статов
+   - [templates/debug_map.html](../templates/debug_map.html): строка статов
      актора — `damage` → `melee_power` в JS.
-   - [test_serialization.py](test_serialization.py) и
-     [test_dump_restore.py](test_dump_restore.py) — точечно поправить
+   - [tests/test_serialization.py](../tests/test_serialization.py) и
+     [tests/test_dump_restore.py](../tests/test_dump_restore.py) — точечно поправить
      ручное создание `Player(...)` (добавить `mech=`, переименовать
      `damage=`→`melee_power=`), чтобы эти smoke-скрипты не сломались.
 
 5. ✅ **DTO меха для клиента + простой дебаг-просмотр статов/деталей.** — сделано (2026-07-08).
-   - [dto/state.py](dto/state.py): добавить `PartState` (`slot`, `name`,
+   - [dto/state.py](../dto/state.py): добавить `PartState` (`slot`, `name`,
      `health`, `speed`, `accuracy`, `melee_power`, `view_distance` —
      зеркало внутреннего `Part`) и `MechState` (`torso`/`legs`/`arms`/`head`: `PartState`).
      Поле `mech: MechState` добавляется в `PlayerState`, а не в общий
      `ActorState` — у `Enemy` меха нет (см. п.3 этапа 1).
-   - [templates/debug_map.html](templates/debug_map.html): минимальный
+   - [templates/debug_map.html](../templates/debug_map.html): минимальный
      просмотр, без билдера и без редактирования — только для отладки:
      1. выбор актора (свой игрок по умолчанию; из видимых на карте, если
         понадобится смотреть и на чужих мехов в рамках уже применяемой
@@ -197,23 +197,23 @@
         итоговая цифра (например, `speed` целиком от `legs`, `melee_power`
         от `arms` и т.д.).
    - Видимость данных не меняем: `filter_visible_entities_for_team` в
-     [lobby.py](lobby.py) как есть — это окно для отладки того, что и так
+     [src/lobby/lobby.py](../src/lobby/lobby.py) как есть — это окно для отладки того, что и так
      уже уходит игроку/команде, а не новая лазейка для подглядывания.
    - Полноценный интерактивный билдер меха — не сюда, это Unity-клиент
      и/или Этап 2, когда появится реальный выбор деталей, а не один
      `default_mech()`.
    - ✅ **Аддендум (2026-07-13): лор пресетов в инспекторе.** `MechPreset`
-     ([src/mech_presets.py](src/mech_presets.py)) получил поле
+     ([src/mech_presets.py](../src/mech_presets.py)) получил поле
      `description` — художественный текст с псевдо-историей (кем/когда
      создан, для чего) для каждого из трёх пресетов. Чтобы инспектор знал,
      какому пресету принадлежит конкретный мех игрока, `Mech`
-     ([src/entities/mech.py](src/entities/mech.py)) получил
+     ([src/entities/mech.py](../src/entities/mech.py)) получил
      `preset_name: Optional[str]`, который простановился в
      `mech_presets._fresh_copy` — `None` для мехов без пресета
      (`default_mech()`). Прокинуто в `MechState.preset_name` и
-     `MechPresetState.description` ([dto/state.py](dto/state.py); второе
+     `MechPresetState.description` ([dto/state.py](../dto/state.py); второе
      уже отдаётся эндпоинтом `/mech_presets`, использованным для выбора
-     пресета в лобби). В [templates/debug_map.html](templates/debug_map.html)
+     пресета в лобби). В [templates/debug_map.html](../templates/debug_map.html)
      `refresh_mech_presets()` строит по ответу `/mech_presets` карту
      `имя пресета -> description`, а `render_mech_inspector()` показывает
      блок с описанием над статами, если у меха выбранного актора есть
@@ -225,10 +225,10 @@
    - ✅ Редактор дополнен кистью: панель `#brushes` над сеткой позволяет
      выбрать тип клетки и красить клик/протаскиванием мыши вместо
      циклического перебора кликом по клетке — см.
-     [static/map_editor.html](static/map_editor.html). Кисть `CHEST` была
+     [static/map_editor.html](../static/map_editor.html). Кисть `CHEST` была
      в исходной версии, убрана вместе с механикой сундуков (2026-07-14,
      см. Этап 1 п.2).
-   - Сами 2-3 карты в [src/maps/default.py](src/maps/default.py) через
+   - Сами 2-3 карты в [src/maps/default.py](../src/maps/default.py) через
      редактор — осознанно не были обязательной частью этапа: пользователь
      подтвердил, что текущего набора пока достаточно.
    - `Arena._procedural_generate` (бывший `Dungeon._procedural_generate`) и
@@ -243,26 +243,26 @@
      файл (`src/dungeon.py` → `src/arena.py`), атрибут `Game.arena`/
      `Lobby`, DTO (`ArenaState`, поле `GameState.arena` — меняет и
      wire-формат WS, учли только debug-клиент), ссылки в
-     [templates/debug_map.html](templates/debug_map.html) и
-     [static/map_editor.html](static/map_editor.html) (заголовки), тесты
+     [templates/debug_map.html](../templates/debug_map.html) и
+     [static/map_editor.html](../static/map_editor.html) (заголовки), тесты
      и smoke-скрипты в корне. `Player` осознанно не переименован в
      `Pilot` — оставлен как нейтральное имя.
    - Заодно переименован один из моков оружия врагов: "Старая сабля" →
      "Повреждённый ударный модуль" (стилистически ближе к сеттингу боевых роботов,
-     см. [src/arena.py](src/arena.py)).
+     см. [src/arena.py](../src/arena.py)).
    - `Player`/`Actor`/`Turn`/`ActionHandler` — осознанно не трогали,
      уже нейтральны.
    - `dungeon_game` как имя репозитория/пакета — **не трогаем** (решение
      пользователя), обсуждение отдельно не требуется.
 
 8. ✅ **Пресеты мехов (только бэкенд).** — сделано (2026-07-12).
-   - [src/parts_catalog.py](src/parts_catalog.py): добавлены именованные
+   - [src/parts_catalog.py](../src/parts_catalog.py): добавлены именованные
      детали для двух пресетов — `STEELMAN_*` (упор в ближний бой: больше
      здоровья и силы удара, ниже точность/скорость/обзор) и `FIREWORKS_*`
      (упор в стрельбу: выше точность/скорость/обзор, ниже здоровье и сила
      удара). `DEFAULT_*`/`default_mech()` не трогали — используются в тестах
      и остаются как нейтральный/тестовый мех.
-   - [src/mech_presets.py](src/mech_presets.py) (новый файл): `MechPreset`
+   - [src/mech_presets.py](../src/mech_presets.py) (новый файл): `MechPreset`
      (`name`, `mech`, `weapons`) — пресет как «мех + оружие под него»,
      а не только набор деталей. `STEELMAN_PRESET` (в ближний бой —
      тяжёлое оружие `Кувалда «SteelMan»` + слабый пистолет для дальней
@@ -271,7 +271,7 @@
      `get_random_mech_preset()` возвращает копию случайного пресета со
      свежими `id` у всех деталей/оружия (тот же паттерн, что уже был у
      `default_mech()` — детали разных мехов не должны делить id).
-   - [lobby.py](lobby.py): `connect_player` больше не собирает мех/оружие
+   - [src/lobby/lobby.py](../src/lobby/lobby.py): `connect_player` больше не собирает мех/оружие
      руками — берёт `get_random_mech_preset()` и использует его `mech` и
      `weapons` как есть.
    - Не сделано намеренно: выбор пресета игроком (сейчас всегда случайно),
@@ -321,18 +321,18 @@
 1. **Больше слотов/деталей, редкости (common/rare/epic и т.п.), реальные
    компромиссы (например, тяжёлый корпус = меньше скорости).**
    - ✅ **Редкость.** — сделано (2026-07-13). `PartRarity` (`common`/`rare`/
-     `epic`) добавлен в [src/entities/part.py](src/entities/part.py) как
+     `epic`) добавлен в [src/entities/part.py](../src/entities/part.py) как
      поле `Part.rarity` (по умолчанию `common` — обратная совместимость со
      старыми дампами при восстановлении через `Mech.model_validate`). В
-     [src/parts_catalog.py](src/parts_catalog.py) `DEFAULT_*` помечены
+     [src/parts_catalog.py](../src/parts_catalog.py) `DEFAULT_*` помечены
      `common`, `STEELMAN_*`/`FIREWORKS_*` — `rare` (именной набор пресета,
      не стартовый). `epic`-тир пока не выдан ни одной детали — не выдумывали
      деталь под тир, которому ещё не с чем сравниться (см. ниже про
      количество деталей). Прокинуто в `dto.state.PartState.rarity` и в
-     дебаг-просмотр меха в [templates/debug_map.html](templates/debug_map.html)
+     дебаг-просмотр меха в [templates/debug_map.html](../templates/debug_map.html)
      (метка `[rarity]` рядом с именем детали).
    - ✅ **Аудит существующих деталей на реальный компромисс.** — сделано
-     (2026-07-13, прогонялось через [balance_sim.py](balance_sim.py)).
+     (2026-07-13, прогонялось через [src/debug/balance_sim.py](../src/debug/balance_sim.py)).
      Найдено и исправлено одно реальное несоответствие: `STEELMAN_LEGS` в
      ходе прошлых сессий ручной балансировки win rate дошёл до `speed=6` —
      быстрее, чем "манёвренный" `FIREWORKS_LEGS` (тогда `speed=5`), что
@@ -350,7 +350,7 @@
    - ✅ **Аддендум (2026-07-24): ослабление ваншота SteelMan.** После
      плейтеста SteelMan против Fireworks бонус `STEELMAN_ARMS.melee_power`
      снижен с 6 до 4: номинальный урон кувалды в ближнем бою стал 10 вместо
-     12. Два прогона `balance_sim.py` (250 игр/матчап) для промежуточного
+     12. Два прогона `src/debug/balance_sim.py` (250 игр/матчап) для промежуточного
      значения 5 и итогового 4 дали одинаковый ключевой матч-ап — SteelMan vs
      Fireworks 63/37 в пользу SteelMan на позиции команды 1. Правка убрала
      порог ваншота, но не сдвинула поведение текущего бота: искать причину
@@ -362,7 +362,7 @@
      оставлен текущим значением 19 для следующего ручного плейтеста, прежде
      чем решать, усиливать ли Fireworks точечно вместо дальнейшей правки
      SteelMan.
-     После перевода `balance_sim.py` на целевой 2v2 и усреднения обеих
+     После перевода `src/debug/balance_sim.py` на целевой 2v2 и усреднения обеих
      ориентаций фаз (500 игр на контр-пару) SteelMan vs Fireworks оказался
      практически ровным — 49/51, но StrikeForce стабильно побеждает обоих:
      63% против Fireworks и 65% против SteelMan. Следующая итерация баланса
@@ -377,14 +377,14 @@
    - ✅ **Третий архетип, "StrikeForce" (медленный/малое HP/дамажный).** —
      сделано и сбалансировано (2026-07-13). Расширили дизайн-пространство
      сверх пары "тяжёлый/медленный" ↔ "лёгкий/быстрый": `STRIKEFORCE_*` в
-     [src/parts_catalog.py](src/parts_catalog.py) (rarity `rare`, самое
+     [src/parts_catalog.py](../src/parts_catalog.py) (rarity `rare`, самое
      низкое HP и самая низкая скорость в игре) + `STRIKEFORCE_PRESET` в
-     [src/mech_presets.py](src/mech_presets.py) с единственным оружием —
+     [src/mech_presets.py](../src/mech_presets.py) с единственным оружием —
      рейлганом (без запасного, в отличие от SteelMan/Fireworks: весь лоадаут
      поставлен на один разовый урон). Добавлен в `MECH_PRESETS`. Первая
      прикидка урона рейлгана (damage=11) давала разгром обоих других
      архетипов (66% побед у StrikeForce что против SteelMan, что против
-     Fireworks в 3v3 через `balance_sim.py`); срезали урон до 10 — этого
+     Fireworks в 3v3 через `src/debug/balance_sim.py`); срезали урон до 10 — этого
      хватило, чтобы обе пары сошлись к ~49/51 и ~48/52. Другие архетипы из
      обсуждавшихся с пользователем ("быстрый/лёгкий/мало HP",
      "быстрый/лёгкий/обзорный") сознательно не делали — решили ограничиться
@@ -392,14 +392,14 @@
    - ✅ **Аддендум (2026-07-14): аварийное оружие "Коготь" в левую руку.** После
      разделения рук (п.3-4 ниже) StrikeForce с пустой левой рукой полностью
      обезоруживался при потере правой. Добавлено намеренно слабое
-     [src/mech_presets.py](src/mech_presets.py) оружие "Коготь"
+     [src/mech_presets.py](../src/mech_presets.py) оружие "Коготь"
      (`melee`, damage=2, cost_ap=4, accuracy=65, weight=2 — хуже "Аварийного
      клинка" Fireworks по всем боевым статам, легче по весу) как последний
      шанс не остаться совсем без оружия. **Не полноценный план "Б"** — заделан
      под будущий гараж (Этап 2.5): игрок сможет сознательно не брать "Коготь"
      ради экономии веса, рискуя безоружностью при потере правой руки; сейчас
      выбора нет (пресет фиксирован), но сама механика уже это позволяет.
-     Проверено `balance_sim.py` (250 игр/матчап, новая метрика "hands
+     Проверено `src/debug/balance_sim.py` (250 игр/матчап, новая метрика "hands
      destroyed"/"full-disarm"): в матчах без StrikeForce руки уничтожаются
      почти никогда (0.02-0.22/игру), в матчах со StrikeForce — заметно чаще
      (0.52-0.92/игру, из-за высокого абсолютного урона рейлгана — 10 при 10 HP
@@ -421,31 +421,31 @@
      потерять её.
 2. ✅ **Случайный урон по части меха (locational damage).** — сделано
    (2026-07-13).
-   - [src/entities/part.py](src/entities/part.py): `Part.max_health` +
+   - [src/entities/part.py](../src/entities/part.py): `Part.max_health` +
      `Part.current_health` (собственное HP детали, отдельное от общего
      `CharacterStats.health`) и `Part.destroyed` (`@computed_field`).
      Прочность одна на все детали (`Part.DEFAULT_MAX_HEALTH = 10`) — числа
      не подбирались отдельно, веса/баланс прочности — не приоритет, не
      трогать без отдельного запроса.
-   - [src/entities/mech.py](src/entities/mech.py): `Mech.HIT_WEIGHTS`
+   - [src/entities/mech.py](../src/entities/mech.py): `Mech.HIT_WEIGHTS`
      (торс 0.4, остальные по 0.2) + `apply_random_part_damage` (наносит
      урон случайной части, возвращает деталь и флаг "впервые уничтожена")
      + `recompute_live_stats` (пересчитывает `speed`/`accuracy`/
      `melee_power`/`view_distance` по живым деталям; `health`/`max_health`/
      `action_points` не трогает — торс специально не кейсится, смерть
      по-прежнему через общий `stats.health <= 0`).
-   - [src/action_handler.py](src/action_handler.py): при любой успешной
+   - [src/action_handler.py](../src/action_handler.py): при любой успешной
      атаке по игроку (Enemy→Player, Player→Player) урон дополнительно
      размазывается на случайную деталь + пересчёт статов; в `detail`
      добавляется уведомление об уничтожении детали. Player→Enemy не
      затронут — у `Enemy` пока нет меха (см. AGENTS.md).
-   - [dto/state.py](dto/state.py): `PartState` получил `max_health`/
+   - [dto/state.py](../dto/state.py): `PartState` получил `max_health`/
      `current_health`/`destroyed`.
    - Попутно найден и исправлен смежный баг: `Game.prepare_actor_turn`
      считал `available_moves` до сброса `current_speed_spent`, из-за чего
      просевший (от уничтоженных ног) `speed` мог уйти в минус и уронить
      assert в `ArenaMap.get_available_moves` — переставлен порядок сброса.
-   - Проверено `balance_sim.py` (250 игр/матчап) — заметного сдвига баланса
+   - Проверено `src/debug/balance_sim.py` (250 игр/матчап) — заметного сдвига баланса
      нет, отклонения в пределах уже известного шума.
    - **Не сделано осознанно:** прицеливание игроком в конкретную деталь
      (только случайный выбор при попадании, как и требовалось).
@@ -457,7 +457,7 @@
    отличному от исходной формулировки). **Руки — одна деталь-выбор** (нельзя
    надеть разные типы левой/правой), но две физические руки с раздельным
    здоровьем. Реализация:
-   - [src/entities/mech.py](src/entities/mech.py): `arms: Part` →
+   - [src/entities/mech.py](../src/entities/mech.py): `arms: Part` →
      `arms_left: Part` + `arms_right: Part`; `check_slots` требует, чтобы обе
      были **одного типа** (сверка `_PART_IDENTITY_FIELDS`, без id/current_health/
      destroyed) — это и есть «одна деталь». `HIT_WEIGHTS`: суммарный шанс по
@@ -477,33 +477,33 @@
 4. ✅ **Привязать оружие (`Inventory.weapons`) к рукам.** — сделано
    (2026-07-14, вместе с п.3). Каждая рука — слот под одно оружие; количество
    оружия ограничено двумя руками, **минимум одно обязательно**.
-   - [src/entities/base.py](src/entities/base.py): `Weapon.hand:
+   - [src/entities/base.py](../src/entities/base.py): `Weapon.hand:
      Optional[Literal["left","right"]]` (у оружия врагов без меха `hand=None`).
-   - [src/entities/player.py](src/entities/player.py): `check_weapon_loadout` —
+   - [src/entities/player.py](../src/entities/player.py): `check_weapon_loadout` —
      у игрока 1–2 оружия, у каждого рука задана и валидна, не более одного на
      руку, минимум одно.
    - **Будущая зависимость из п.2 (locational damage) закрыта:** уничтоженная
      рука делает привязанное к ней оружие недоступным для атаки и овервотча
-     ([src/action_handler.py](src/action_handler.py): проверка `arm_for(hand).destroyed`
+     ([src/action_handler.py](../src/action_handler.py): проверка `arm_for(hand).destroyed`
      в `__perform_action_attack`/`__perform_action_overwatch`;
-     [src/game.py](src/game.py): выстрел по триггеру овервотча из уничтоженной
+     [src/game.py](../src/game.py): выстрел по триггеру овервотча из уничтоженной
      руки не происходит, дозор снимается). ИИ-бот в
-     [src/ai/player.py](src/ai/player.py) (`PlayerBotAI._pick_weapon`) не выбирает
+     [src/ai/player.py](../src/ai/player.py) (`PlayerBotAI._pick_weapon`) не выбирает
      оружие уничтоженной руки; `SimpleEnemyAI` не тронут (у врагов нет рук).
-   - Пресеты ([src/mech_presets.py](src/mech_presets.py)): SteelMan (кувалда
+   - Пресеты ([src/mech_presets.py](../src/mech_presets.py)): SteelMan (кувалда
      right / пистолет left), Fireworks (винтовка right / клинок left),
      StrikeForce (рейлган right / "Коготь" left — см. аддендум 2026-07-14 в
      п.1 выше; изначально левая рука была пустой, валидировала «одно оружие
      допустимо» — эта проверка теперь покрыта отдельно в
-     [test_hands.py](test_hands.py), не через пресет).
-   - DTO ([dto/state.py](dto/state.py)): `WeaponState.hand`, `MechState` →
+     [tests/test_hands.py](../tests/test_hands.py), не через пресет).
+   - DTO ([dto/state.py](../dto/state.py)): `WeaponState.hand`, `MechState` →
      `arms_left`/`arms_right` (меняет wire-формат — только debug-клиент);
-     дебаг-инспектор ([templates/debug_map.html](templates/debug_map.html))
+     дебаг-инспектор ([templates/debug_map.html](../templates/debug_map.html))
      показывает две руки с раздельным HP, привязку оружия и пометку
      «недоступно».
-   - Проверено: [test_hands.py](test_hands.py) (5 контрактных проверок,
-     уровень 0), `pytest` (8), [test_serialization.py](test_serialization.py)
-     (dump/restore меха с новыми полями), `balance_sim.py` (все три пресета
+   - Проверено: [tests/test_hands.py](../tests/test_hands.py) (5 контрактных проверок,
+     уровень 0), `pytest` (8), [tests/test_serialization.py](../tests/test_serialization.py)
+     (dump/restore меха с новыми полями), `src/debug/balance_sim.py` (все три пресета
      доигрывают без исключений), браузерная проверка инспектора.
 5. Балансировка дроп-таблиц наград — вопрос «подбор в бою vs пост-матчевая
    награда» уже закрыт (2026-07-14): сундуков нет, весь дроп — по итогам
@@ -540,11 +540,11 @@
      механики прока в бою**, чтобы её можно было опробовать: XP/уровней,
      которые её открывают, на этом этапе ещё нет, поэтому набор скиллов
      пилоту на прототипе выдаём **захардкоженным** (по аналогии с
-     [src/parts_catalog.py](src/parts_catalog.py)/[src/maps/default.py](src/maps/default.py)).
+     [src/parts_catalog.py](../src/parts_catalog.py)/[src/maps/default.py](../src/maps/default.py)).
    - **Дерево скиллов — зафиксировано с пользователем (2026-07-10),
      статичное и одинаковое для всех пилотов** (не случайная генерация
      веток), продублировано как JSON-заглушка в
-     [skills_tree.json](skills_tree.json) (с `proc_chance` на глаз, ~раз в
+     [docs/design/skills_tree.json](design/skills_tree.json) (с `proc_chance` на глаз, ~раз в
      5-15 ходов) — при реализации брать структуру оттуда, не изобретать
      заново. 3 уровня, на 2 и 3 уровне — выбор одного из двух узлов; выбор
      на уровне 3 зависит от того, что выбрано на уровне 2 (настоящее
@@ -580,7 +580,7 @@
        проках: `Точный выстрел`, `Усиленный удар`, `Боевой импульс`,
        `Уклонение`.
    - Реализовано:
-     - новый каталог [src/skills_catalog.py](src/skills_catalog.py) и поле
+     - новый каталог [src/skills_catalog.py](../src/skills_catalog.py) и поле
        `Player.skills`;
      - всем пилотам на текущем MVP выдаётся один и тот же захардкоженный
        набор из четырёх пассивных проков (без level-up, БД и UI выбора);
@@ -624,7 +624,7 @@
      - Список скиллов у пилота: `Player.skills: list[Skill]` (у `Enemy`
        скиллов пока нет — по аналогии с тем, что у него нет `Mech`, п.3
        Этапа 1; при желании добавить позже).
-     - Хук прока в [src/action_handler.py](src/action_handler.py): в местах,
+     - Хук прока в [src/action_handler.py](../src/action_handler.py): в местах,
        соответствующих триггерам (в первую очередь `__perform_action_attack`),
        перед/после расчёта бросить `proc_chance`, и если скилл сработал —
        применить эффект и **отдать это событием** (`GameEvent`), чтобы прок
@@ -635,7 +635,7 @@
    - **Видимость/честность данных:** `Player.skills` — как и `mech`, кладём
      в `PlayerState`, а не в общий `ActorState`, и следим, чтобы список
      скиллов противника не утёк через `filter_visible_entities_for_team`
-     в [lobby.py](lobby.py) больше, чем уже утекает лоадаут (server-authoritative,
+     в [src/lobby/lobby.py](../src/lobby/lobby.py) больше, чем уже утекает лоадаут (server-authoritative,
      см. AGENTS.md). Сам факт сработавшего прока — это уже публичное боевое
      событие (как попадание/промах), его в логе скрывать не нужно.
    - Проверять — уровнем 0 из AGENTS.md: собрать `Player` со скиллом с
@@ -653,44 +653,44 @@
    "ценность"/очки баланса — тяжёлая деталь весит больше именно физически
    (больше брони → больше HP, но и больше веса), а не потому что она сильнее
    в отрыве от фикции.
-   - [src/entities/part.py](src/entities/part.py): `Part.weight` (у деталей
+   - [src/entities/part.py](../src/entities/part.py): `Part.weight` (у деталей
      всех слотов) и `Part.carry_capacity` (по конвенции значим только у
      `slot=LEGS`, аналог `melee_power`, значимого только у `ARMS`).
-   - [src/entities/base.py](src/entities/base.py): `Weapon.weight`.
-   - [src/entities/mech.py](src/entities/mech.py): `Mech.parts_weight`
+   - [src/entities/base.py](../src/entities/base.py): `Weapon.weight`.
+   - [src/entities/mech.py](../src/entities/mech.py): `Mech.parts_weight`
      (computed_field, сумма веса 4 деталей) и `Mech.weight_capacity`
      (computed_field) — **решено брать от `legs`** (конвенция Armored Core,
      первый вариант из формулировки пункта), не от `torso` (FM3).
-   - [src/entities/player.py](src/entities/player.py):
+   - [src/entities/player.py](../src/entities/player.py):
      `Player.check_weight_budget` (`model_validator`) — сумма
      `mech.parts_weight` + вес оружия в `inventory.weapons` не может
      превышать `mech.weight_capacity`, иначе `ValueError`. **Решено:
      запрет** (не штраф к статам за перегруз) — вариант по умолчанию из
      формулировки пункта.
-   - [src/parts_catalog.py](src/parts_catalog.py)/[src/mech_presets.py](src/mech_presets.py):
+   - [src/parts_catalog.py](../src/parts_catalog.py)/[src/mech_presets.py](../src/mech_presets.py):
      проставлены `weight`/`carry_capacity` для `DEFAULT_*` и всех трёх
      пресетов (SteelMan/Fireworks/StrikeForce) + их оружия. Числа — первая
-     прикидка (не гонялось через `balance_sim.py` на баланс, т.к. вес сам
+     прикидка (не гонялось через `src/debug/balance_sim.py` на баланс, т.к. вес сам
      по себе не влияет на боевые статы, только на факт прохождения валидации):
      `carry_capacity` ног задан с запасом над суммой веса деталей+оружия
      конкретного пресета (SteelMan 38/42, Fireworks 19/24, StrikeForce
      34/40) — самый тяжёлый архетип (SteelMan) сейчас с наименьшим запасом,
      отражая "несёт груз на пределе"; не финал, подбирать при дальнейшей
      балансировке (в первую очередь вместе с п.10, слайдер плотности брони).
-   - [dto/state.py](dto/state.py): `WeaponState.weight`,
+   - [dto/state.py](../dto/state.py): `WeaponState.weight`,
      `PartState.weight`/`carry_capacity`, `MechState.parts_weight`/
      `weight_capacity` — проброшено клиенту тем же путём, что и остальные
      статы (`GameState.model_validate` подхватывает по имени поля,
      `computed_field` на `Mech` включается в `model_dump()` наравне с
      обычными полями).
-   - [templates/debug_map.html](templates/debug_map.html): `weight`/
+   - [templates/debug_map.html](../templates/debug_map.html): `weight`/
      `carry_capacity` добавлены в `MECH_STAT_LABELS` (авто-отображаются в
      блоке детали per-slot, т.к. уже фильтруются по non-zero) + сводка
      "вес X/Y" в заголовке блока "Детали меха".
    - Проверено уровнем 0 (AGENTS.md): все три пресета проходят
      `Player(...)` без ошибки; сборка с намеренно тяжёлым оружием (`weight=100`)
-     корректно отклоняется `ValueError`; `pytest`, `test_serialization.py` и
-     `balance_sim.py` (короткий прогон) не сломались.
+     корректно отклоняется `ValueError`; `pytest`, `tests/test_serialization.py` и
+     `src/debug/balance_sim.py` (короткий прогон) не сломались.
    - **Не сделано осознанно:** реальное расходование бюджета игроком (выбор
      деталей всё ещё через фиксированные пресеты, не через сборку в гараже)
      — бюджет пока чисто серверный инвариант на существующих пресетах,
@@ -754,7 +754,7 @@
       проблему, разобранную в «Экономике награды».
     - **Это упрощение ИИ, а не усложнение.** Переиспользуем `Enemy` +
       `SimpleEnemyAI`, но **снимаем** с него «двигаться к ближайшему игроку»
-      (см. [src/ai/](src/ai)): страж держит зону, включается только когда
+      (см. [src/ai/](../src/ai)): страж держит зону, включается только когда
       к нему вошли/ударили (leash/aggro-on-contact). Сундука для гейта
       больше нет (убраны целиком, 2026-07-14, см. Этап 1 п.2) — по смерти
       стража деталь начисляется напрямую в `Actor.trophies` по формуле ниже,
@@ -914,15 +914,15 @@
     - **Модель:** `Weapon.ammo: Optional[int] = None` (`None` = безлимит —
       это значение по умолчанию и для melee-оружия, и как безопасный
       fallback для не тронутых мест кода). Для ranged-оружия в
-      [src/mech_presets.py](src/mech_presets.py) задаётся конкретное число.
+      [src/mech_presets.py](../src/mech_presets.py) задаётся конкретное число.
       Runtime-расход — на самом экземпляре `Weapon` в инвентаре актора
       (mutable поле `current_ammo`, по аналогии с `current_action_points`
       на `Actor`), а не в отдельной структуре — оружие уже не шарится между
       акторами: копируется со свежим `id` на каждого игрока (см. Этап 1,
       п.8, `get_random_mech_preset`/`get_mech_preset_by_name`).
     - **Два хука расхода — оба должны списывать патрон одинаково:**
-      `ActionHandler.__perform_action_attack` ([src/action_handler.py](src/action_handler.py),
-      обычная атака) и `Game._fire_overwatch_shot` ([src/game.py](src/game.py),
+      `ActionHandler.__perform_action_attack` ([src/action_handler.py](../src/action_handler.py),
+      обычная атака) и `Game._fire_overwatch_shot` ([src/game.py](../src/game.py),
       выстрел по триггеру овервотча). Сейчас это два независимых места
       вызова `weapon.check_hit`/урона — при реализации стоит свести
       проверку/списание патрона в общий хелпер, чтобы не задублировать
@@ -938,7 +938,7 @@
       не зафиксировано жёстко.
     - **Честность данных.** `current_ammo` оружия — часть `WeaponState`
       (в инвентаре игрока), значит уже подпадает под существующую
-      `filter_visible_entities_for_team` в [lobby.py](lobby.py) наравне с
+      `filter_visible_entities_for_team` в [src/lobby/state_view.py](../src/lobby/state_view.py) наравне с
       остальным лоадаутом — не создаёт нового канала утечки, но не забыть
       добавить поле в `WeaponState` (`dto/state.py`), когда будете
       прокидывать `ammo`/`current_ammo` в DTO.
@@ -956,11 +956,11 @@
       подбирать при плейтесте вместе с балансировкой весового бюджета (п.9).
 13. **Открытый вопрос (не решение, направление подумать, 2026-07-13):
     преимущество хода второй командой.** Обнаружено массовыми прогонами
-    [balance_sim.py](balance_sim.py): даже в зеркальных матч-апах (идентичные
+    [src/debug/balance_sim.py](../src/debug/balance_sim.py): даже в зеркальных матч-апах (идентичные
     составы с обеих сторон) команда, ходящая **второй** в раунде, стабильно
     выигрывает чаще (наблюдалось ~54-61% против ~39-46%). Проверено
     экспериментально — временная перестановка порядка фаз в
-    [src/turn.py](src/turn.py) (`Turn.next`/`switch_phase`, обычно
+    [src/turn.py](../src/turn.py) (`Turn.next`/`switch_phase`, обычно
     `TEAM_1_PHASE` → `TEAM_2_PHASE` → `AI_ENEMY_PHASE`) на `TEAM_2_PHASE` →
     `TEAM_1_PHASE` → `AI_ENEMY_PHASE`) перевернула и перекос — значит, дело
     не в асимметрии стартовых точек `map_2`, а именно в порядке ходов
@@ -985,16 +985,16 @@
     детерминирован (`Weapon.damage` — фиксированное число), что ощущалось
     слишком "настольно-механическим"; добавлен случайный разброс на каждое
     попадание, одинаково для ближнего и дальнего оружия.
-    - `Weapon.roll_damage()` в [src/entities/base.py](src/entities/base.py):
+    - `Weapon.roll_damage()` в [src/entities/base.py](../src/entities/base.py):
       `round(damage * uniform(1 - DAMAGE_VARIANCE, 1 + DAMAGE_VARIANCE))`,
       минимум 1. `DAMAGE_VARIANCE = 0.125` (±12.5%, середина запрошенного
       диапазона 10-15%).
     - Заменил прямое использование `weapon.damage` на `weapon.roll_damage()`
       в обоих местах, где считается урон: обычная атака
       (`ActionHandler.__perform_action_attack`,
-      [src/action_handler.py](src/action_handler.py)) и выстрел по триггеру
+      [src/action_handler.py](../src/action_handler.py)) и выстрел по триггеру
       огневого дозора (`Game._fire_overwatch_shot`,
-      [src/game.py](src/game.py)) — раньше это были два независимых расчёта
+      [src/game.py](../src/game.py)) — раньше это были два независимых расчёта
       урона, важно было не забыть про оба (см. похожую заметку про боезапас
       в п.12 выше).
     - Бонус `melee_power` за ближний бой по-прежнему прибавляется поверх
@@ -1009,7 +1009,7 @@
       разброс тоже должен быть заметен — потребуется отдельная правка
       (например, минимальный абсолютный разброс ±1 вне зависимости от
       процента), не делали её сейчас, т.к. не просили.
-    - Баланс-тесты (`balance_sim.py`) сознательно не гонялись сразу после
+    - Баланс-тесты (`src/debug/balance_sim.py`) сознательно не гонялись сразу после
       этой правки по просьбе пользователя — сначала разброс, потом баланс
       (актуально в первую очередь для новых чисел `StrikeForce`, см. выше).
 15. ✅ **Генерация деталей с аффиксами по редкости.** — сделано MVP
@@ -1034,7 +1034,7 @@
       дропы уже могут быть повторными копиями знакомой базы — это и есть
       источник дальнейшей вариативности лута после открытия каталога.
     - ✅ **Аддендум (2026-07-24): грубая балансировка через headless-симулятор.**
-      `balance_sim.py` получил `--affix-suite`: зеркальные прогоны
+      `src/debug/balance_sim.py` получил `--affix-suite`: зеркальные прогоны
       «аффиксная команда vs базовая команда» с усреднением по обеим
       сторонам первого хода. На первой итерации это уже помогло поймать,
       что плоский `health`-аффикс слишком сильно баффает хрупкие пресеты
@@ -1099,9 +1099,9 @@
    текущий мех и позволять владельцу отправлять его действие; полноценный UI
    состава остаётся задачей Unity. Добавить сценарии уровня 0 для чередования
    инициативы, авторизации действия владельцем, смерти одного меха и награды
-   пилоту; обновить dump/restore и `balance_sim.py` на составы отрядов.
+   пилоту; обновить dump/restore и `src/debug/balance_sim.py` на составы отрядов.
    - Реализованы проверки доменной очереди и WebSocket-владения; dump/restore
-     сохраняет владельцев, loadout id и порядок акторов. `balance_sim.py`
+     сохраняет владельцев, loadout id и порядок акторов. `src/debug/balance_sim.py`
      моделирует одного пилота с двумя мехами на сторону. Контрольный прогон
      250 игр на серию: SteelMan/Fireworks 49/51, Fireworks/StrikeForce 40/60,
      StrikeForce/SteelMan 63/37; смешанное зеркало 47/53. Баланс чисел этим
@@ -1154,6 +1154,12 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
      выведены из `/debug`: это обычные игровые действия пилота. Мгновенный
      рематч хостом, напротив, перенесён в `/debug/rematch`, потому что пока не
      требует согласия второй живой стороны.
+   - ✅ **Технический аддендум (2026-08-08):** in-memory слой гаража
+     разрезан по доменным обязанностям без ввода тяжёлых абстракций:
+     `src/garage.py` держит aggregate/лоадаут и сборку боевого `Player`,
+     `src/progression.py` — XP/уровни/`pending`-выбор навыка,
+     `src/rewards.py` — пост-матчевый дроп и affix-roll. Это подготовка к БД,
+     не новая игровая механика.
      Отдельный `debug_garage.html` (`/garage`) показывает склад, дельты
      статов/веса и метрики; `debug_map.html` оставлен для лобби и матча.
      Гараж создаётся только при первом подключении через игру: выбранный там
@@ -1177,8 +1183,8 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
 **Промежуточный debug-MVP (2026-07-24).** ✅ Добавлен одиночный режим
 `vs_bot`: один живой пилот команды 1 играет против временного пилота-бота
 команды 2, управляющего двумя мехами. Общий `PlayerBotAI` вынесен в
-[src/ai/player.py](src/ai/player.py) и переиспользуется
-[balance_sim.py](balance_sim.py); `Lobby.run_automated_turns` последовательно
+[src/ai/player.py](../src/ai/player.py) и переиспользуется
+[src/debug/balance_sim.py](../src/debug/balance_sim.py); `Lobby.run_automated_turns` последовательно
 проводит ходы PvP-бота и нейтральных врагов до возврата управления человеку.
 Бот намеренно видит полное серверное состояние и просто преследует ближайшего
 противника по BFS. Его временный гараж не получает награды/XP и не попадает в
@@ -1188,14 +1194,14 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
 
 1. **Бот-ИИ достойного уровня (фундамент, делать первым).** Не
    `SimpleEnemyAI` и не жёсткая эвристика `PlayerBotAI` из
-   [src/ai/player.py](src/ai/player.py), а ИИ, которого **не стыдно подставить
+   [src/ai/player.py](../src/ai/player.py), а ИИ, которого **не стыдно подставить
    вместо живого игрока**: понимает свой лоадаут (melee-архетип сближается,
    ranged держит дистанцию, «мех одного выстрела» вроде StrikeForce
    караулит момент), пользуется овервотчем и линией видимости, отступает
    на низком HP, играет вокруг объектива (страж, Этап 2 п.11), не делает
    очевидно самоубийственных ходов. `PlayerBotAI` — стартовая точка, целевая
    планка заметно выше. Побочные выгоды: реалистичнее прогоны
-   `balance_sim.py` и проверка гипотезы Этапа 2 п.13 (человекоподобная
+   `src/debug/balance_sim.py` и проверка гипотезы Этапа 2 п.13 (человекоподобная
    игра может ослабить преимущество второй команды). Ревью ИИ из Этапа 2
    п.7 делается здесь же, не отдельной задачей.
 2. **Подлив ботов в матчи (модель PUBG).** Зафиксировано с пользователем
@@ -1241,7 +1247,7 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
    - `PilotSkillOwnership` — какие скиллы пилот уже открыл через прокачку
      (постоянное «дерево развития» пилота между боями).
 3. **Начисление прогрессии.** По окончании `Game` (сейчас `Game.ended`
-   в [src/game.py](src/game.py)) — расчёт XP/валюты/дропа и запись в БД.
+   в [src/game.py](../src/game.py)) — расчёт XP/валюты/дропа и запись в БД.
    Это новый код на границе `Lobby`/`Game`, сама логика боя не меняется.
    - **Скиллы и уровни (продолжение Этапа 2, п.8).** Именно здесь появляется
      то, чего не было в прототипе: реальное начисление XP → рост `Pilot.level`,
@@ -1272,7 +1278,7 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
    пилота, CRUD лоадаутов, история матчей, а также скиллы пилота: открытые
    скиллы + доступный на текущем уровне выбор и приём выбранного скилла
    (см. п.3, «Скиллы и уровни»).
-6. **`lobby.py`/`start_game`:** отряд игрока собирается из выбранных
+6. **`src/lobby/lobby.py`/`start_game`:** отряд игрока собирается из выбранных
    `MechLoadout` из БД вместо одного лоадаута из каталога в коде.
    Каталог деталей в коде (Этап 1, п. 4) на этом этапе выпиливается —
    переезжает в БД полностью.
@@ -1299,7 +1305,7 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
 2. Переподключение/устойчивость к разрыву соединения — уже частично есть
    (`websocket_endpoint` шлёт текущее состояние при реконнекте); можно
    опереться на существующий dump/restore
-   ([game_state_utils.py](game_state_utils.py)) для восстановления после
+   ([src/debug/game_state_utils.py](../src/debug/game_state_utils.py)) для восстановления после
    падения процесса, а не только реконнекта клиента.
 3. Матчмейкинг вместо ручного шаринга лобби — опционально, по необходимости.
    Если к этому моменту решится открытый вопрос про score силы пилота/сборки

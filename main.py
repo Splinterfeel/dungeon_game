@@ -29,12 +29,12 @@ from dto.state import MechPresetState
 
 from src.mech_presets import MECH_PRESETS
 from dto.event import GameEvent
-from lobby_manager import LobbyManager
+from src.lobby.manager import LobbyManager
 from src.game import Game
 from fastapi.staticfiles import StaticFiles
 
-from ws_utils import WSCloseCodes
-from game_state_utils import (
+from src.ws_utils import WSCloseCodes
+from src.debug.game_state_utils import (
     create_debug_dump_response,
     restore_game_state as restore_game_state_util,
     create_restore_response,

@@ -12,25 +12,21 @@ from dto.state import (
     LobbyState,
     LobbyStatePayload,
     PartState,
-    PlayerState,
 )
-from src.ai.enemy import SimpleEnemyAI
-from src.ai.player import PlayerBotAI
+from src.lobby.automation import LobbyAutomation
+from src.lobby.rewards import LobbyRewards
+from src.lobby.state_view import LobbyStateView
 from src.entities.base import Actor, Inventory
-from src.entities.enemy import Enemy
 from src.game import Game
 from src.arena import Arena
 from src.entities.player import Player
-from src.action import Action, ActionType
+from src.action import Action
 from src.map import ArenaMap
 from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
-from src.garage import GarageProfile, MATCH_XP_REWARDS, roll_match_reward
-from src.turn import GamePhase
+from src.garage import GarageProfile
 
-
-MAX_AUTOMATED_ACTIONS_PER_ACTOR = 20
 
 
 @dataclass
@@ -56,17 +52,17 @@ class Lobby(GameObserver):
         self.vs_bot = vs_bot
         self.created_by_player_id = str(created_by_player_id)
         self.participants: dict[str, LobbyParticipant] = {}
-        # Боевые акторы заполняются при старте матча. Ключ — actor id, а не
-        # player_id подключённого пилота.
+        # Р‘РѕРµРІС‹Рµ Р°РєС‚РѕСЂС‹ Р·Р°РїРѕР»РЅСЏСЋС‚СЃСЏ РїСЂРё СЃС‚Р°СЂС‚Рµ РјР°С‚С‡Р°. РљР»СЋС‡ вЂ” actor id, Р° РЅРµ
+        # player_id РїРѕРґРєР»СЋС‡С‘РЅРЅРѕРіРѕ РїРёР»РѕС‚Р°.
         self.players: dict[str, Player] = {}
-        # Гаражи живут в LobbyManager и общие для всех лобби процесса.
+        # Р“Р°СЂР°Р¶Рё Р¶РёРІСѓС‚ РІ LobbyManager Рё РѕР±С‰РёРµ РґР»СЏ РІСЃРµС… Р»РѕР±Р±Рё РїСЂРѕС†РµСЃСЃР°.
         self.garages = garages
         self.bot_garages: dict[str, GarageProfile] = {}
         self.connections: dict[str, WebSocket] = {}
 
         self.lock = asyncio.Lock()
         self.automation_lock = asyncio.Lock()
-        self.game = None  # до момента старта игры нет
+        self.game = None  # РґРѕ РјРѕРјРµРЅС‚Р° СЃС‚Р°СЂС‚Р° РёРіСЂС‹ РЅРµС‚
 
     async def on_game_event(
         self, event: GameEvent, receiver_player_ids: Optional[List[str]] = None
@@ -102,7 +98,7 @@ class Lobby(GameObserver):
             Player(
                 id=bot_id,
                 team=2,
-                name="Бот",
+                name="Р‘РѕС‚",
                 mech=preset.mech.model_copy(deep=True),
                 stats=preset.mech.build_character_stats(action_points=10),
                 inventory=Inventory(
@@ -129,11 +125,11 @@ class Lobby(GameObserver):
             return False, "player already in lobby"
         if self.vs_bot:
             if player.team != 1:
-                return False, "В одиночном режиме игрок должен выбрать команду 1"
+                return False, "Р’ РѕРґРёРЅРѕС‡РЅРѕРј СЂРµР¶РёРјРµ РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РІС‹Р±СЂР°С‚СЊ РєРѕРјР°РЅРґСѓ 1"
             if any(
                 not participant.is_bot for participant in self.participants.values()
             ):
-                return False, "Одиночное лобби уже занято"
+                return False, "РћРґРёРЅРѕС‡РЅРѕРµ Р»РѕР±Р±Рё СѓР¶Рµ Р·Р°РЅСЏС‚Рѕ"
         if len(self.participants) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
@@ -183,7 +179,7 @@ class Lobby(GameObserver):
             return False, detail
         if self.vs_bot:
             self._add_bot_participant()
-        # генерация
+        # РіРµРЅРµСЂР°С†РёСЏ
         # arena = Arena(
         #     enemies_num=2,
         #     width=20,
@@ -194,15 +190,15 @@ class Lobby(GameObserver):
         #     max_room_size=5,
         # )
 
-        # готовые карты
+        # РіРѕС‚РѕРІС‹Рµ РєР°СЂС‚С‹
         arena_map = ArenaMap(
             width=copy.deepcopy(default.map_2["width"]),
             height=copy.deepcopy(default.map_2["height"]),
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         arena = Arena(enemies_num=2, map=arena_map)
-        # Всегда пересобираем весь отряд из гаража: HP и поломки прошлого
-        # матча не являются прогрессом, а установленные детали — являются.
+        # Р’СЃРµРіРґР° РїРµСЂРµСЃРѕР±РёСЂР°РµРј РІРµСЃСЊ РѕС‚СЂСЏРґ РёР· РіР°СЂР°Р¶Р°: HP Рё РїРѕР»РѕРјРєРё РїСЂРѕС€Р»РѕРіРѕ
+        # РјР°С‚С‡Р° РЅРµ СЏРІР»СЏСЋС‚СЃСЏ РїСЂРѕРіСЂРµСЃСЃРѕРј, Р° СѓСЃС‚Р°РЅРѕРІР»РµРЅРЅС‹Рµ РґРµС‚Р°Р»Рё вЂ” СЏРІР»СЏСЋС‚СЃСЏ.
         self.players = {}
         for participant in self.participants.values():
             participant.actor_ids = []
@@ -223,9 +219,9 @@ class Lobby(GameObserver):
 
     async def start_rematch(self, host_player_id: str) -> tuple[bool, str]:
         if host_player_id != self.created_by_player_id:
-            return False, "Только хост лобби может начать рематч"
+            return False, "РўРѕР»СЊРєРѕ С…РѕСЃС‚ Р»РѕР±Р±Рё РјРѕР¶РµС‚ РЅР°С‡Р°С‚СЊ СЂРµРјР°С‚С‡"
         if self.game is None or not self.game.ended:
-            return False, "Рематч доступен только после завершения матча"
+            return False, "Р РµРјР°С‚С‡ РґРѕСЃС‚СѓРїРµРЅ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ РјР°С‚С‡Р°"
         result, detail = await self._start_fresh_game()
         if result:
             for participant in self.participants.values():
@@ -235,8 +231,8 @@ class Lobby(GameObserver):
         return result, detail
 
     async def _start_fresh_game(self) -> tuple[bool, str]:
-        # start_game проверяет game is not None, поэтому для рематча временно
-        # освобождаем слот, сохранив завершённый матч только в событиях/метриках.
+        # start_game РїСЂРѕРІРµСЂСЏРµС‚ game is not None, РїРѕСЌС‚РѕРјСѓ РґР»СЏ СЂРµРјР°С‚С‡Р° РІСЂРµРјРµРЅРЅРѕ
+        # РѕСЃРІРѕР±РѕР¶РґР°РµРј СЃР»РѕС‚, СЃРѕС…СЂР°РЅРёРІ Р·Р°РІРµСЂС€С‘РЅРЅС‹Р№ РјР°С‚С‡ С‚РѕР»СЊРєРѕ РІ СЃРѕР±С‹С‚РёСЏС…/РјРµС‚СЂРёРєР°С….
         self.game = None
         return await self.start_game()
 
@@ -250,7 +246,7 @@ class Lobby(GameObserver):
         print("[LOBBY handle lobby action]", player, action)
 
     async def broadcast_lobby_state(self):
-        # Формируем структуру для лобби (до старта игры)
+        # Р¤РѕСЂРјРёСЂСѓРµРј СЃС‚СЂСѓРєС‚СѓСЂСѓ РґР»СЏ Р»РѕР±Р±Рё (РґРѕ СЃС‚Р°СЂС‚Р° РёРіСЂС‹)
         if self.game:
             status = "game started"
         elif self._ready_to_start():
@@ -274,7 +270,7 @@ class Lobby(GameObserver):
     async def broadcast_game_event(
         self, event: GameEvent, receiver_player_ids: list[str] = None
     ):
-        "Отправка информационных сообщений - смерть игрока и т д"
+        "РћС‚РїСЂР°РІРєР° РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№ - СЃРјРµСЂС‚СЊ РёРіСЂРѕРєР° Рё С‚ Рґ"
         _receivers = self.connections
         if receiver_player_ids:
             _receivers = {
@@ -310,134 +306,15 @@ class Lobby(GameObserver):
             return action_result.performed
 
     async def run_automated_turns(self) -> None:
-        """Выполняет ходы PvP-ботов и нейтральных врагов до хода человека."""
-        async with self.automation_lock:
-            automated_actor_id = None
-            ai = None
-            actions_for_actor = 0
-
-            while self.game and not self.game.ended:
-                actor = self.game.turn.current_actor
-                if isinstance(actor, Player):
-                    participant = self.participants.get(str(actor.owner_player_id))
-                    if participant is None or not participant.is_bot:
-                        return
-                    ai_class = PlayerBotAI
-                elif (
-                    isinstance(actor, Enemy)
-                    and self.game.turn.phase == GamePhase.AI_ENEMY_PHASE
-                ):
-                    ai_class = SimpleEnemyAI
-                else:
-                    return
-
-                actor_id = str(actor.id)
-                if actor_id != automated_actor_id:
-                    automated_actor_id = actor_id
-                    ai = ai_class(actor, self.game)
-                    actions_for_actor = 0
-
-                if actions_for_actor >= MAX_AUTOMATED_ACTIONS_PER_ACTOR:
-                    action = ai.end_turn()
-                else:
-                    action = ai.decide()
-                actions_for_actor += 1
-
-                performed = await self.handle_game_action(
-                    actor, action.model_dump(mode="json")
-                )
-                await self.broadcast_game_state()
-                if performed:
-                    continue
-
-                if action.type == ActionType.END_TURN:
-                    return
-                fallback = ai.end_turn()
-                fallback_performed = await self.handle_game_action(
-                    actor, fallback.model_dump(mode="json")
-                )
-                await self.broadcast_game_state()
-                if not fallback_performed:
-                    return
+        await LobbyAutomation(self).run_automated_turns()
 
     async def finalize_match_rewards(self) -> None:
-        """Начисляет награды ровно один раз, в том числе погибшим победителям."""
-        if not self.game or self.game.rewards_granted:
-            return
-        self.game.rewards_granted = True
-        for player_id, participant in self.participants.items():
-            if participant.is_bot:
-                continue
-            garage = self.garages[player_id]
-            is_winner = (
-                self.game.winner is not None and participant.team == self.game.winner
-            )
-            garage.metrics.matches_finished += 1
-            progression = garage.award_xp(
-                MATCH_XP_REWARDS["winner" if is_winner else "loser"]
-            )
-            if progression.level_after > progression.level_before:
-                await self.broadcast_game_event(
-                    GameEvent(
-                        message=(
-                            f"Прогресс пилота {garage.name}: +{progression.xp_awarded} XP, "
-                            f"уровень {progression.level_before} → {progression.level_after}. "
-                            f"Новый выбор навыка доступен в гараже."
-                        )
-                    ),
-                    receiver_player_ids=[player_id],
-                )
-            else:
-                await self.broadcast_game_event(
-                    GameEvent(
-                        message=(
-                            f"Прогресс пилота {garage.name}: +{progression.xp_awarded} XP "
-                            f"(всего {garage.xp}), уровень {garage.level}."
-                        )
-                    ),
-                    receiver_player_ids=[player_id],
-                )
-            reward = roll_match_reward(garage, is_winner)
-            if reward.awarded_part is None:
-                chance_percent = round(reward.chance * 100)
-                await self.broadcast_game_event(
-                    GameEvent(
-                        message=(
-                            f"Награда: ролл {chance_percent}% для {garage.name} — "
-                            f"деталь не выпала. {reward.reason}."
-                        )
-                    ),
-                    receiver_player_ids=[player_id],
-                )
-                continue
-            part_state = PartState.model_validate(
-                reward.awarded_part.model_dump(mode="json")
-            )
-            await self.broadcast_game_event(
-                GameEvent(
-                    message=(
-                        f"Награда: {garage.name} получает {part_state.rarity} "
-                        f"деталь «{part_state.name}»!"
-                    ),
-                    loot_part=part_state,
-                )
-            )
+        await LobbyRewards(self).finalize_match_rewards()
 
     def filter_available_moves(
         self, game_state: GameState, player_id: str
     ) -> GameState:
-        game_state = game_state.model_copy(deep=True)
-        if not game_state.turn.current_actor:
-            # если нет текущего актора (значит это Enemy AI) - не отдаём доступные клетки
-            game_state.turn.available_moves = []
-            return game_state
-        current_actor = game_state.turn.current_actor
-        if (
-            not isinstance(current_actor, PlayerState)
-            or current_actor.owner_player_id != player_id
-        ):
-            game_state.turn.available_moves = []
-        return game_state
+        return LobbyStateView(self.game).filter_available_moves(game_state, player_id)
 
     async def broadcast_game_state(self):
         try:
@@ -445,14 +322,12 @@ class Lobby(GameObserver):
         except Exception as e:
             print(e)
         else:
-            states_for_teams = {
-                1: self.filter_visible_entities_for_team(state, 1),
-                2: self.filter_visible_entities_for_team(state, 2),
-            }
+            state_view = LobbyStateView(self.game)
+            states_for_teams = state_view.build_states_for_teams(state)
             for player_id, ws in self.connections.items():
                 participant = self.participants[player_id]
                 _state = states_for_teams[participant.team]
-                _state = self.filter_available_moves(_state, str(player_id))
+                _state = state_view.filter_available_moves(_state, str(player_id))
                 try:
                     await ws.send_json(
                         {"type": "state_update", "payload": _state.model_dump()}
@@ -463,34 +338,6 @@ class Lobby(GameObserver):
     def filter_visible_entities_for_team(
         self, game_state: GameState, team: int
     ) -> GameState:
-        # исключаем те, которые больше view_distance по Евклиду и имеют препятствия
-        game_state = game_state.model_copy(deep=True)
-        team_players = [p for p in game_state.players if p.team == team]
-        another_team_players = [p for p in game_state.players if p.team != team]
-        visible_enemies = []
-        visible_players = [p for p in team_players]
-        for enemy in game_state.arena.enemies:
-            for player in team_players:
-                if self.game.arena.map.can_see(player, enemy):
-                    visible_enemies.append(enemy)
-                    break
-        for another_player in another_team_players:
-            for player in team_players:
-                if self.game.arena.map.can_see(player, another_player):
-                    visible_players.append(another_player)
-                    break
-        game_state.players = visible_players
-        game_state.arena.enemies = visible_enemies
-        if (
-            game_state.turn.current_actor is not None
-            and game_state.turn.current_actor.team != team
-            and all(
-                player.id != game_state.turn.current_actor.id
-                for player in visible_players
-            )
-        ):
-            # Порядок хода не должен превращаться в радар: скрытый вражеский
-            # мех не отдаём вместе с позицией, статами и оружием.
-            game_state.turn.current_actor = None
-            game_state.turn.available_moves = []
-        return game_state
+        return LobbyStateView(self.game).filter_visible_entities_for_team(
+            game_state, team
+        )
