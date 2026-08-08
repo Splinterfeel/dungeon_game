@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from src.entities.base import Inventory, UUIDStr, Weapon
 from src.entities.mech import Mech
-from src.entities.part import Part, PartRarity, PartSlot, PartType
+from src.entities.part import Part, PartRarity, PartSlot
 from src.entities.player import Player
 
 from src.progression import (
@@ -59,7 +59,7 @@ FIRE_CONTROL_DELTAS: dict[FireControlMode, tuple[int, int]] = {
 }
 
 
-def part_catalog_key(part: Part) -> PartType:
+def part_catalog_key(part: Part) -> str:
     return part.catalog_key
 
 
@@ -151,7 +151,7 @@ class GarageProfile(BaseModel):
     def build_mech(self, loadout_id: UUIDStr | str | None = None) -> Mech:
         loadout = self.loadout_by_id(loadout_id)
         arms = self.equipped_part(loadout, PartSlot.ARMS)
-        return Mech.from_part_selection(
+        return Mech(
             torso=self.equipped_part(loadout, PartSlot.TORSO),
             legs=self.equipped_part(loadout, PartSlot.LEGS),
             arms=arms,
@@ -260,7 +260,7 @@ class GarageProfile(BaseModel):
         parts = {
             slot: self.part_by_id(part_id) for slot, part_id in equipped_ids.items()
         }
-        mech = Mech.from_part_selection(
+        mech = Mech(
             torso=parts[PartSlot.TORSO],
             legs=parts[PartSlot.LEGS],
             arms=parts[PartSlot.ARMS],

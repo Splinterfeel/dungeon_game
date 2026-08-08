@@ -23,8 +23,8 @@ class Mech(BaseModel):
     torso: Part
     legs: Part
     # руки - одна деталь-выбор (нельзя надеть разные типы), но две физические руки
-    # с раздельным здоровьем (ROADMAP.md Этап 2 п.3): arms_left/arms_right - копии
-    # одного типа детали (проверяется в check_slots). Каждая рука - слот под оружие
+    # с раздельным здоровьем (ROADMAP.md Этап 2 п.3): Mech принимает одну деталь
+    # arms и создаёт из неё arms_left/arms_right. Каждая рука - слот под оружие
     # (Weapon.hand), её уничтожение делает своё оружие недоступным (arm_for).
     arms_left: Part
     arms_right: Part
@@ -34,26 +34,21 @@ class Mech(BaseModel):
     # показа лора пресета в дебаг-инспекторе, на игровую логику не влияет
     preset_name: Optional[str] = None
 
-    @classmethod
-    def from_part_selection(
-        cls,
+    def __init__(
+        self,
         *,
         torso: Part,
         legs: Part,
         arms: Part,
         head: Part,
         preset_name: Optional[str] = None,
-        fresh_parts: bool = True,
-    ) -> "Mech":
-        def selected(part: Part) -> Part:
-            return part.fresh_copy() if fresh_parts else part
-
-        return cls(
-            torso=selected(torso),
-            legs=selected(legs),
-            arms_left=selected(arms),
-            arms_right=selected(arms),
-            head=selected(head),
+    ) -> None:
+        super().__init__(
+            torso=torso.fresh_copy(),
+            legs=legs.fresh_copy(),
+            arms_left=arms.fresh_copy(),
+            arms_right=arms.fresh_copy(),
+            head=head.fresh_copy(),
             preset_name=preset_name,
         )
 
@@ -72,12 +67,6 @@ class Mech(BaseModel):
                 raise ValueError(
                     f"{field_name} ожидает деталь слота {expected_slot}, получена {part.slot}"
                 )
-        # "руки - одна деталь": левая и правая должны быть одного типа (id и
-        # текущая прочность могут отличаться - это разные экземпляры в бою)
-        if not self.arms_left.same_loadout_part_as(self.arms_right):
-            raise ValueError(
-                "Левая и правая руки должны быть одной деталью (одинаковый тип)"
-            )
         return self
 
     def arm_for(self, hand: str) -> Part:

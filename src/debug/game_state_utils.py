@@ -11,6 +11,7 @@ from src.garage import GarageProfile
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
+from src.entities.part import Part
 from src.skills_catalog import Skill
 from src.turn import Turn
 from src.base import Point
@@ -46,6 +47,26 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
     """Restore a Player object from dump data"""
     player_uuid = UUID(player_data["id"])
 
+    mech_data = player_data["mech"]
+
+    def restore_part(part_data: Dict[str, Any]) -> Part:
+        part = Part.model_validate(part_data)
+        # Part валидатор трактует 0 как начальную прочность; в дампе это может
+        # означать уже уничтоженную деталь, поэтому возвращаем боевое значение.
+        part.current_health = part_data["current_health"]
+        return part
+
+    # Debug restore намеренно обходит обычную сборку из одной выбранной детали
+    # рук: в дампе левая и правая руки уже имеют раздельное боевое состояние.
+    restored_mech = Mech.model_construct(
+        torso=restore_part(mech_data["torso"]),
+        legs=restore_part(mech_data["legs"]),
+        arms_left=restore_part(mech_data["arms_left"]),
+        arms_right=restore_part(mech_data["arms_right"]),
+        head=restore_part(mech_data["head"]),
+        preset_name=mech_data.get("preset_name"),
+    )
+
     # Create player with restored state
     restored_player = Player(
         id=player_uuid,
@@ -53,7 +74,7 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
         owner_player_id=player_data.get("owner_player_id", player_uuid),
         loadout_id=player_data.get("loadout_id"),
         name=player_data.get("name"),
-        mech=Mech.model_validate(player_data["mech"]),
+        mech=restored_mech,
         xp=player_data.get("xp", 0),
         level=player_data.get("level", 1),
         skills=[Skill.model_validate(skill) for skill in player_data.get("skills", [])],

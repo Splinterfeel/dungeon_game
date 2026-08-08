@@ -1,6 +1,6 @@
 import uuid
 from enum import Enum
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, computed_field, model_validator
 
@@ -20,26 +20,6 @@ class PartRarity(str, Enum):
     EPIC = "epic"
 
 
-PartType = Literal[
-    "default_torso",
-    "default_legs",
-    "default_arms",
-    "default_head",
-    "steelman_torso",
-    "steelman_legs",
-    "steelman_arms",
-    "steelman_head",
-    "fireworks_torso",
-    "fireworks_legs",
-    "fireworks_arms",
-    "fireworks_head",
-    "strikeforce_torso",
-    "strikeforce_legs",
-    "strikeforce_arms",
-    "strikeforce_head",
-]
-
-
 class Part(BaseModel):
     # локальная прочность детали (locational damage), отдельная от
     # CharacterStats.health - см. ROADMAP.md, Этап 2 п.2. Одна прочность
@@ -49,7 +29,7 @@ class Part(BaseModel):
     id: UUIDStr = Field(default_factory=uuid.uuid4)
     # Идентификатор типа детали в каталоге. Экземплярный id отличает две
     # полученные детали, а catalog_key нужен для защиты от дублей в гараже.
-    catalog_key: PartType
+    catalog_key: str
     slot: PartSlot
     name: str
     rarity: PartRarity = PartRarity.COMMON
@@ -91,19 +71,6 @@ class Part(BaseModel):
                 "max_health": max_health,
                 "current_health": max_health,
             }
-        )
-
-    def same_loadout_part_as(self, other: "Part") -> bool:
-        return (
-            self.catalog_key,
-            self.affix_tier,
-            self.affix_stat,
-            self.affix_value,
-        ) == (
-            other.catalog_key,
-            other.affix_tier,
-            other.affix_stat,
-            other.affix_value,
         )
 
     def apply_damage(self, damage: int) -> None:

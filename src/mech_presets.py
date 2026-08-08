@@ -41,12 +41,11 @@ STEELMAN_PRESET = MechPreset(
         "за способность пережить шквал огня и всё-таки дойти до цели, но "
         "платят за это медлительностью и слабым прицельным оборудованием."
     ),
-    mech=Mech.from_part_selection(
+    mech=Mech(
         torso=STEELMAN_TORSO,
         legs=STEELMAN_LEGS,
         arms=STEELMAN_ARMS,
         head=STEELMAN_HEAD,
-        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -83,12 +82,11 @@ FIREWORKS_MK1_PRESET = MechPreset(
         "бронёй — среди пилотов ходит мрачная шутка, что мех назвали в честь "
         "того, как эффектно он вспыхивает при первом же серьёзном попадании."
     ),
-    mech=Mech.from_part_selection(
+    mech=Mech(
         torso=FIREWORKS_TORSO,
         legs=FIREWORKS_LEGS,
         arms=FIREWORKS_ARMS,
         head=FIREWORKS_HEAD,
-        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -131,12 +129,11 @@ STRIKEFORCE_PRESET = MechPreset(
         "выстрела»: StrikeForce либо решает бой одним попаданием, либо не "
         "успевает нанести его вовсе."
     ),
-    mech=Mech.from_part_selection(
+    mech=Mech(
         torso=STRIKEFORCE_TORSO,
         legs=STRIKEFORCE_LEGS,
         arms=STRIKEFORCE_ARMS,
         head=STRIKEFORCE_HEAD,
-        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -175,7 +172,7 @@ def _fresh_copy(preset: MechPreset) -> MechPreset:
     mech = preset.mech
     return preset.model_copy(
         update={
-            "mech": Mech.from_part_selection(
+            "mech": Mech(
                 torso=mech.torso,
                 legs=mech.legs,
                 arms=mech.arms_left,

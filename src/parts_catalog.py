@@ -174,7 +174,7 @@ def default_mech() -> Mech:
     # каждая деталь копируется со своим id — детали разных мехов не должны его делить.
     # Руки - одна деталь-выбор, но две физические руки (ROADMAP.md Этап 2 п.3):
     # обе копии одного типа DEFAULT_ARMS, каждая со своим id и раздельным HP.
-    return Mech.from_part_selection(
+    return Mech(
         torso=DEFAULT_TORSO,
         legs=DEFAULT_LEGS,
         arms=DEFAULT_ARMS,

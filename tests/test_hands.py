@@ -31,7 +31,6 @@ from src.map import ArenaMap
 from src.maps import default
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon, OverwatchState
-from src.entities.mech import Mech
 from src.action import Action, ActionType, AttackActionParams
 from src.game import Game
 from src.base import Point
@@ -73,29 +72,14 @@ def _ranged(hand):
     )
 
 
-def test_mech_arm_identity_ignores_instance_state_but_not_affixes():
+def test_mech_builds_two_physical_arms_from_one_selected_part():
     mech = default_mech()
+    assert mech.arms_left.id != mech.arms_right.id
+    assert mech.arms_left.catalog_key == mech.arms_right.catalog_key
+
     mech.arms_left.apply_damage(999)
-
-    Mech(
-        torso=mech.torso,
-        legs=mech.legs,
-        arms_left=mech.arms_left,
-        arms_right=mech.arms_right,
-        head=mech.head,
-    )
-
-    affixed_right_arm = mech.arms_right.model_copy(
-        update={"affix_tier": 1, "affix_stat": "accuracy", "affix_value": 4}
-    )
-    with pytest.raises(ValueError):
-        Mech(
-            torso=mech.torso,
-            legs=mech.legs,
-            arms_left=mech.arms_left,
-            arms_right=affixed_right_arm,
-            head=mech.head,
-        )
+    assert mech.arms_left.destroyed
+    assert not mech.arms_right.destroyed
 
 
 def check_4_validation():

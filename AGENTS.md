@@ -45,8 +45,8 @@ PUBG) и асинхронное PvP против сборок других иг�
   (см. [src/entities/mech.py](src/entities/mech.py)/[part.py](src/entities/part.py)),
   а итоговые `CharacterStats` — сумма характеристик деталей (`Mech.build_character_stats`).
   Только `action_points` на этой итерации остаётся "от пилота", не от детали.
-  **Руки — одна деталь-выбор** (`arms_left`/`arms_right` обязаны быть одного
-  типа, `Mech.check_slots`), но у каждой руки **раздельное здоровье** и **слот
+  **Руки — одна деталь-выбор** (`Mech(..., arms=part)` сам создаёт
+  `arms_left`/`arms_right`), но у каждой руки **раздельное здоровье** и **слот
   под одно оружие** (`Weapon.hand: "left"|"right"`, ROADMAP.md Этап 2 п.3-4):
   оружие в уничтоженной руке недоступно для атаки/овервотча (`Mech.arm_for`),
   статы рук (accuracy/melee_power) полные пока жива хотя бы одна рука. У игрока
@@ -148,7 +148,8 @@ WebSocket для игры**. Хранение состояния — тольк�
   пассивных скиллов `skills`), `enemy.py`,
   `room.py`, `part.py` (`Part`, `PartSlot`, `PartRarity`, собственная
   прочность детали, а также инстансные аффиксы `affix_tier`/
-  `affix_stat`/`affix_value` у выпавших деталей), `mech.py` (две руки `arms_left`/`arms_right` одного типа,
+  `affix_stat`/`affix_value` у выпавших деталей), `mech.py` (одна выбранная
+  деталь рук разворачивается в две физические `arms_left`/`arms_right`,
   `Mech.build_character_stats`/`arm_for`/`hand_side_of`; locational damage:
   `apply_random_part_damage`/`recompute_live_stats`).
 - [src/parts_catalog.py](src/parts_catalog.py) — каталог деталей:
