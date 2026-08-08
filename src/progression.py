@@ -73,9 +73,7 @@ def choose_skill(
     pending_choice = pending_skill_choices[0]
     allowed_keys = {
         skill.skill_key
-        for skill in get_skill_choice_options(
-            pending_choice.level, owned_skill_keys
-        )
+        for skill in get_skill_choice_options(pending_choice.level, owned_skill_keys)
     }
     if not allowed_keys:
         raise ValueError("Для текущего выбора навыка пока не выполнены условия ветки")

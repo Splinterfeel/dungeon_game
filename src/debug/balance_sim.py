@@ -269,12 +269,8 @@ def print_matchup_stats(stats) -> None:
     disarm_on_loser_side = stats["disarm_on_loser_side"]
 
     print(f"\n=== {name} ({n_games} games) ===")
-    print(
-        f"Team1 ({stats['team1_name']}) wins: {wins[1]} ({wins[1] / n_games:.0%})"
-    )
-    print(
-        f"Team2 ({stats['team2_name']}) wins: {wins[2]} ({wins[2] / n_games:.0%})"
-    )
+    print(f"Team1 ({stats['team1_name']}) wins: {wins[1]} ({wins[1] / n_games:.0%})")
+    print(f"Team2 ({stats['team2_name']}) wins: {wins[2]} ({wins[2] / n_games:.0%})")
     print(f"Draws: {wins[None]} ({wins[None] / n_games:.0%})")
     if timeouts:
         print(f"WARNING: {timeouts} games hit action-count safety cap without ending")
@@ -336,9 +332,7 @@ def _supports_stat(preset_name: str, stat_name: str) -> bool:
 
 async def run_affix_balance_suite(n_games: int):
     print("\n=== AFFIX BALANCE SUITE ===")
-    print(
-        "Цель: грубо оценить, насколько один и тот же аффикс на ОБОИХ мехах стороны"
-    )
+    print("Цель: грубо оценить, насколько один и тот же аффикс на ОБОИХ мехах стороны")
     print(
         "ломает зеркало того же пресета. Результат усредняется по ОБЕИМ сторонам первого хода."
     )
@@ -400,7 +394,9 @@ async def run_affix_balance_suite(n_games: int):
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n", type=int, default=250, help="Кол-во игр на базовую серию")
+    parser.add_argument(
+        "--n", type=int, default=250, help="Кол-во игр на базовую серию"
+    )
     parser.add_argument(
         "--affix-suite",
         action="store_true",

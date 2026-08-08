@@ -153,7 +153,7 @@ class Game:
         if not outcome.hit:
             await self._notify_event(
                 GameEvent(
-                    message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} промахивается по {target.name} из {weapon.name}"
+                    message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} промахивается по {target.name} из {weapon.name}"  # noqa
                 )
             )
             return
@@ -165,7 +165,7 @@ class Game:
                 death_detail = f" {target.name} погиб!"
         await self._notify_event(
             GameEvent(
-                message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} попадает по {target.name} из {weapon.name} ({outcome.damage} урона){outcome.part_detail}{death_detail}"
+                message=f"Огневой дозор: {outcome.skill_prefix}{watcher.name} попадает по {target.name} из {weapon.name} ({outcome.damage} урона){outcome.part_detail}{death_detail}"  # noqa
             )
         )
 

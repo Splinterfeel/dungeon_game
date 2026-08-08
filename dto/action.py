@@ -3,7 +3,6 @@ import uuid
 from pydantic import BaseModel
 
 from dto.base import PointState
-from dto.state import ActorState
 
 
 class GameActionState(BaseModel):

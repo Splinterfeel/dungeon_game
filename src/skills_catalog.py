@@ -53,8 +53,7 @@ DODGE = Skill(
 DEFAULT_PLAYER_SKILLS = [ACCURATE_SHOT, HEAVY_STRIKE, COMBAT_IMPULSE, DODGE]
 
 SKILLS_BY_KEY: dict[str, Skill] = {
-    skill.skill_key: skill
-    for skill in DEFAULT_PLAYER_SKILLS
+    skill.skill_key: skill for skill in DEFAULT_PLAYER_SKILLS
 }
 
 LEVEL_SKILL_CHOICES: dict[int, tuple[str, ...]] = {
@@ -70,7 +69,9 @@ LEVEL_BRANCH_SKILL_CHOICES: dict[int, dict[str, tuple[str, ...]]] = {
 
 
 def fresh_default_player_skills() -> list[Skill]:
-    return [skill.model_copy(update={"id": uuid.uuid4()}) for skill in DEFAULT_PLAYER_SKILLS]
+    return [
+        skill.model_copy(update={"id": uuid.uuid4()}) for skill in DEFAULT_PLAYER_SKILLS
+    ]
 
 
 def fresh_skills_by_keys(skill_keys: list[str]) -> list[Skill]:

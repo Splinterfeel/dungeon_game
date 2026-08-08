@@ -18,8 +18,8 @@ PUBG) и асинхронное PvP против сборок других иг�
 живучесть онлайна» в [ROADMAP.md](docs/ROADMAP.md).
 
 **Планируемый клиент — Unity.** Текущий HTML/JS клиент
-([templates/debug_map.html](templates/debug_map.html),
-[static/map_editor.html](static/map_editor.html)) — это временный
+([web/templates/debug_map.html](web/templates/debug_map.html),
+[web/static/map_editor.html](web/static/map_editor.html)) — это временный
 инструмент для прототипирования и отладки сервера, не продакшен-клиент.
 Не стоит вкладываться в его UI/UX сверх необходимого для отладки.
 
@@ -335,7 +335,7 @@ regression-тест, а по факту протухнет за один реф�
 внутри `Game`, для которой хватает уровня 0.
 
 **Уровень 2 — браузер (самый дорогой, использовать реже всего).** Реальный
-запуск сервера + [templates/debug_map.html](templates/debug_map.html) —
+запуск сервера + [web/templates/debug_map.html](web/templates/debug_map.html) —
 единственный способ проверить то, что нельзя проверить кодом: как это
 выглядит и кликается (туман войны, CSS-классы, наличие/отсутствие кнопки).
 Не использовать для проверки правил боя — это либо покрывает уровень 0,

@@ -266,5 +266,5 @@ class ActionHandler:
         return ActionResult(
             action=action,
             action_cost=outcome.action_cost,
-            detail=f"{outcome.skill_prefix}{actor.name} атакует {target.name} ({weapon.name}) и наносит {outcome.damage} урона.{outcome.part_detail}{death_detail}",
+            detail=f"{outcome.skill_prefix}{actor.name} атакует {target.name} ({weapon.name}) и наносит {outcome.damage} урона.{outcome.part_detail}{death_detail}",  # noqa
         )

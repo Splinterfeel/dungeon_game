@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from enum import Enum, auto
 from src.base import Point
-from src.entities.base import Actor
 
 
 class ActionType(Enum):

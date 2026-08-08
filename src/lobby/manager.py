@@ -126,27 +126,25 @@ class LobbyManager:
     def choose_garage_skill(self, player_id: str, skill_key: str) -> GarageState:
         garage = self.garages.get(player_id)
         if garage is None:
-            raise ValueError(
-                "Р“Р°СЂР°Р¶ РїРёР»РѕС‚Р° РµС‰С‘ РЅРµ СЃРѕР·РґР°РЅ: СЃРЅР°С‡Р°Р»Р° РїРѕРґРєР»СЋС‡РёС‚РµСЃСЊ С‡РµСЂРµР· debug-РєР°СЂС‚Сѓ"
-            )
+            raise ValueError("Гараж не существует")
         garage.choose_skill(skill_key)
         return self.get_garage_state(player_id)
 
     def get_lobbies_list(self) -> list[LobbyDTO]:
         return [
             LobbyDTO(
-                id=l.id,
-                name=l.name,
-                players_num=l.players_num,
-                vs_bot=l.vs_bot,
-                created_by_player_id=l.created_by_player_id,
+                id=lobby.id,
+                name=lobby.name,
+                players_num=lobby.players_num,
+                vs_bot=lobby.vs_bot,
+                created_by_player_id=lobby.created_by_player_id,
                 team_1_connected_players=len(
-                    [p for p in l.participants.values() if p.team == 1]
+                    [p for p in lobby.participants.values() if p.team == 1]
                 ),
                 team_2_connected_players=len(
-                    [p for p in l.participants.values() if p.team == 2]
+                    [p for p in lobby.participants.values() if p.team == 2]
                 ),
-                game_started=l.game is not None,
+                game_started=lobby.game is not None,
             )
-            for l in self.lobbies.values()
+            for lobby in self.lobbies.values()
         ]

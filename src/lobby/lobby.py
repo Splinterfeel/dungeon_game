@@ -11,7 +11,6 @@ from dto.state import (
     GameState,
     LobbyState,
     LobbyStatePayload,
-    PartState,
 )
 from src.lobby.automation import LobbyAutomation
 from src.lobby.rewards import LobbyRewards
@@ -26,7 +25,6 @@ from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
 from src.garage import GarageProfile
-
 
 
 @dataclass
@@ -52,17 +50,14 @@ class Lobby(GameObserver):
         self.vs_bot = vs_bot
         self.created_by_player_id = str(created_by_player_id)
         self.participants: dict[str, LobbyParticipant] = {}
-        # Р‘РѕРµРІС‹Рµ Р°РєС‚РѕСЂС‹ Р·Р°РїРѕР»РЅСЏСЋС‚СЃСЏ РїСЂРё СЃС‚Р°СЂС‚Рµ РјР°С‚С‡Р°. РљР»СЋС‡ вЂ” actor id, Р° РЅРµ
-        # player_id РїРѕРґРєР»СЋС‡С‘РЅРЅРѕРіРѕ РїРёР»РѕС‚Р°.
         self.players: dict[str, Player] = {}
-        # Р“Р°СЂР°Р¶Рё Р¶РёРІСѓС‚ РІ LobbyManager Рё РѕР±С‰РёРµ РґР»СЏ РІСЃРµС… Р»РѕР±Р±Рё РїСЂРѕС†РµСЃСЃР°.
         self.garages = garages
         self.bot_garages: dict[str, GarageProfile] = {}
         self.connections: dict[str, WebSocket] = {}
 
         self.lock = asyncio.Lock()
         self.automation_lock = asyncio.Lock()
-        self.game = None  # РґРѕ РјРѕРјРµРЅС‚Р° СЃС‚Р°СЂС‚Р° РёРіСЂС‹ РЅРµС‚
+        self.game = None
 
     async def on_game_event(
         self, event: GameEvent, receiver_player_ids: Optional[List[str]] = None
@@ -125,11 +120,14 @@ class Lobby(GameObserver):
             return False, "player already in lobby"
         if self.vs_bot:
             if player.team != 1:
-                return False, "Р’ РѕРґРёРЅРѕС‡РЅРѕРј СЂРµР¶РёРјРµ РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РІС‹Р±СЂР°С‚СЊ РєРѕРјР°РЅРґСѓ 1"
+                return (
+                    False,
+                    "Можно присоединиться только к 1 команде",
+                )
             if any(
                 not participant.is_bot for participant in self.participants.values()
             ):
-                return False, "РћРґРёРЅРѕС‡РЅРѕРµ Р»РѕР±Р±Рё СѓР¶Рµ Р·Р°РЅСЏС‚Рѕ"
+                return False, "Нет ботов"
         if len(self.participants) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
@@ -179,7 +177,6 @@ class Lobby(GameObserver):
             return False, detail
         if self.vs_bot:
             self._add_bot_participant()
-        # РіРµРЅРµСЂР°С†РёСЏ
         # arena = Arena(
         #     enemies_num=2,
         #     width=20,
@@ -190,15 +187,12 @@ class Lobby(GameObserver):
         #     max_room_size=5,
         # )
 
-        # РіРѕС‚РѕРІС‹Рµ РєР°СЂС‚С‹
         arena_map = ArenaMap(
             width=copy.deepcopy(default.map_2["width"]),
             height=copy.deepcopy(default.map_2["height"]),
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
         arena = Arena(enemies_num=2, map=arena_map)
-        # Р’СЃРµРіРґР° РїРµСЂРµСЃРѕР±РёСЂР°РµРј РІРµСЃСЊ РѕС‚СЂСЏРґ РёР· РіР°СЂР°Р¶Р°: HP Рё РїРѕР»РѕРјРєРё РїСЂРѕС€Р»РѕРіРѕ
-        # РјР°С‚С‡Р° РЅРµ СЏРІР»СЏСЋС‚СЃСЏ РїСЂРѕРіСЂРµСЃСЃРѕРј, Р° СѓСЃС‚Р°РЅРѕРІР»РµРЅРЅС‹Рµ РґРµС‚Р°Р»Рё вЂ” СЏРІР»СЏСЋС‚СЃСЏ.
         self.players = {}
         for participant in self.participants.values():
             participant.actor_ids = []
@@ -219,9 +213,15 @@ class Lobby(GameObserver):
 
     async def start_rematch(self, host_player_id: str) -> tuple[bool, str]:
         if host_player_id != self.created_by_player_id:
-            return False, "РўРѕР»СЊРєРѕ С…РѕСЃС‚ Р»РѕР±Р±Рё РјРѕР¶РµС‚ РЅР°С‡Р°С‚СЊ СЂРµРјР°С‚С‡"
+            return (
+                False,
+                "Рестартовать может только хост",
+            )
         if self.game is None or not self.game.ended:
-            return False, "Р РµРјР°С‚С‡ РґРѕСЃС‚СѓРїРµРЅ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ РјР°С‚С‡Р°"
+            return (
+                False,
+                "Игра еще не закончена или не создана",
+            )
         result, detail = await self._start_fresh_game()
         if result:
             for participant in self.participants.values():
@@ -231,8 +231,6 @@ class Lobby(GameObserver):
         return result, detail
 
     async def _start_fresh_game(self) -> tuple[bool, str]:
-        # start_game РїСЂРѕРІРµСЂСЏРµС‚ game is not None, РїРѕСЌС‚РѕРјСѓ РґР»СЏ СЂРµРјР°С‚С‡Р° РІСЂРµРјРµРЅРЅРѕ
-        # РѕСЃРІРѕР±РѕР¶РґР°РµРј СЃР»РѕС‚, СЃРѕС…СЂР°РЅРёРІ Р·Р°РІРµСЂС€С‘РЅРЅС‹Р№ РјР°С‚С‡ С‚РѕР»СЊРєРѕ РІ СЃРѕР±С‹С‚РёСЏС…/РјРµС‚СЂРёРєР°С….
         self.game = None
         return await self.start_game()
 
@@ -246,7 +244,6 @@ class Lobby(GameObserver):
         print("[LOBBY handle lobby action]", player, action)
 
     async def broadcast_lobby_state(self):
-        # Р¤РѕСЂРјРёСЂСѓРµРј СЃС‚СЂСѓРєС‚СѓСЂСѓ РґР»СЏ Р»РѕР±Р±Рё (РґРѕ СЃС‚Р°СЂС‚Р° РёРіСЂС‹)
         if self.game:
             status = "game started"
         elif self._ready_to_start():
@@ -270,7 +267,6 @@ class Lobby(GameObserver):
     async def broadcast_game_event(
         self, event: GameEvent, receiver_player_ids: list[str] = None
     ):
-        "РћС‚РїСЂР°РІРєР° РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№ - СЃРјРµСЂС‚СЊ РёРіСЂРѕРєР° Рё С‚ Рґ"
         _receivers = self.connections
         if receiver_player_ids:
             _receivers = {

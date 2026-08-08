@@ -274,7 +274,13 @@ def test_match_reward_can_drop_affixed_copy_of_known_base_part(monkeypatch):
     from main import lobby_manager
 
     garage = lobby_manager.garages[player_id]
-    existing_keys = [part["catalog_key"] for part in client.get(f"/garages/{player_id}").json()["loadouts"][0]["mech"].values() if isinstance(part, dict) and "catalog_key" in part]
+    existing_keys = [
+        part["catalog_key"]
+        for part in client.get(f"/garages/{player_id}")
+        .json()["loadouts"][0]["mech"]
+        .values()
+        if isinstance(part, dict) and "catalog_key" in part
+    ]
 
     random_values = iter((0.0, 0.95, 0.10))
     monkeypatch.setattr("src.garage.random.random", lambda: next(random_values))
@@ -303,7 +309,9 @@ def test_garage_shows_xp_level_and_pending_skill_choice():
     assert state["owned_skills"] == []
     assert len(state["pending_skill_choices"]) == 1
     assert state["pending_skill_choices"][0]["level"] == 2
-    assert [skill["skill_key"] for skill in state["pending_skill_choices"][0]["options"]] == [
+    assert [
+        skill["skill_key"] for skill in state["pending_skill_choices"][0]["options"]
+    ] == [
         "accurate_shot",
         "heavy_strike",
     ]

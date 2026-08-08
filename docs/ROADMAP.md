@@ -16,7 +16,7 @@
   деталей на уровне во время боя не нужен — лут только по итогам матча:
   страж/Баррон (Этап 2 п.11) и пост-матчевая награда (Этап 3).
 - Процедурная генерация уровней — **не приоритет**, курс на ручные карты
-  через [static/map_editor.html](../static/map_editor.html). Жертвуем
+  через [web/static/map_editor.html](../web/static/map_editor.html). Жертвуем
   процедурной генерацией, если она будет мешать рефакторингу.
 - Золото — убираем как отдельную сущность, награда после боя = валюта
   + дроп деталей, начисляется на этапе БД (Этап 3).
@@ -59,8 +59,8 @@
    - Удалены `ActionType.EXIT`, `ActionHandler.__perform_action_exit`,
      `CELL_TYPE.EXIT`, `Dungeon.exits`/`_generate_exits`, спец-случай для
      клетки выхода в `__perform_action_move`, поле `exits` в `dto/state.py`,
-     кнопка/рендер/хендлер в [templates/debug_map.html](../templates/debug_map.html)
-     и палитра в [static/map_editor.html](../static/map_editor.html).
+     кнопка/рендер/хендлер в [web/templates/debug_map.html](../web/templates/debug_map.html)
+     и палитра в [web/static/map_editor.html](../web/static/map_editor.html).
      Клетки бывших выходов на `map_1`/`map_2` стали обычным полом.
    - Условие конца игры не зависело от "выхода" и не менялось
      (`Game.check_game_end` считает только смерти команд/врагов).
@@ -83,9 +83,9 @@
      генерацией сундуков), `dto.state.ChestState` + поле `chests` в
      `ArenaState`, фильтрация видимости сундуков в `src/lobby/lobby.py`, восстановление
      сундуков в `src/debug/game_state_utils.py`, UI/JS сундука в
-     [templates/debug_map.html](../templates/debug_map.html) (кнопка OPEN CHEST,
+     [web/templates/debug_map.html](../web/templates/debug_map.html) (кнопка OPEN CHEST,
      рендер на карте, `send_open_chest()`) и кисть `CHEST` в
-     [static/map_editor.html](../static/map_editor.html). Клетки `" C "` на
+     [web/static/map_editor.html](../web/static/map_editor.html). Клетки `" C "` на
      `map_1`/`map_2` ([src/maps/default.py](../src/maps/default.py)) заменены
      на обычный пол.
    - `Actor.trophies: list[str]` **оставлен** как задел под пост-матчевую
@@ -171,7 +171,7 @@
      `restore_player_from_data` — восстанавливать `mech` из дампа
      (`Mech.model_validate(...)`) и передавать в `Player(...)`;
      переименовать `damage` → `melee_power` при восстановлении `stats`.
-   - [templates/debug_map.html](../templates/debug_map.html): строка статов
+   - [web/templates/debug_map.html](../web/templates/debug_map.html): строка статов
      актора — `damage` → `melee_power` в JS.
    - [tests/test_serialization.py](../tests/test_serialization.py) и
      [tests/test_dump_restore.py](../tests/test_dump_restore.py) — точечно поправить
@@ -184,7 +184,7 @@
      зеркало внутреннего `Part`) и `MechState` (`torso`/`legs`/`arms`/`head`: `PartState`).
      Поле `mech: MechState` добавляется в `PlayerState`, а не в общий
      `ActorState` — у `Enemy` меха нет (см. п.3 этапа 1).
-   - [templates/debug_map.html](../templates/debug_map.html): минимальный
+   - [web/templates/debug_map.html](../web/templates/debug_map.html): минимальный
      просмотр, без билдера и без редактирования — только для отладки:
      1. выбор актора (свой игрок по умолчанию; из видимых на карте, если
         понадобится смотреть и на чужих мехов в рамках уже применяемой
@@ -213,7 +213,7 @@
      (`default_mech()`). Прокинуто в `MechState.preset_name` и
      `MechPresetState.description` ([dto/state.py](../dto/state.py); второе
      уже отдаётся эндпоинтом `/mech_presets`, использованным для выбора
-     пресета в лобби). В [templates/debug_map.html](../templates/debug_map.html)
+     пресета в лобби). В [web/templates/debug_map.html](../web/templates/debug_map.html)
      `refresh_mech_presets()` строит по ответу `/mech_presets` карту
      `имя пресета -> description`, а `render_mech_inspector()` показывает
      блок с описанием над статами, если у меха выбранного актора есть
@@ -225,7 +225,7 @@
    - ✅ Редактор дополнен кистью: панель `#brushes` над сеткой позволяет
      выбрать тип клетки и красить клик/протаскиванием мыши вместо
      циклического перебора кликом по клетке — см.
-     [static/map_editor.html](../static/map_editor.html). Кисть `CHEST` была
+     [web/static/map_editor.html](../web/static/map_editor.html). Кисть `CHEST` была
      в исходной версии, убрана вместе с механикой сундуков (2026-07-14,
      см. Этап 1 п.2).
    - Сами 2-3 карты в [src/maps/default.py](../src/maps/default.py) через
@@ -243,8 +243,8 @@
      файл (`src/dungeon.py` → `src/arena.py`), атрибут `Game.arena`/
      `Lobby`, DTO (`ArenaState`, поле `GameState.arena` — меняет и
      wire-формат WS, учли только debug-клиент), ссылки в
-     [templates/debug_map.html](../templates/debug_map.html) и
-     [static/map_editor.html](../static/map_editor.html) (заголовки), тесты
+     [web/templates/debug_map.html](../web/templates/debug_map.html) и
+     [web/static/map_editor.html](../web/static/map_editor.html) (заголовки), тесты
      и smoke-скрипты в корне. `Player` осознанно не переименован в
      `Pilot` — оставлен как нейтральное имя.
    - Заодно переименован один из моков оружия врагов: "Старая сабля" →
@@ -329,7 +329,7 @@
      не стартовый). `epic`-тир пока не выдан ни одной детали — не выдумывали
      деталь под тир, которому ещё не с чем сравниться (см. ниже про
      количество деталей). Прокинуто в `dto.state.PartState.rarity` и в
-     дебаг-просмотр меха в [templates/debug_map.html](../templates/debug_map.html)
+     дебаг-просмотр меха в [web/templates/debug_map.html](../web/templates/debug_map.html)
      (метка `[rarity]` рядом с именем детали).
    - ✅ **Аудит существующих деталей на реальный компромисс.** — сделано
      (2026-07-13, прогонялось через [src/debug/balance_sim.py](../src/debug/balance_sim.py)).
@@ -498,7 +498,7 @@
      [tests/test_hands.py](../tests/test_hands.py), не через пресет).
    - DTO ([dto/state.py](../dto/state.py)): `WeaponState.hand`, `MechState` →
      `arms_left`/`arms_right` (меняет wire-формат — только debug-клиент);
-     дебаг-инспектор ([templates/debug_map.html](../templates/debug_map.html))
+     дебаг-инспектор ([web/templates/debug_map.html](../web/templates/debug_map.html))
      показывает две руки с раздельным HP, привязку оружия и пометку
      «недоступно».
    - Проверено: [tests/test_hands.py](../tests/test_hands.py) (5 контрактных проверок,
@@ -683,7 +683,7 @@
      статы (`GameState.model_validate` подхватывает по имени поля,
      `computed_field` на `Mech` включается в `model_dump()` наравне с
      обычными полями).
-   - [templates/debug_map.html](../templates/debug_map.html): `weight`/
+   - [web/templates/debug_map.html](../web/templates/debug_map.html): `weight`/
      `carry_capacity` добавлены в `MECH_STAT_LABELS` (авто-отображаются в
      блоке детали per-slot, т.к. уже фильтруются по non-zero) + сводка
      "вес X/Y" в заголовке блока "Детали меха".

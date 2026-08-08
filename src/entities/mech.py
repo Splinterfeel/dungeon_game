@@ -91,7 +91,8 @@ class Mech(BaseModel):
     @computed_field  # type: ignore[misc]
     @property
     def parts_weight(self) -> int:
-        "Суммарный вес деталей меха (без оружия - см. Player.check_weight_budget). Руки - одна деталь, вес считается один раз."
+        "Суммарный вес деталей меха (без оружия - см. Player.check_weight_budget)"
+        "Руки - одна деталь, вес считается один раз."
         return (
             self.torso.weight
             + self.legs.weight
@@ -106,7 +107,8 @@ class Mech(BaseModel):
         return self.legs.carry_capacity
 
     def build_character_stats(self, action_points: int) -> CharacterStats:
-        "Совокупные статы меха = сумма характеристик деталей + очки действия пилота. Руки идентичны - считаются один раз."
+        "Совокупные статы меха = сумма характеристик деталей + очки действия пилота"
+        "Руки идентичны - считаются один раз."
         parts = [self.torso, self.legs, self.head, self.arms_left]
         return CharacterStats(
             health=sum(p.health for p in parts),

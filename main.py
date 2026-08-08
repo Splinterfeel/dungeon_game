@@ -52,8 +52,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="web/static"), name="static")
+templates = Jinja2Templates(directory="web/templates")
 lobby_manager = LobbyManager()
 
 
@@ -173,9 +173,7 @@ def choose_garage_skill(request: ChooseGarageSkillRequest) -> GarageState:
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@app.post(
-    "/debug/rematch", description="Начать рематч тем же составом (debug only)"
-)
+@app.post("/debug/rematch", description="Начать рематч тем же составом (debug only)")
 async def start_rematch(request: RematchRequest) -> StartGameResponse:
     lobby = lobby_manager.get_lobby(request.lobby_id)
     if not lobby:

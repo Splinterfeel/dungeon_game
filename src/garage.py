@@ -14,24 +14,7 @@ from src.entities.base import Inventory, UUIDStr, Weapon
 from src.entities.mech import Mech
 from src.entities.part import Part, PartRarity, PartSlot
 from src.entities.player import Player
-from src.parts_catalog import (
-    DEFAULT_ARMS,
-    DEFAULT_HEAD,
-    DEFAULT_LEGS,
-    DEFAULT_TORSO,
-    FIREWORKS_ARMS,
-    FIREWORKS_HEAD,
-    FIREWORKS_LEGS,
-    FIREWORKS_TORSO,
-    STEELMAN_ARMS,
-    STEELMAN_HEAD,
-    STEELMAN_LEGS,
-    STEELMAN_TORSO,
-    STRIKEFORCE_ARMS,
-    STRIKEFORCE_HEAD,
-    STRIKEFORCE_LEGS,
-    STRIKEFORCE_TORSO,
-)
+
 from src.progression import (
     MATCH_XP_REWARDS,
     PendingSkillChoice,

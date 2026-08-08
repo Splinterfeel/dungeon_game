@@ -1,6 +1,5 @@
 """DTOs for debug operations (dump/restore game state)"""
 
-from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field

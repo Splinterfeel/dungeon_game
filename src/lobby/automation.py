@@ -23,7 +23,9 @@ class LobbyAutomation:
             while self.lobby.game and not self.lobby.game.ended:
                 actor = self.lobby.game.turn.current_actor
                 if isinstance(actor, Player):
-                    participant = self.lobby.participants.get(str(actor.owner_player_id))
+                    participant = self.lobby.participants.get(
+                        str(actor.owner_player_id)
+                    )
                     if participant is None or not participant.is_bot:
                         return
                     ai_class = PlayerBotAI

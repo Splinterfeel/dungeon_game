@@ -48,9 +48,7 @@ class CombatResolver:
         self.game = game
 
     @staticmethod
-    def _try_proc_skill(
-        actor: Actor, skill_key: str, proc_actor_ids: set[str]
-    ) -> bool:
+    def _try_proc_skill(actor: Actor, skill_key: str, proc_actor_ids: set[str]) -> bool:
         if str(actor.id) in proc_actor_ids or not isinstance(actor, Player):
             return False
         skill = next((s for s in actor.skills if s.skill_key == skill_key), None)

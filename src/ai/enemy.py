@@ -19,9 +19,7 @@ class SimpleEnemyAI(AI):
 
         # сначала проверяем ranged-атаку (до движения, чтобы хватило AP)
         if not self.attacked_on_turn:
-            ranged_weapon = next(
-                iter(self.actor.get_usable_weapons("ranged")), None
-            )
+            ranged_weapon = next(iter(self.actor.get_usable_weapons("ranged")), None)
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
@@ -105,16 +103,12 @@ class SimpleEnemyAI(AI):
 
         # если не атаковали и не двигались — пробуем огневой дозор
         if self.actor.overwatch is None:
-            ranged_weapon = next(
-                iter(self.actor.get_usable_weapons("ranged")), None
-            )
+            ranged_weapon = next(iter(self.actor.get_usable_weapons("ranged")), None)
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
             ):
-                print(
-                    f"have AP {self.actor.current_action_points}, cost overwatch {ranged_weapon.cost_ap}, trying to overwatch"
-                )
+                # trying to overwatch
                 can_see_any_player = any(
                     Point.distance_euklid(self.actor.position, p.position)
                     <= self.actor.stats.view_distance
