@@ -6,22 +6,6 @@ from pydantic import BaseModel, computed_field, model_validator
 from src.entities.base import CharacterStats
 from src.entities.part import Part, PartSlot
 
-# поля Part, определяющие "тип" детали (без экземплярных id/прочности) - по ним
-# сверяется, что левая и правая руки - одна и та же деталь (ROADMAP.md Этап 2 п.3)
-_PART_IDENTITY_FIELDS = (
-    "slot",
-    "name",
-    "rarity",
-    "health",
-    "speed",
-    "accuracy",
-    "melee_power",
-    "view_distance",
-    "max_health",
-    "weight",
-    "carry_capacity",
-)
-
 
 class Mech(BaseModel):
     # веса случайного выбора части при попадании (locational damage,
@@ -50,6 +34,29 @@ class Mech(BaseModel):
     # показа лора пресета в дебаг-инспекторе, на игровую логику не влияет
     preset_name: Optional[str] = None
 
+    @classmethod
+    def from_part_selection(
+        cls,
+        *,
+        torso: Part,
+        legs: Part,
+        arms: Part,
+        head: Part,
+        preset_name: Optional[str] = None,
+        fresh_parts: bool = True,
+    ) -> "Mech":
+        def selected(part: Part) -> Part:
+            return part.fresh_copy() if fresh_parts else part
+
+        return cls(
+            torso=selected(torso),
+            legs=selected(legs),
+            arms_left=selected(arms),
+            arms_right=selected(arms),
+            head=selected(head),
+            preset_name=preset_name,
+        )
+
     @model_validator(mode="after")
     def check_slots(self) -> "Mech":
         expected_slots = {
@@ -67,10 +74,7 @@ class Mech(BaseModel):
                 )
         # "руки - одна деталь": левая и правая должны быть одного типа (id и
         # текущая прочность могут отличаться - это разные экземпляры в бою)
-        if any(
-            getattr(self.arms_left, f) != getattr(self.arms_right, f)
-            for f in _PART_IDENTITY_FIELDS
-        ):
+        if not self.arms_left.same_loadout_part_as(self.arms_right):
             raise ValueError(
                 "Левая и правая руки должны быть одной деталью (одинаковый тип)"
             )

@@ -41,12 +41,12 @@ STEELMAN_PRESET = MechPreset(
         "за способность пережить шквал огня и всё-таки дойти до цели, но "
         "платят за это медлительностью и слабым прицельным оборудованием."
     ),
-    mech=Mech(
+    mech=Mech.from_part_selection(
         torso=STEELMAN_TORSO,
         legs=STEELMAN_LEGS,
-        arms_left=STEELMAN_ARMS,
-        arms_right=STEELMAN_ARMS,
+        arms=STEELMAN_ARMS,
         head=STEELMAN_HEAD,
+        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -83,12 +83,12 @@ FIREWORKS_MK1_PRESET = MechPreset(
         "бронёй — среди пилотов ходит мрачная шутка, что мех назвали в честь "
         "того, как эффектно он вспыхивает при первом же серьёзном попадании."
     ),
-    mech=Mech(
+    mech=Mech.from_part_selection(
         torso=FIREWORKS_TORSO,
         legs=FIREWORKS_LEGS,
-        arms_left=FIREWORKS_ARMS,
-        arms_right=FIREWORKS_ARMS,
+        arms=FIREWORKS_ARMS,
         head=FIREWORKS_HEAD,
+        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -131,12 +131,12 @@ STRIKEFORCE_PRESET = MechPreset(
         "выстрела»: StrikeForce либо решает бой одним попаданием, либо не "
         "успевает нанести его вовсе."
     ),
-    mech=Mech(
+    mech=Mech.from_part_selection(
         torso=STRIKEFORCE_TORSO,
         legs=STRIKEFORCE_LEGS,
-        arms_left=STRIKEFORCE_ARMS,
-        arms_right=STRIKEFORCE_ARMS,
+        arms=STRIKEFORCE_ARMS,
         head=STRIKEFORCE_HEAD,
+        fresh_parts=False,
     ),
     weapons=[
         Weapon(
@@ -175,14 +175,11 @@ def _fresh_copy(preset: MechPreset) -> MechPreset:
     mech = preset.mech
     return preset.model_copy(
         update={
-            "mech": Mech(
-                torso=mech.torso.model_copy(update={"id": uuid.uuid4()}),
-                legs=mech.legs.model_copy(update={"id": uuid.uuid4()}),
-                # руки - две отдельные детали одного типа, каждой свой id и
-                # раздельная прочность (ROADMAP.md Этап 2 п.3)
-                arms_left=mech.arms_left.model_copy(update={"id": uuid.uuid4()}),
-                arms_right=mech.arms_right.model_copy(update={"id": uuid.uuid4()}),
-                head=mech.head.model_copy(update={"id": uuid.uuid4()}),
+            "mech": Mech.from_part_selection(
+                torso=mech.torso,
+                legs=mech.legs,
+                arms=mech.arms_left,
+                head=mech.head,
                 preset_name=preset.name,
             ),
             # model_copy сохраняет hand у оружия, обновляя только id

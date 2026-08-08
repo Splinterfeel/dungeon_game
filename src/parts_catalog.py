@@ -1,5 +1,3 @@
-﻿import uuid
-
 from src.constants import Accuracy
 from src.entities.mech import Mech
 from src.entities.part import Part, PartRarity, PartSlot
@@ -12,6 +10,7 @@ from src.entities.part import Part, PartRarity, PartSlot
 # деталей+оружия существующих пресетов (см. STEELMAN/FIREWORKS/STRIKEFORCE
 # ниже), не финальные числа.
 DEFAULT_TORSO = Part(
+    catalog_key="default_torso",
     slot=PartSlot.TORSO,
     name="Лёгкий корпус",
     rarity=PartRarity.COMMON,
@@ -19,6 +18,7 @@ DEFAULT_TORSO = Part(
     weight=6,
 )
 DEFAULT_LEGS = Part(
+    catalog_key="default_legs",
     slot=PartSlot.LEGS,
     name="Стандартные ноги",
     rarity=PartRarity.COMMON,
@@ -27,6 +27,7 @@ DEFAULT_LEGS = Part(
     carry_capacity=25,
 )
 DEFAULT_ARMS = Part(
+    catalog_key="default_arms",
     slot=PartSlot.ARMS,
     name="Стандартные руки",
     rarity=PartRarity.COMMON,
@@ -35,6 +36,7 @@ DEFAULT_ARMS = Part(
     weight=4,
 )
 DEFAULT_HEAD = Part(
+    catalog_key="default_head",
     slot=PartSlot.HEAD,
     name="Стандартная электроника",
     rarity=PartRarity.COMMON,
@@ -54,6 +56,7 @@ DEFAULT_HEAD = Part(
 # точности рук FIREWORKS_ARMS (92 → 85), а не собственными статами SteelMan
 # — см. FIREWORKS_ARMS ниже и src/debug/balance_sim.py.
 STEELMAN_TORSO = Part(
+    catalog_key="steelman_torso",
     slot=PartSlot.TORSO,
     name="Тяжёлый корпус «Голем»",
     rarity=PartRarity.RARE,
@@ -61,6 +64,7 @@ STEELMAN_TORSO = Part(
     weight=10,
 )
 STEELMAN_LEGS = Part(
+    catalog_key="steelman_legs",
     slot=PartSlot.LEGS,
     name="Усиленные сервоприводы",
     rarity=PartRarity.RARE,
@@ -69,6 +73,7 @@ STEELMAN_LEGS = Part(
     carry_capacity=42,
 )
 STEELMAN_ARMS = Part(
+    catalog_key="steelman_arms",
     slot=PartSlot.ARMS,
     name="Ударный привод «Молот»",
     rarity=PartRarity.RARE,
@@ -77,6 +82,7 @@ STEELMAN_ARMS = Part(
     weight=6,
 )
 STEELMAN_HEAD = Part(
+    catalog_key="steelman_head",
     slot=PartSlot.HEAD,
     name="Штурмовая электроника",
     rarity=PartRarity.RARE,
@@ -88,6 +94,7 @@ STEELMAN_HEAD = Part(
 # ценой здоровья и силы удара в ближнем бою. Rarity: rare - именной набор
 # для пресета, доступен не как стартовый common.
 FIREWORKS_TORSO = Part(
+    catalog_key="fireworks_torso",
     slot=PartSlot.TORSO,
     name="Лёгкий корпус «Стриж»",
     rarity=PartRarity.RARE,
@@ -95,6 +102,7 @@ FIREWORKS_TORSO = Part(
     weight=4,
 )
 FIREWORKS_LEGS = Part(
+    catalog_key="fireworks_legs",
     slot=PartSlot.LEGS,
     name="Манёвренные ноги «Вихрь»",
     rarity=PartRarity.RARE,
@@ -103,6 +111,7 @@ FIREWORKS_LEGS = Part(
     carry_capacity=24,
 )
 FIREWORKS_ARMS = Part(
+    catalog_key="fireworks_arms",
     slot=PartSlot.ARMS,
     name="Прицельный привод «Соколиный глаз»",
     rarity=PartRarity.RARE,
@@ -111,6 +120,7 @@ FIREWORKS_ARMS = Part(
     weight=3,
 )
 FIREWORKS_HEAD = Part(
+    catalog_key="fireworks_head",
     slot=PartSlot.HEAD,
     name="Дальномерная электроника «Горизонт»",
     rarity=PartRarity.RARE,
@@ -125,6 +135,7 @@ FIREWORKS_HEAD = Part(
 # сбалансированы намеренно — баланс делаем после того, как появится
 # разброс урона оружия.
 STRIKEFORCE_TORSO = Part(
+    catalog_key="strikeforce_torso",
     slot=PartSlot.TORSO,
     name="Облегчённый каркас «Копьё»",
     rarity=PartRarity.RARE,
@@ -132,6 +143,7 @@ STRIKEFORCE_TORSO = Part(
     weight=3,
 )
 STRIKEFORCE_LEGS = Part(
+    catalog_key="strikeforce_legs",
     slot=PartSlot.LEGS,
     name="Опорная платформа «Такт»",
     rarity=PartRarity.RARE,
@@ -140,6 +152,7 @@ STRIKEFORCE_LEGS = Part(
     carry_capacity=40,
 )
 STRIKEFORCE_ARMS = Part(
+    catalog_key="strikeforce_arms",
     slot=PartSlot.ARMS,
     name="Привод наведения рейлгана",
     rarity=PartRarity.RARE,
@@ -148,6 +161,7 @@ STRIKEFORCE_ARMS = Part(
     weight=4,
 )
 STRIKEFORCE_HEAD = Part(
+    catalog_key="strikeforce_head",
     slot=PartSlot.HEAD,
     name="Баллистический вычислитель",
     rarity=PartRarity.RARE,
@@ -160,10 +174,9 @@ def default_mech() -> Mech:
     # каждая деталь копируется со своим id — детали разных мехов не должны его делить.
     # Руки - одна деталь-выбор, но две физические руки (ROADMAP.md Этап 2 п.3):
     # обе копии одного типа DEFAULT_ARMS, каждая со своим id и раздельным HP.
-    return Mech(
-        torso=DEFAULT_TORSO.model_copy(update={"id": uuid.uuid4()}),
-        legs=DEFAULT_LEGS.model_copy(update={"id": uuid.uuid4()}),
-        arms_left=DEFAULT_ARMS.model_copy(update={"id": uuid.uuid4()}),
-        arms_right=DEFAULT_ARMS.model_copy(update={"id": uuid.uuid4()}),
-        head=DEFAULT_HEAD.model_copy(update={"id": uuid.uuid4()}),
+    return Mech.from_part_selection(
+        torso=DEFAULT_TORSO,
+        legs=DEFAULT_LEGS,
+        arms=DEFAULT_ARMS,
+        head=DEFAULT_HEAD,
     )

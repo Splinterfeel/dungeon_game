@@ -1,6 +1,7 @@
 from src.action import Action, ActionType, AttackActionParams, OverwatchActionParams
 from src.ai.base import AI
 from src.base import Point
+from src.entities.base import WeaponType
 from src.entities.player import Player
 
 
@@ -20,7 +21,7 @@ class PlayerBotAI(AI):
             if self.game.is_hostile(self.actor, player) and not player.is_dead()
         ]
 
-    def _pick_weapon(self, weapon_type: str):
+    def _pick_weapon(self, weapon_type: WeaponType):
         return next(iter(self.actor.get_usable_weapons(weapon_type)), None)
 
     def decide(self) -> Action:

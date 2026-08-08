@@ -1,13 +1,13 @@
 import random
-from typing import Annotated, ClassVar, Dict, Optional
+from typing import Annotated, ClassVar, Dict, Literal, Optional
 import uuid
 import names
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, model_validator
 from src.base import Point
-from typing import Literal
 
 
 UUIDStr = Annotated[uuid.UUID, PlainSerializer(lambda x: str(x), return_type=str)]
+WeaponType = Literal["melee", "ranged"]
 
 
 class Entity(BaseModel):
@@ -43,7 +43,7 @@ class Weapon(BaseModel):
     DAMAGE_VARIANCE: ClassVar[float] = 0.125
 
     id: UUIDStr = Field(default_factory=uuid.uuid4)
-    type: Literal["melee", "ranged"]
+    type: WeaponType
     name: str
     damage: int
     cost_ap: int
@@ -128,14 +128,11 @@ class Actor(Entity):
     def is_weapon_usable(self, weapon: Weapon) -> bool:
         return self.get_weapon(weapon.id) is not None
 
-    def get_usable_weapons(
-        self, weapon_type: Literal["melee", "ranged"] | None = None
-    ) -> list[Weapon]:
+    def get_usable_weapons(self, weapon_type: WeaponType) -> list[Weapon]:
         return [
             weapon
             for weapon in self.inventory.weapons
-            if (weapon_type is None or weapon.type == weapon_type)
-            and self.is_weapon_usable(weapon)
+            if weapon.type == weapon_type and self.is_weapon_usable(weapon)
         ]
 
     def __str__(self):

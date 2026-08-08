@@ -1,13 +1,12 @@
 import asyncio
 import typing
-from typing import Literal
 
 from pydantic import BaseModel
 
 from src.action import Action, ActionResult, ActionType
 from src.base import Point
 from src.combat import AttackKind, HAND_LABELS_RU
-from src.entities.base import Actor, OverwatchState, Weapon
+from src.entities.base import Actor, OverwatchState, Weapon, WeaponType
 from src.entities.player import Player
 
 if typing.TYPE_CHECKING:
@@ -38,7 +37,7 @@ class ActionHandler:
         actor: Actor,
         action: Action,
         purpose: str,
-        required_weapon_type: Literal["melee", "ranged"] | None = None,
+        required_weapon_type: WeaponType | None = None,
     ) -> WeaponActionContext | ActionResult:
         if action.params is None or not hasattr(action.params, "weapon_id"):
             return self._reject(

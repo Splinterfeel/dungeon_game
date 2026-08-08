@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from src.entities.base import Inventory, UUIDStr, Weapon
 from src.entities.mech import Mech
-from src.entities.part import Part, PartRarity, PartSlot
+from src.entities.part import Part, PartRarity, PartSlot, PartType
 from src.entities.player import Player
 
 from src.progression import (
@@ -59,21 +59,13 @@ FIRE_CONTROL_DELTAS: dict[FireControlMode, tuple[int, int]] = {
 }
 
 
-def part_catalog_key(part: Part) -> str:
-    return part.catalog_key or f"{part.slot.value}:{part.name}"
+def part_catalog_key(part: Part) -> PartType:
+    return part.catalog_key
 
 
 def fresh_part(part: Part, *, keep_id: bool = False) -> Part:
     """Клонирует деталь как целую: прочность боя никогда не хранится в гараже."""
-    max_health = part.max_health or Part.DEFAULT_MAX_HEALTH
-    return part.model_copy(
-        update={
-            "id": part.id if keep_id else uuid.uuid4(),
-            "catalog_key": part_catalog_key(part),
-            "max_health": max_health,
-            "current_health": max_health,
-        }
-    )
+    return part.fresh_copy(keep_id=keep_id)
 
 
 class GarageMetrics(BaseModel):
@@ -159,12 +151,11 @@ class GarageProfile(BaseModel):
     def build_mech(self, loadout_id: UUIDStr | str | None = None) -> Mech:
         loadout = self.loadout_by_id(loadout_id)
         arms = self.equipped_part(loadout, PartSlot.ARMS)
-        return Mech(
-            torso=fresh_part(self.equipped_part(loadout, PartSlot.TORSO)),
-            legs=fresh_part(self.equipped_part(loadout, PartSlot.LEGS)),
-            arms_left=fresh_part(arms),
-            arms_right=fresh_part(arms),
-            head=fresh_part(self.equipped_part(loadout, PartSlot.HEAD)),
+        return Mech.from_part_selection(
+            torso=self.equipped_part(loadout, PartSlot.TORSO),
+            legs=self.equipped_part(loadout, PartSlot.LEGS),
+            arms=arms,
+            head=self.equipped_part(loadout, PartSlot.HEAD),
             preset_name=loadout.preset_name,
         )
 
@@ -269,12 +260,11 @@ class GarageProfile(BaseModel):
         parts = {
             slot: self.part_by_id(part_id) for slot, part_id in equipped_ids.items()
         }
-        mech = Mech(
-            torso=fresh_part(parts[PartSlot.TORSO]),
-            legs=fresh_part(parts[PartSlot.LEGS]),
-            arms_left=fresh_part(parts[PartSlot.ARMS]),
-            arms_right=fresh_part(parts[PartSlot.ARMS]),
-            head=fresh_part(parts[PartSlot.HEAD]),
+        mech = Mech.from_part_selection(
+            torso=parts[PartSlot.TORSO],
+            legs=parts[PartSlot.LEGS],
+            arms=parts[PartSlot.ARMS],
+            head=parts[PartSlot.HEAD],
         )
         total_weight = mech.parts_weight + sum(
             weapon.weight for weapon in loadout.weapons

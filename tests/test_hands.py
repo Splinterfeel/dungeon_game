@@ -20,6 +20,8 @@ import copy
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -29,6 +31,7 @@ from src.map import ArenaMap
 from src.maps import default
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon, OverwatchState
+from src.entities.mech import Mech
 from src.action import Action, ActionType, AttackActionParams
 from src.game import Game
 from src.base import Point
@@ -68,6 +71,31 @@ def _ranged(hand):
         accuracy=100,
         hand=hand,
     )
+
+
+def test_mech_arm_identity_ignores_instance_state_but_not_affixes():
+    mech = default_mech()
+    mech.arms_left.apply_damage(999)
+
+    Mech(
+        torso=mech.torso,
+        legs=mech.legs,
+        arms_left=mech.arms_left,
+        arms_right=mech.arms_right,
+        head=mech.head,
+    )
+
+    affixed_right_arm = mech.arms_right.model_copy(
+        update={"affix_tier": 1, "affix_stat": "accuracy", "affix_value": 4}
+    )
+    with pytest.raises(ValueError):
+        Mech(
+            torso=mech.torso,
+            legs=mech.legs,
+            arms_left=mech.arms_left,
+            arms_right=affixed_right_arm,
+            head=mech.head,
+        )
 
 
 def check_4_validation():
