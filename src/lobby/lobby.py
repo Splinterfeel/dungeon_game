@@ -22,7 +22,7 @@ from src.entities.player import Player
 from src.action import Action
 from src.map import ArenaMap
 from src.maps import default
-from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
+from src.mech.presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
 from src.garage_manager import GarageManager
 

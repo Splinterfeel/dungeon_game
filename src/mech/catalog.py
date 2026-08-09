@@ -1,6 +1,6 @@
 from src.constants import Accuracy
-from src.entities.mech import Mech
-from src.entities.part import Part, PartRarity, PartSlot
+from src.mech.mech import Mech
+from src.mech.part import Part, PartRarity, PartSlot
 
 # Стартовые детали повторяют числа, ранее захардкоженные в lobby.py,
 # чтобы сама реструктуризация на Pilot/Mech/Part не меняла баланс.

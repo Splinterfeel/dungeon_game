@@ -42,7 +42,7 @@ PUBG) и асинхронное PvP против сборок других иг�
   награда, Этап 3), в подземелье во время боя лута больше нет.
 - `Player` — уже пилот с мехом: `Player.mech: Mech` собран из деталей по
   слотам `torso`/`legs`/`head` + **двух рук** `arms_left`/`arms_right`
-  (см. [src/entities/mech.py](src/entities/mech.py)/[part.py](src/entities/part.py)),
+  (см. [src/mech/mech.py](src/mech/mech.py)/[part.py](src/mech/part.py)),
   а итоговые `CharacterStats` — сумма характеристик деталей (`Mech.build_character_stats`).
   Только `action_points` на этой итерации остаётся "от пилота", не от детали.
   **Руки — одна деталь-выбор** (`Mech(..., arms=part)` сам создаёт
@@ -54,7 +54,7 @@ PUBG) и асинхронное PvP против сборок других иг�
   одному на руку. У деталей есть редкость (`Part.rarity`) и собственная
   прочность (locational damage: `Part.current_health`/`destroyed`,
   `Mech.apply_random_part_damage`/`recompute_live_stats`); лоадаут игроку
-  выдаётся случайным пресетом из [src/mech_presets.py](src/mech_presets.py).
+  выдаётся случайным пресетом из [src/mech/presets.py](src/mech/presets.py).
   `Enemy` мех пока не получил — остаётся на плоских `CharacterStats`/`Inventory`
   (осознанно, см. [ROADMAP.md](docs/ROADMAP.md), Этап 1 п.3).
 - Название пакета/репозитория (`dungeon_game`) тоже отражает старый сеттинг.
@@ -149,14 +149,12 @@ WebSocket для игры**. Хранение состояния — тольк�
   `Weapon` с `Weapon.hand`, `Inventory`, `OverwatchState`), `player.py`
   (`Player` — боевой мех с отдельным `id`, `owner_player_id`, `loadout_id`
   и `mech: Mech`; включает `check_weapon_loadout` и прототипный список
-  пассивных скиллов `skills`), `enemy.py`,
-  `room.py`, `part.py` (`Part`, `PartSlot`, `PartRarity`, собственная
-  прочность детали, а также инстансные аффиксы `affix_tier`/
-  `affix_stat`/`affix_value` у выпавших деталей), `mech.py` (одна выбранная
-  деталь рук разворачивается в две физические `arms_left`/`arms_right`,
-  `Mech.build_character_stats`/`arm_for`/`hand_side_of`; locational damage:
-  `apply_random_part_damage`/`recompute_live_stats`).
-- [src/parts_catalog.py](src/parts_catalog.py) — каталог деталей:
+  пассивных скиллов `skills`), `enemy.py`, `room.py`.
+- [src/mech/](src/mech) — доменный пакет меха: `part.py` (`Part`, `PartSlot`,
+  `PartRarity`, прочность и инстансные аффиксы), `mech.py` (сборка меха,
+  разделённые руки и locational damage), `catalog.py` (каталог деталей) и
+  `presets.py` (готовые мехи с оружием).
+- [src/mech/catalog.py](src/mech/catalog.py) — каталог деталей:
   стартовый набор `DEFAULT_*` (common, из него собирается нейтральный/
   тестовый `default_mech()`) и именные наборы трёх пресетов
   `STEELMAN_*`/`FIREWORKS_*`/`STRIKEFORCE_*` (rare); аналог
@@ -164,7 +162,7 @@ WebSocket для игры**. Хранение состояния — тольк�
   Аффиксные награды генерируются поверх этих базовых шаблонов в
   [src/rewards.py](src/rewards.py), а наружу отдаются через
   [src/garage.py](src/garage.py) (Этап 2 п.15, см. [ROADMAP.md](docs/ROADMAP.md)).
-- [src/mech_presets.py](src/mech_presets.py) — `MechPreset` («мех + оружие
+- [src/mech/presets.py](src/mech/presets.py) — `MechPreset` («мех + оружие
   под него» + лор-`description`): SteelMan (ближний бой), Fireworks Mk. 1
   (стрельба), StrikeForce (один рейлган). `get_random_mech_preset()` —
   текущий источник лоадаута игрока в `src/lobby/lobby.py`.
@@ -284,7 +282,7 @@ from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.action import Action, ActionType
 from src.game import Game
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 
 async def main():
     arena_map = ArenaMap(
@@ -356,8 +354,8 @@ regression-тест, а по факту протухнет за один реф�
 `python -m src.debug.balance_sim` (не pytest; это отдельный балансный smoke-инструмент).
 Появился как замена ручному
 прогону 2v2 через 4 браузерные сессии, когда нужно быстро оценить, как
-правка `Part`/`Weapon` в [src/parts_catalog.py](src/parts_catalog.py)/
-[src/mech_presets.py](src/mech_presets.py) сдвигает баланс.
+правка `Part`/`Weapon` в [src/mech/catalog.py](src/mech/catalog.py)/
+[src/mech/presets.py](src/mech/presets.py) сдвигает баланс.
 
 Что делает: чистое PvP 2v2 мехов (`Arena(enemies_num=0)`, без нейтрального
 ИИ, чтобы не шуметь поверх баланса пресетов) на `map_2`: один пилот на
@@ -394,7 +392,7 @@ rate/средним числом раундов/остатком HP победи
   рандомизацию/смену инициативы и её влияние на баланс рассматривать
   отдельной задачей после плейтеста с людьми — см. [ROADMAP.md](docs/ROADMAP.md),
   Этап 2 п.13.
-- Использовать при любой правке чисел в `parts_catalog.py`/`mech_presets.py`
+- Использовать при любой правке чисел в `mech/catalog.py`/`mech/presets.py`
   (HP, `speed`, `accuracy`, `melee_power`, урон/`cost_ap`/`range` оружия) —
   дешевле и быстрее, чем просить пользователя вручную гонять несколько
   реальных клиентов.

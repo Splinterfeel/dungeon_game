@@ -10,7 +10,7 @@ from src.entities.player import Player
 from src.game import Game
 from src.map import ArenaMap
 from src.maps import default
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 from src.skills_catalog import ACCURATE_SHOT, COMBAT_IMPULSE, DODGE, HEAVY_STRIKE
 
 

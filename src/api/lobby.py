@@ -13,7 +13,7 @@ from dto.base import (
 from dto.state import MechPresetState
 from src.api.deps import get_lobby_manager
 from src.lobby.manager import LobbyManager
-from src.mech_presets import MECH_PRESETS
+from src.mech.presets import MECH_PRESETS
 
 
 router = APIRouter()

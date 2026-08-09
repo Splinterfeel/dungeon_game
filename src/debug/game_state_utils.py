@@ -11,8 +11,8 @@ from src.garage import GarageProfile
 from src.garage_manager import GarageManager
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
-from src.entities.mech import Mech
-from src.entities.part import Part
+from src.mech.mech import Mech
+from src.mech.part import Part
 from src.skills_catalog import Skill
 from src.turn import Turn
 from src.base import Point

@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from main import app, garage_manager, lobby_manager
 from src.garage import apply_random_affix, fresh_part, roll_match_reward
-from src.parts_catalog import FIREWORKS_ARMS, FIREWORKS_TORSO
+from src.mech.catalog import FIREWORKS_ARMS, FIREWORKS_TORSO
 
 
 client = TestClient(app)

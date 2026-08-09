@@ -17,7 +17,7 @@ from src.entities.player import Player
 from src.game import Game
 from src.map import ArenaMap
 from src.maps import default
-from src.mech_presets import get_mech_preset_by_name
+from src.mech.presets import get_mech_preset_by_name
 from src.turn import GamePhase
 
 

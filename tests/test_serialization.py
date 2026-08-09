@@ -22,7 +22,7 @@ from src.arena import Arena, ArenaMap
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.constants import Accuracy
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 from src.game_observer import GameObserver
 from dto.event import GameEvent
 

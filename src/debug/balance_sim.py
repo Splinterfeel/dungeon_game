@@ -51,13 +51,13 @@ action_handler_module.asyncio.sleep = _no_sleep
 from src.ai.player import PlayerBotAI
 from src.arena import Arena
 from src.entities.base import Inventory
-from src.entities.part import PartSlot
+from src.mech.part import PartSlot
 from src.entities.player import Player
 from src.game import Game
 from src.garage import AFFIX_VALUES_BY_STAT
 from src.map import ArenaMap
 from src.maps import default
-from src.mech_presets import get_mech_preset_by_name
+from src.mech.presets import get_mech_preset_by_name
 
 
 @dataclass(frozen=True)

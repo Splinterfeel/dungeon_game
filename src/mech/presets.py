@@ -4,8 +4,8 @@ import uuid
 from pydantic import BaseModel
 
 from src.entities.base import Weapon
-from src.entities.mech import Mech
-from src.parts_catalog import (
+from src.mech.mech import Mech
+from src.mech.catalog import (
     STEELMAN_TORSO,
     STEELMAN_LEGS,
     STEELMAN_ARMS,
@@ -117,7 +117,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
 # оружие с совсем минимальными статами (2026-07-14): не полноценный план "Б",
 # а последний шанс не остаться совсем безоружным, если правую руку выбьют.
 # Числа не сбалансированы намеренно, см. комментарий у STRIKEFORCE_* в
-# parts_catalog.py - баланс после того, как появится разброс урона.
+# catalog.py - баланс после того, как появится разброс урона.
 STRIKEFORCE_PRESET = MechPreset(
     name="StrikeForce",
     description=(

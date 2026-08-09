@@ -11,8 +11,8 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from src.entities.base import Inventory, UUIDStr, Weapon
-from src.entities.mech import Mech
-from src.entities.part import Part, PartRarity, PartSlot
+from src.mech.mech import Mech
+from src.mech.part import Part, PartRarity, PartSlot
 from src.entities.player import Player
 
 from src.progression import (

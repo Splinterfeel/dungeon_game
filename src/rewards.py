@@ -2,8 +2,8 @@ import random
 
 from pydantic import BaseModel
 
-from src.entities.part import Part, PartSlot
-from src.parts_catalog import (
+from src.mech.part import Part, PartSlot
+from src.mech.catalog import (
     DEFAULT_ARMS,
     DEFAULT_HEAD,
     DEFAULT_LEGS,

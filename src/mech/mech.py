@@ -4,7 +4,7 @@ from typing import ClassVar, Optional
 from pydantic import BaseModel, computed_field, model_validator
 
 from src.entities.base import CharacterStats
-from src.entities.part import Part, PartSlot
+from src.mech.part import Part, PartSlot
 
 
 class Mech(BaseModel):
@@ -29,7 +29,7 @@ class Mech(BaseModel):
     arms_left: Part
     arms_right: Part
     head: Part
-    # имя пресета (см. src/mech_presets.py), из которого собран этот мех -
+    # имя пресета (см. src/mech/presets.py), из которого собран этот мех -
     # None для мехов без пресета (default_mech() и т.п.); нужно только для
     # показа лора пресета в дебаг-инспекторе, на игровую логику не влияет
     preset_name: Optional[str] = None

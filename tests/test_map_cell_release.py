@@ -21,7 +21,7 @@ from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.game import Game
 from src.base import Point
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 
 
 def _neighbors(p: Point) -> list[Point]:

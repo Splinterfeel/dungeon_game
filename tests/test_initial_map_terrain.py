@@ -17,7 +17,7 @@ from src.base import Point
 from src.entities.player import Player
 from src.entities.base import Inventory, Weapon
 from src.game import Game
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 
 
 def _one_weapon() -> Weapon:

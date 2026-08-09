@@ -34,7 +34,7 @@ from src.entities.base import Inventory, Weapon, OverwatchState
 from src.action import Action, ActionType, AttackActionParams
 from src.game import Game
 from src.base import Point
-from src.parts_catalog import default_mech
+from src.mech.catalog import default_mech
 
 
 def _mk_player(team, position, weapons):

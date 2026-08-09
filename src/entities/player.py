@@ -2,7 +2,7 @@ import names
 from pydantic import Field, model_validator
 
 from src.entities.base import Actor, UUIDStr, Weapon
-from src.entities.mech import Mech
+from src.mech.mech import Mech
 from src.skills_catalog import Skill, fresh_default_player_skills
 
 

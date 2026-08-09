@@ -123,12 +123,12 @@
      переименованным полем).
 
    Реализация:
-   - [src/entities/part.py](../src/entities/part.py) (новый): `PartSlot`
+   - [src/mech/part.py](../src/mech/part.py) (новый): `PartSlot`
      (`TORSO`/`LEGS`/`ARMS`/`HEAD`) + `Part` (id, slot, name, и
      `health`/`speed`/`accuracy`/`melee_power`/`view_distance`, все `= 0`
      по умолчанию — деталь заполняет только то, что относится к её слоту
      по конвенции, модель этого не форсирует).
-   - [src/entities/mech.py](../src/entities/mech.py) (новый): `Mech`
+   - [src/mech/mech.py](../src/mech/mech.py) (новый): `Mech`
      (`torso`/`legs`/`arms`/`head`: `Part`) + метод
      `build_character_stats(action_points: int) -> CharacterStats`,
      суммирующий соответствующие поля всех 4 деталей и добавляющий
@@ -151,7 +151,7 @@
      дампа, где `stats` передаётся как есть).
 
 4. ✅ **Каталог деталей (пока в коде, не в БД).** — сделано (2026-07-08).
-   - [src/parts_catalog.py](../src/parts_catalog.py) (по аналогии с
+   - [src/mech/catalog.py](../src/mech/catalog.py) (по аналогии с
      [src/maps/default.py](../src/maps/default.py)): по одной стартовой
      детали на слот с текущими числами (torso.health=15, legs.speed=5,
      arms.accuracy=87 + arms.melee_power=5, head.view_distance=5 — те же
@@ -203,13 +203,13 @@
      и/или Этап 2, когда появится реальный выбор деталей, а не один
      `default_mech()`.
    - ✅ **Аддендум (2026-07-13): лор пресетов в инспекторе.** `MechPreset`
-     ([src/mech_presets.py](../src/mech_presets.py)) получил поле
+     ([src/mech/presets.py](../src/mech/presets.py)) получил поле
      `description` — художественный текст с псевдо-историей (кем/когда
      создан, для чего) для каждого из трёх пресетов. Чтобы инспектор знал,
      какому пресету принадлежит конкретный мех игрока, `Mech`
-     ([src/entities/mech.py](../src/entities/mech.py)) получил
+     ([src/mech/mech.py](../src/mech/mech.py)) получил
      `preset_name: Optional[str]`, который простановился в
-     `mech_presets._fresh_copy` — `None` для мехов без пресета
+     `mech.presets._fresh_copy` — `None` для мехов без пресета
      (`default_mech()`). Прокинуто в `MechState.preset_name` и
      `MechPresetState.description` ([dto/state.py](../dto/state.py); второе
      уже отдаётся эндпоинтом `/mech_presets`, использованным для выбора
@@ -255,13 +255,13 @@
      пользователя), обсуждение отдельно не требуется.
 
 8. ✅ **Пресеты мехов (только бэкенд).** — сделано (2026-07-12).
-   - [src/parts_catalog.py](../src/parts_catalog.py): добавлены именованные
+   - [src/mech/catalog.py](../src/mech/catalog.py): добавлены именованные
      детали для двух пресетов — `STEELMAN_*` (упор в ближний бой: больше
      здоровья и силы удара, ниже точность/скорость/обзор) и `FIREWORKS_*`
      (упор в стрельбу: выше точность/скорость/обзор, ниже здоровье и сила
      удара). `DEFAULT_*`/`default_mech()` не трогали — используются в тестах
      и остаются как нейтральный/тестовый мех.
-   - [src/mech_presets.py](../src/mech_presets.py) (новый файл): `MechPreset`
+   - [src/mech/presets.py](../src/mech/presets.py) (новый файл): `MechPreset`
      (`name`, `mech`, `weapons`) — пресет как «мех + оружие под него»,
      а не только набор деталей. `STEELMAN_PRESET` (в ближний бой —
      тяжёлое оружие `Кувалда «SteelMan»` + слабый пистолет для дальней
@@ -320,10 +320,10 @@
 1. **Больше слотов/деталей, редкости (common/rare/epic и т.п.), реальные
    компромиссы (например, тяжёлый корпус = меньше скорости).**
    - ✅ **Редкость.** — сделано (2026-07-13). `PartRarity` (`common`/`rare`/
-     `epic`) добавлен в [src/entities/part.py](../src/entities/part.py) как
+     `epic`) добавлен в [src/mech/part.py](../src/mech/part.py) как
      поле `Part.rarity` (по умолчанию `common` — обратная совместимость со
      старыми дампами при восстановлении через `Mech.model_validate`). В
-     [src/parts_catalog.py](../src/parts_catalog.py) `DEFAULT_*` помечены
+     [src/mech/catalog.py](../src/mech/catalog.py) `DEFAULT_*` помечены
      `common`, `STEELMAN_*`/`FIREWORKS_*` — `rare` (именной набор пресета,
      не стартовый). `epic`-тир пока не выдан ни одной детали — не выдумывали
      деталь под тир, которому ещё не с чем сравниться (см. ниже про
@@ -376,9 +376,9 @@
    - ✅ **Третий архетип, "StrikeForce" (медленный/малое HP/дамажный).** —
      сделано и сбалансировано (2026-07-13). Расширили дизайн-пространство
      сверх пары "тяжёлый/медленный" ↔ "лёгкий/быстрый": `STRIKEFORCE_*` в
-     [src/parts_catalog.py](../src/parts_catalog.py) (rarity `rare`, самое
+     [src/mech/catalog.py](../src/mech/catalog.py) (rarity `rare`, самое
      низкое HP и самая низкая скорость в игре) + `STRIKEFORCE_PRESET` в
-     [src/mech_presets.py](../src/mech_presets.py) с единственным оружием —
+     [src/mech/presets.py](../src/mech/presets.py) с единственным оружием —
      рейлганом (без запасного, в отличие от SteelMan/Fireworks: весь лоадаут
      поставлен на один разовый урон). Добавлен в `MECH_PRESETS`. Первая
      прикидка урона рейлгана (damage=11) давала разгром обоих других
@@ -391,7 +391,7 @@
    - ✅ **Аддендум (2026-07-14): аварийное оружие "Коготь" в левую руку.** После
      разделения рук (п.3-4 ниже) StrikeForce с пустой левой рукой полностью
      обезоруживался при потере правой. Добавлено намеренно слабое
-     [src/mech_presets.py](../src/mech_presets.py) оружие "Коготь"
+     [src/mech/presets.py](../src/mech/presets.py) оружие "Коготь"
      (`melee`, damage=2, cost_ap=4, accuracy=65, weight=2 — хуже "Аварийного
      клинка" Fireworks по всем боевым статам, легче по весу) как последний
      шанс не остаться совсем без оружия. **Не полноценный план "Б"** — заделан
@@ -420,13 +420,13 @@
      потерять её.
 2. ✅ **Случайный урон по части меха (locational damage).** — сделано
    (2026-07-13).
-   - [src/entities/part.py](../src/entities/part.py): `Part.max_health` +
+   - [src/mech/part.py](../src/mech/part.py): `Part.max_health` +
      `Part.current_health` (собственное HP детали, отдельное от общего
      `CharacterStats.health`) и `Part.destroyed` (`@computed_field`).
      Прочность одна на все детали (`Part.DEFAULT_MAX_HEALTH = 10`) — числа
      не подбирались отдельно, веса/баланс прочности — не приоритет, не
      трогать без отдельного запроса.
-   - [src/entities/mech.py](../src/entities/mech.py): `Mech.HIT_WEIGHTS`
+   - [src/mech/mech.py](../src/mech/mech.py): `Mech.HIT_WEIGHTS`
      (торс 0.4, остальные по 0.2) + `apply_random_part_damage` (наносит
      урон случайной части, возвращает деталь и флаг "впервые уничтожена")
      + `recompute_live_stats` (пересчитывает `speed`/`accuracy`/
@@ -456,7 +456,7 @@
    отличному от исходной формулировки). **Руки — одна деталь-выбор** (нельзя
    надеть разные типы левой/правой), но две физические руки с раздельным
    здоровьем. Реализация:
-   - [src/entities/mech.py](../src/entities/mech.py): `arms: Part` →
+   - [src/mech/mech.py](../src/mech/mech.py): `arms: Part` →
      `arms_left: Part` + `arms_right: Part`: обычный конструктор принимает одну
      выбранную деталь и сам создаёт две боевые копии с независимыми id/HP.
      Поэтому отдельная сверка идентичности рук не нужна. `HIT_WEIGHTS`:
@@ -489,7 +489,7 @@
      руки не происходит, дозор снимается). ИИ-бот в
      [src/ai/player.py](../src/ai/player.py) (`PlayerBotAI._pick_weapon`) не выбирает
      оружие уничтоженной руки; `SimpleEnemyAI` не тронут (у врагов нет рук).
-   - Пресеты ([src/mech_presets.py](../src/mech_presets.py)): SteelMan (кувалда
+   - Пресеты ([src/mech/presets.py](../src/mech/presets.py)): SteelMan (кувалда
      right / пистолет left), Fireworks (винтовка right / клинок left),
      StrikeForce (рейлган right / "Коготь" left — см. аддендум 2026-07-14 в
      п.1 выше; изначально левая рука была пустой, валидировала «одно оружие
@@ -539,7 +539,7 @@
      механики прока в бою**, чтобы её можно было опробовать: XP/уровней,
      которые её открывают, на этом этапе ещё нет, поэтому набор скиллов
      пилоту на прототипе выдаём **захардкоженным** (по аналогии с
-     [src/parts_catalog.py](../src/parts_catalog.py)/[src/maps/default.py](../src/maps/default.py)).
+     [src/mech/catalog.py](../src/mech/catalog.py)/[src/maps/default.py](../src/maps/default.py)).
    - **Дерево скиллов — зафиксировано с пользователем (2026-07-10),
      статичное и одинаковое для всех пилотов** (не случайная генерация
      веток), продублировано как JSON-заглушка в
@@ -652,11 +652,11 @@
    "ценность"/очки баланса — тяжёлая деталь весит больше именно физически
    (больше брони → больше HP, но и больше веса), а не потому что она сильнее
    в отрыве от фикции.
-   - [src/entities/part.py](../src/entities/part.py): `Part.weight` (у деталей
+   - [src/mech/part.py](../src/mech/part.py): `Part.weight` (у деталей
      всех слотов) и `Part.carry_capacity` (по конвенции значим только у
      `slot=LEGS`, аналог `melee_power`, значимого только у `ARMS`).
    - [src/entities/base.py](../src/entities/base.py): `Weapon.weight`.
-   - [src/entities/mech.py](../src/entities/mech.py): `Mech.parts_weight`
+   - [src/mech/mech.py](../src/mech/mech.py): `Mech.parts_weight`
      (computed_field, сумма веса 4 деталей) и `Mech.weight_capacity`
      (computed_field) — **решено брать от `legs`** (конвенция Armored Core,
      первый вариант из формулировки пункта), не от `torso` (FM3).
@@ -666,7 +666,7 @@
      превышать `mech.weight_capacity`, иначе `ValueError`. **Решено:
      запрет** (не штраф к статам за перегруз) — вариант по умолчанию из
      формулировки пункта.
-   - [src/parts_catalog.py](../src/parts_catalog.py)/[src/mech_presets.py](../src/mech_presets.py):
+   - [src/mech/catalog.py](../src/mech/catalog.py)/[src/mech/presets.py](../src/mech/presets.py):
      проставлены `weight`/`carry_capacity` для `DEFAULT_*` и всех трёх
      пресетов (SteelMan/Fireworks/StrikeForce) + их оружия. Числа — первая
      прикидка (не гонялось через `src/debug/balance_sim.py` на баланс, т.к. вес сам
@@ -913,7 +913,7 @@
     - **Модель:** `Weapon.ammo: Optional[int] = None` (`None` = безлимит —
       это значение по умолчанию и для melee-оружия, и как безопасный
       fallback для не тронутых мест кода). Для ranged-оружия в
-      [src/mech_presets.py](../src/mech_presets.py) задаётся конкретное число.
+      [src/mech/presets.py](../src/mech/presets.py) задаётся конкретное число.
       Runtime-расход — на самом экземпляре `Weapon` в инвентаре актора
       (mutable поле `current_ammo`, по аналогии с `current_action_points`
       на `Actor`), а не в отдельной структуре — оружие уже не шарится между
@@ -1233,7 +1233,7 @@ Postgres/миграции (Этап 3). Всё in-memory, персистентн
 2. **Схема БД (минимум):**
    - `Account` — учётка (см. п. 4 про авторизацию).
    - `Pilot` — профиль пилота: `account_id`, `xp`, `level`, `currency`.
-   - `Part` — каталог деталей (переезжает из `src/parts_catalog.py` в БД
+   - `Part` — каталог деталей (переезжает из `src/mech/catalog.py` в БД
      как справочник; сид через миграцию).
    - `PilotPartOwnership` — какие детали пилоту доступны/разблокированы
      (не все детали доступны всем сразу).
