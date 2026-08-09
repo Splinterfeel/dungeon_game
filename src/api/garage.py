@@ -6,8 +6,8 @@ from dto.garage import (
     GarageState,
     UpdateGarageTuningRequest,
 )
-from src.api.deps import get_lobby_manager
-from src.lobby.manager import LobbyManager
+from src.api.deps import get_garage_manager
+from src.garage_manager import GarageManager
 
 
 router = APIRouter()
@@ -19,10 +19,10 @@ router = APIRouter()
 )
 def get_garage(
     player_id: str,
-    lobby_manager: LobbyManager = Depends(get_lobby_manager),
+    garage_manager: GarageManager = Depends(get_garage_manager),
 ) -> GarageState:
     try:
-        return lobby_manager.get_garage_state(player_id)
+        return garage_manager.get_garage_state(player_id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
 
@@ -33,10 +33,10 @@ def get_garage(
 )
 def equip_garage_part(
     request: EquipGaragePartRequest,
-    lobby_manager: LobbyManager = Depends(get_lobby_manager),
+    garage_manager: GarageManager = Depends(get_garage_manager),
 ) -> GarageState:
     try:
-        return lobby_manager.equip_garage_part(
+        return garage_manager.equip_garage_part(
             str(request.player_id),
             str(request.loadout_id),
             str(request.part_id),
@@ -51,10 +51,10 @@ def equip_garage_part(
 )
 def update_garage_tuning(
     request: UpdateGarageTuningRequest,
-    lobby_manager: LobbyManager = Depends(get_lobby_manager),
+    garage_manager: GarageManager = Depends(get_garage_manager),
 ) -> GarageState:
     try:
-        return lobby_manager.update_garage_tuning(
+        return garage_manager.update_garage_tuning(
             str(request.player_id),
             str(request.loadout_id),
             request.reactor_mode,
@@ -70,10 +70,10 @@ def update_garage_tuning(
 )
 def choose_garage_skill(
     request: ChooseGarageSkillRequest,
-    lobby_manager: LobbyManager = Depends(get_lobby_manager),
+    garage_manager: GarageManager = Depends(get_garage_manager),
 ) -> GarageState:
     try:
-        return lobby_manager.choose_garage_skill(
+        return garage_manager.choose_garage_skill(
             str(request.player_id),
             request.skill_key,
         )

@@ -8,6 +8,7 @@ from dto.debug import DebugDumpResponse, DebugRestoreResponse
 from src.arena import Arena, ArenaMap
 from src.entities.player import Player
 from src.garage import GarageProfile
+from src.garage_manager import GarageManager
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
 from src.entities.mech import Mech
@@ -186,7 +187,10 @@ def find_current_actor(
 
 
 def restore_game_state(
-    game_data: Dict[str, Any], lobby_id: UUID, lobby_name: str, garages: dict
+    game_data: Dict[str, Any],
+    lobby_id: UUID,
+    lobby_name: str,
+    garage_manager: GarageManager,
 ) -> Lobby:
     """Restore complete game state from dump data"""
     # Create a fresh lobby with the provided ID
@@ -200,7 +204,7 @@ def restore_game_state(
         name=lobby_name,
         players_num=len(owner_ids),
         created_by_player_id=owner_ids[0] if owner_ids else lobby_id,
-        garages=garages,
+        garage_manager=garage_manager,
     )
     lobby.id = lobby_id  # Override the generated ID with the provided one
 
@@ -219,8 +223,8 @@ def restore_game_state(
             team=owned_actors[0].team,
             actor_ids=[str(actor.id) for actor in owned_actors],
         )
-        if owner_id not in garages:
-            garages[owner_id] = GarageProfile.from_players(owned_actors)
+        if garage_manager.find_profile(owner_id) is None:
+            garage_manager.register_profile(GarageProfile.from_players(owned_actors))
 
     # Restore arena
     arena = restore_arena_from_data(game_data["arena"])

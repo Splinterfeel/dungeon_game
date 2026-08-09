@@ -87,25 +87,26 @@ PUBG) и асинхронное PvP против сборок других иг�
 ## Архитектура
 
 Backend на **FastAPI**, коммуникация с фронтом — **REST для лобби +
-WebSocket для игры**. Хранение состояния — только в памяти процесса
-(`LobbyManager.lobbies` и общий для всех лобби `LobbyManager.garages` —
-обычные dict), базы данных нет.
+WebSocket для игры**. Хранение состояния — только в памяти процесса:
+`LobbyManager.lobbies` хранит лобби, `GarageManager.profiles` — общие для
+всех лобби профили пилотов; базы данных нет.
 
 ### Основные модули
 
 - [main.py](main.py) — сборка FastAPI-приложения: CORS, static mount,
-  общий in-memory `LobbyManager` в `app.state` и подключение роутеров.
+  app-scoped `LobbyManager`/`GarageManager` в `app.state` и роутеры.
 - [src/api/](src/api) — HTTP/WS boundary приложения: `web.py` (debug UI),
   `lobby.py` (лобби и старт игры), `game.py` (WS `/ws/{lobby_id}/{player_id}`),
   `garage.py` (`/garages/*`, включая выбор навыка), `debug.py` (dump/restore
-  и `/debug/rematch`), `deps.py` (доступ роутеров к `LobbyManager`).
+  и `/debug/rematch`), `deps.py` (доступ роутеров к app-scoped менеджерам).
 - [src/lobby/lobby.py](src/lobby/lobby.py) — `Lobby`: отдельно хранит подключённых
   `LobbyParticipant` (пилот → команда → actor ids), боевых `Player` и
   вебсокеты пилотов, создаёт `Game` при старте, реализует `GameObserver`
   для рассылки событий/состояния, проверяет владение актором, фильтрует
   видимое состояние по команде (`filter_visible_entities_for_team`) и
   доступные ходы по `owner_player_id` (`filter_available_moves`). В debug-
-  режиме `vs_bot` создаёт временного пилота команды 2 с локальным гаражом;
+  режиме `vs_bot` создаёт временного пилота команды 2; его незарегистрированный
+  `GarageProfile` существует только внутри сборки акторов в `GarageManager`;
   `run_automated_turns` ведёт его мехов и фазу нейтральных врагов до
   следующего хода человека.
 - [src/lobby/state_view.py](src/lobby/state_view.py) — тонкий view-helper для
@@ -117,6 +118,9 @@ WebSocket для игры**. Хранение состояния — тольк�
   orchestration PvP-бота и нейтральных врагов, включая fallback в `END_TURN`
   и ограничение числа действий на одного автоматического актора.
 - [src/lobby/manager.py](src/lobby/manager.py) — реестр лобби в памяти.
+- [src/garage_manager.py](src/garage_manager.py) — app-scoped реестр постоянных
+  гаражей и операции над ними; также собирает акторов бота через временный
+  незарегистрированный профиль, чтобы не плодить второй путь сборки мехов.
 - [src/game.py](src/game.py) — `Game`: жизненный цикл партии, порядок ходов,
   overwatch-триггеры при перемещении, условия окончания игры.
 - [src/turn.py](src/turn.py) — `Turn`/`GamePhase`: фиксированная очередь

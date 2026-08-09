@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from src.action import ActionType
 from src.ai.enemy import SimpleEnemyAI
 from src.ai.player import PlayerBotAI
@@ -5,13 +7,16 @@ from src.entities.enemy import Enemy
 from src.entities.player import Player
 from src.turn import GamePhase
 
+if TYPE_CHECKING:
+    from src.lobby.lobby import Lobby
+
 
 MAX_AUTOMATED_ACTIONS_PER_ACTOR = 20
 
 
 class LobbyAutomation:
     def __init__(self, lobby):
-        self.lobby = lobby
+        self.lobby: "Lobby" = lobby
 
     async def run_automated_turns(self) -> None:
         """Выполняет ходы PvP-ботов и нейтральных врагов до хода человека."""
@@ -59,10 +64,10 @@ class LobbyAutomation:
                 if action.type == ActionType.END_TURN:
                     return
 
-                fallback = ai.end_turn()
-                fallback_performed = await self.lobby.handle_game_action(
-                    actor, fallback.model_dump(mode="json")
+                end_turn_action = ai.end_turn()
+                end_turn_performed = await self.lobby.handle_game_action(
+                    actor, end_turn_action.model_dump(mode="json")
                 )
                 await self.lobby.broadcast_game_state()
-                if not fallback_performed:
+                if not end_turn_performed:
                     return

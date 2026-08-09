@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.api import debug, game, garage, lobby, web
+from src.garage_manager import GarageManager
 from src.lobby.manager import LobbyManager
 
 
@@ -19,7 +20,9 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
-lobby_manager = LobbyManager()
+garage_manager = GarageManager()
+lobby_manager = LobbyManager(garage_manager)
+app.state.garage_manager = garage_manager
 app.state.lobby_manager = lobby_manager
 
 app.include_router(web.router)

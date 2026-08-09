@@ -3,7 +3,7 @@ import asyncio
 
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, garage_manager, lobby_manager
 from src.garage import apply_random_affix, fresh_part, roll_match_reward
 from src.parts_catalog import FIREWORKS_ARMS, FIREWORKS_TORSO
 
@@ -100,10 +100,8 @@ def test_equipped_garage_part_is_used_when_match_starts():
     lobby_id = create_lobby(player_id)
     connect_player(lobby_id, player_id, ["SteelMan", "Fireworks Mk. 1"])
 
-    from main import lobby_manager
-
     stored_part = fresh_part(FIREWORKS_TORSO)
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     garage.owned_parts.append(stored_part)
     first_loadout_id = str(garage.loadouts[0].id)
     response = client.post(
@@ -193,8 +191,6 @@ def test_garage_tuning_is_applied_when_match_starts():
     assert response.status_code == 200
     assert response.json()["result"] is True
 
-    from main import lobby_manager
-
     lobby = lobby_manager.get_lobby(lobby_id)
     actor_ids = lobby.participants[player_id].actor_ids
     first_actor = lobby.players[actor_ids[0]]
@@ -218,9 +214,7 @@ def test_one_physical_part_cannot_be_equipped_on_two_loadouts():
         ["SteelMan", "Fireworks Mk. 1"],
     )
 
-    from main import lobby_manager
-
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     stored_part = fresh_part(FIREWORKS_TORSO)
     garage.owned_parts.append(stored_part)
     first_loadout_id = str(garage.loadouts[0].id)
@@ -271,9 +265,7 @@ def test_match_reward_can_drop_affixed_copy_of_known_base_part(monkeypatch):
         ["SteelMan", "Fireworks Mk. 1"],
     )
 
-    from main import lobby_manager
-
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     existing_keys = [
         part["catalog_key"]
         for part in client.get(f"/garages/{player_id}")
@@ -297,9 +289,7 @@ def test_garage_shows_xp_level_and_pending_skill_choice():
     player_id = str(uuid4())
     connect_player(create_lobby(player_id), player_id, ["SteelMan", "Fireworks Mk. 1"])
 
-    from main import lobby_manager
-
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     progression = garage.award_xp(100)
 
     assert progression.level_after == 2
@@ -322,9 +312,7 @@ def test_skill_choice_is_saved_and_used_when_match_starts():
     lobby_id = create_lobby(player_id)
     connect_player(lobby_id, player_id, ["SteelMan", "Fireworks Mk. 1"])
 
-    from main import lobby_manager
-
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     garage.award_xp(250)
 
     response = client.post(
@@ -362,14 +350,12 @@ def test_finalize_match_rewards_awards_winner_xp():
     lobby_id = create_lobby(player_id)
     connect_player(lobby_id, player_id, ["SteelMan", "Fireworks Mk. 1"])
 
-    from main import lobby_manager
-
     client.post("/start_game", json={"lobby_id": lobby_id})
     lobby = lobby_manager.get_lobby(lobby_id)
     lobby.game.winner = 1
 
     asyncio.run(lobby.finalize_match_rewards())
 
-    garage = lobby_manager.garages[player_id]
+    garage = garage_manager.get_profile(player_id)
     assert garage.xp == 70
     assert garage.metrics.matches_finished == 1

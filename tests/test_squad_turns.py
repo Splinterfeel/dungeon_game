@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from dto.base import CreateLobbyRequest, PlayerDTO
 from dto.state import GameState
+from src.garage_manager import GarageManager
 from src.lobby.manager import LobbyManager
 from src.action import Action, ActionType
 from src.base import Point
@@ -160,7 +161,7 @@ def test_player_bot_actively_hunts_opposing_team():
 
 def test_solo_lobby_fills_team_two_and_runs_bot_turn():
     async def scenario():
-        manager = LobbyManager()
+        manager = LobbyManager(GarageManager())
         owner_id = uuid4()
         lobby = manager.create_lobby(
             CreateLobbyRequest(
@@ -187,7 +188,9 @@ def test_solo_lobby_fills_team_two_and_runs_bot_turn():
         ]
         assert len(bot_participants) == 1
         assert bot_participants[0].team == 2
-        assert bot_participants[0].player_id not in manager.garages
+        assert (
+            manager.garage_manager.find_profile(bot_participants[0].player_id) is None
+        )
         assert len(lobby.players) == 4
 
         first_human_actor = lobby.game.turn.current_actor
@@ -212,10 +215,12 @@ def test_solo_lobby_fills_team_two_and_runs_bot_turn():
         lobby.game.ended = True
         lobby.game.winner = 1
         await lobby.finalize_match_rewards()
-        assert manager.garages[str(owner_id)].metrics.matches_finished == 1
         assert (
-            lobby.bot_garages[bot_participants[0].player_id].metrics.matches_finished
-            == 0
+            manager.garage_manager.get_profile(str(owner_id)).metrics.matches_finished
+            == 1
+        )
+        assert (
+            manager.garage_manager.find_profile(bot_participants[0].player_id) is None
         )
 
     asyncio.run(scenario())
@@ -223,7 +228,7 @@ def test_solo_lobby_fills_team_two_and_runs_bot_turn():
 
 def test_lobby_rejects_action_for_actor_owned_by_another_pilot():
     async def scenario():
-        manager = LobbyManager()
+        manager = LobbyManager(GarageManager())
         owner_id = uuid4()
         lobby = manager.create_lobby(
             CreateLobbyRequest(players_num=1, created_by_player_id=owner_id)
@@ -271,7 +276,7 @@ def test_match_ends_only_after_all_mechs_of_team_are_destroyed():
 
 def test_match_reward_is_granted_once_per_pilot_not_per_mech():
     async def scenario():
-        manager = LobbyManager()
+        manager = LobbyManager(GarageManager())
         owner_a = uuid4()
         owner_b = uuid4()
         lobby = manager.create_lobby(
@@ -295,8 +300,14 @@ def test_match_reward_is_granted_once_per_pilot_not_per_mech():
         await lobby.finalize_match_rewards()
         await lobby.finalize_match_rewards()
 
-        assert manager.garages[str(owner_a)].metrics.matches_finished == 1
-        assert manager.garages[str(owner_b)].metrics.matches_finished == 1
+        assert (
+            manager.garage_manager.get_profile(str(owner_a)).metrics.matches_finished
+            == 1
+        )
+        assert (
+            manager.garage_manager.get_profile(str(owner_b)).metrics.matches_finished
+            == 1
+        )
         assert len(lobby.players) == 4
 
     asyncio.run(scenario())
@@ -369,9 +380,9 @@ def test_move_into_overwatch_can_kill_actor_and_pass_turn_to_next_slot():
     asyncio.run(scenario())
 
 
-def test_lobby_announces_game_end_once():
+def test_lobby_publishes_game_end_once_and_resets_for_rematch():
     async def scenario():
-        manager = LobbyManager()
+        manager = LobbyManager(GarageManager())
         owner_a = uuid4()
         owner_b = uuid4()
         lobby = manager.create_lobby(
@@ -399,10 +410,14 @@ def test_lobby_announces_game_end_once():
         lobby.game.ended = True
         lobby.game.winner = 2
 
-        await lobby.announce_game_end_once()
-        await lobby.announce_game_end_once()
+        await lobby.publish_game_end_if_needed()
+        await lobby.publish_game_end_if_needed()
 
         assert messages == ["Победила команда 2!", "Игра закончилась"]
-        assert lobby.game.end_announced
+        assert lobby.end_announced
+
+        started, detail = await lobby.start_rematch(str(owner_a))
+        assert started, detail
+        assert not lobby.end_announced
 
     asyncio.run(scenario())

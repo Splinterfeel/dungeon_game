@@ -1,26 +1,12 @@
 from dto.base import CreateLobbyRequest, LobbyDTO
-from dto.garage import (
-    GarageLoadoutState,
-    GarageMetricsState,
-    GarageState,
-    PendingSkillChoiceState,
-)
-from dto.state import SkillState
 from src.lobby.lobby import Lobby
-from src.garage import (
-    FireControlMode,
-    GarageProfile,
-    MATCH_REWARD_CHANCES,
-    ReactorMode,
-)
+from src.garage_manager import GarageManager
 
 
 class LobbyManager:
-    def __init__(self):
+    def __init__(self, garage_manager: GarageManager):
         self.lobbies: dict[str, Lobby] = {}
-        # Профиль гаража принадлежит пилоту, а не конкретному лобби. Пока
-        # сервер работает без БД, это единственное in-memory хранилище.
-        self.garages: dict[str, GarageProfile] = {}
+        self.garage_manager = garage_manager
 
     def create_lobby(self, request: CreateLobbyRequest) -> Lobby:
         _name = request.name
@@ -30,7 +16,7 @@ class LobbyManager:
             name=_name,
             players_num=request.players_num,
             created_by_player_id=request.created_by_player_id,
-            garages=self.garages,
+            garage_manager=self.garage_manager,
             vs_bot=request.vs_bot,
         )
         self.lobbies[str(lobby.id)] = lobby
@@ -38,97 +24,6 @@ class LobbyManager:
 
     def get_lobby(self, lobby_id: str) -> Lobby | None:
         return self.lobbies.get(lobby_id)
-
-    def get_garage_state(self, player_id: str) -> GarageState:
-        garage = self.garages.get(player_id)
-        if garage is None:
-            raise ValueError(
-                "Гараж пилота ещё не создан: сначала подключитесь через debug-карту"
-            )
-        loadout_states = []
-        equipped_ids = set()
-        for loadout in garage.loadouts:
-            player = garage.build_player(loadout_id=loadout.id)
-            equipped_ids.update(loadout.equipped_part_ids.values())
-            loadout_states.append(
-                GarageLoadoutState(
-                    id=str(loadout.id),
-                    name=loadout.name,
-                    preset_name=loadout.preset_name,
-                    reactor_mode=loadout.reactor_mode.value,
-                    fire_control_mode=loadout.fire_control_mode.value,
-                    mech=player.mech.model_dump(mode="json"),
-                    stats=player.stats.model_dump(),
-                    weapons=[
-                        weapon.model_dump(mode="json")
-                        for weapon in player.inventory.weapons
-                    ],
-                )
-            )
-        return GarageState(
-            player_id=player_id,
-            xp=garage.xp,
-            level=garage.level,
-            owned_skills=[
-                SkillState.model_validate(skill.model_dump())
-                for skill in garage.build_skills()
-            ],
-            pending_skill_choices=[
-                PendingSkillChoiceState(
-                    level=level,
-                    options=[
-                        SkillState.model_validate(skill.model_dump())
-                        for skill in options
-                    ],
-                )
-                for level, options in garage.get_pending_skill_options()
-            ],
-            loadouts=loadout_states,
-            stored_parts=[
-                part.model_dump(mode="json")
-                for part in garage.owned_parts
-                if part.id not in equipped_ids
-            ],
-            reward_chances=MATCH_REWARD_CHANCES,
-            metrics=GarageMetricsState.model_validate(garage.metrics.model_dump()),
-        )
-
-    def equip_garage_part(
-        self, player_id: str, loadout_id: str, part_id: str
-    ) -> GarageState:
-        garage = self.garages.get(player_id)
-        if garage is None:
-            raise ValueError(
-                "Гараж пилота ещё не создан: сначала подключитесь через debug-карту"
-            )
-        garage.equip(loadout_id, part_id)
-        return self.get_garage_state(player_id)
-
-    def update_garage_tuning(
-        self,
-        player_id: str,
-        loadout_id: str,
-        reactor_mode: str,
-        fire_control_mode: str,
-    ) -> GarageState:
-        garage = self.garages.get(player_id)
-        if garage is None:
-            raise ValueError(
-                "Гараж пилота ещё не создан: сначала подключитесь через debug-карту"
-            )
-        garage.set_tuning(
-            loadout_id,
-            ReactorMode(reactor_mode),
-            FireControlMode(fire_control_mode),
-        )
-        return self.get_garage_state(player_id)
-
-    def choose_garage_skill(self, player_id: str, skill_key: str) -> GarageState:
-        garage = self.garages.get(player_id)
-        if garage is None:
-            raise ValueError("Гараж не существует")
-        garage.choose_skill(skill_key)
-        return self.get_garage_state(player_id)
 
     def get_lobbies_list(self) -> list[LobbyDTO]:
         return [

@@ -10,13 +10,14 @@ from dto.debug import (
     DebugRestoreResponse,
 )
 from dto.garage import RematchRequest
-from src.api.deps import get_lobby_manager
+from src.api.deps import get_garage_manager, get_lobby_manager
 from src.debug.game_state_utils import (
     create_debug_dump_response,
     create_restore_response,
     restore_game_state as restore_game_state_util,
 )
 from src.lobby.manager import LobbyManager
+from src.garage_manager import GarageManager
 
 
 router = APIRouter(prefix="/debug")
@@ -68,6 +69,7 @@ async def dump_game_state(
 async def restore_game_state(
     request: DebugRestoreRequest,
     lobby_manager: LobbyManager = Depends(get_lobby_manager),
+    garage_manager: GarageManager = Depends(get_garage_manager),
 ) -> DebugRestoreResponse:
     """Restore game state for debugging purposes - creates a fresh lobby with provided ID"""
     try:
@@ -76,9 +78,7 @@ async def restore_game_state(
         lobby_name = request.lobby_name or f"Restored Lobby {request.lobby_id[:8]}"
 
         # Restore game state using utility function
-        lobby = restore_game_state_util(
-            game_data, lobby_id, lobby_name, lobby_manager.garages
-        )
+        lobby = restore_game_state_util(game_data, lobby_id, lobby_name, garage_manager)
 
         # Add the restored lobby to the lobby manager
         lobby_manager.lobbies[str(lobby_id)] = lobby

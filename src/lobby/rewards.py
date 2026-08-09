@@ -18,7 +18,7 @@ class LobbyRewards:
             if participant.is_bot:
                 continue
 
-            garage = self.lobby.garages[player_id]
+            garage = self.lobby.garage_manager.get_profile(player_id)
             is_winner = game.winner is not None and participant.team == game.winner
             garage.metrics.matches_finished += 1
 

@@ -24,7 +24,7 @@ from src.map import ArenaMap
 from src.maps import default
 from src.mech_presets import get_random_mech_preset, get_mech_preset_by_name
 from src.game_observer import GameObserver
-from src.garage import GarageProfile
+from src.garage_manager import GarageManager
 
 
 @dataclass
@@ -41,7 +41,7 @@ class Lobby(GameObserver):
         name: str,
         players_num: int,
         created_by_player_id: UUID,
-        garages: dict[str, GarageProfile],
+        garage_manager: GarageManager,
         vs_bot: bool = False,
     ):
         self.id = uuid4()
@@ -51,13 +51,13 @@ class Lobby(GameObserver):
         self.created_by_player_id = str(created_by_player_id)
         self.participants: dict[str, LobbyParticipant] = {}
         self.players: dict[str, Player] = {}
-        self.garages = garages
-        self.bot_garages: dict[str, GarageProfile] = {}
+        self.garage_manager = garage_manager
         self.connections: dict[str, WebSocket] = {}
 
         self.lock = asyncio.Lock()
         self.automation_lock = asyncio.Lock()
         self.game = None
+        self.end_announced = False
 
     async def on_game_event(
         self, event: GameEvent, receiver_player_ids: Optional[List[str]] = None
@@ -88,12 +88,21 @@ class Lobby(GameObserver):
             return
 
         bot_id = uuid4()
+        bot_player_id = str(bot_id)
+        self.participants[bot_player_id] = LobbyParticipant(
+            player_id=bot_player_id,
+            team=2,
+            is_bot=True,
+        )
+
+    @staticmethod
+    def _temporary_bot_players(bot_id: str, team: int) -> list[Player]:
         presets = [get_random_mech_preset(), get_random_mech_preset()]
-        starting_players = [
+        return [
             Player(
                 id=bot_id,
-                team=2,
-                name="Р‘РѕС‚",
+                team=team,
+                name="Бот",
                 mech=preset.mech.model_copy(deep=True),
                 stats=preset.mech.build_character_stats(action_points=10),
                 inventory=Inventory(
@@ -102,17 +111,6 @@ class Lobby(GameObserver):
             )
             for preset in presets
         ]
-        bot_player_id = str(bot_id)
-        self.bot_garages[bot_player_id] = GarageProfile.from_players(starting_players)
-        self.participants[bot_player_id] = LobbyParticipant(
-            player_id=bot_player_id,
-            team=2,
-            is_bot=True,
-        )
-
-    def _garage_for(self, participant: LobbyParticipant) -> GarageProfile:
-        garages = self.bot_garages if participant.is_bot else self.garages
-        return garages[participant.player_id]
 
     async def connect_player(self, player: PlayerDTO) -> tuple[bool, str]:
         player_id = str(player.id)
@@ -131,7 +129,7 @@ class Lobby(GameObserver):
         if len(self.participants) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
-        garage = self.garages.get(player_id)
+        garage = self.garage_manager.find_profile(player_id)
         if garage is None:
             presets = []
             for preset_name in player.mech_presets:
@@ -153,8 +151,7 @@ class Lobby(GameObserver):
                 )
                 for preset in presets
             ]
-            garage = GarageProfile.from_players(starting_players)
-            self.garages[player_id] = garage
+            self.garage_manager.create_profile(starting_players)
         self.participants[player_id] = LobbyParticipant(
             player_id=player_id,
             team=player.team,
@@ -196,17 +193,23 @@ class Lobby(GameObserver):
         self.players = {}
         for participant in self.participants.values():
             participant.actor_ids = []
-            garage = self._garage_for(participant)
-            for loadout in garage.loadouts:
-                actor = garage.build_player(
-                    team=participant.team,
-                    loadout_id=loadout.id,
-                    actor_id=uuid4(),
+            if participant.is_bot:
+                starting_players = self._temporary_bot_players(
+                    participant.player_id, participant.team
                 )
+                actors = self.garage_manager.build_temporary_players(
+                    starting_players, participant.team
+                )
+            else:
+                actors = self.garage_manager.build_players(
+                    participant.player_id, participant.team
+                )
+            for actor in actors:
                 actor_id = str(actor.id)
                 participant.actor_ids.append(actor_id)
                 self.players[actor_id] = actor
         self.game = Game(arena=arena, players=list(self.players.values()))
+        self.end_announced = False
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
         return True, "Game started"
@@ -227,7 +230,9 @@ class Lobby(GameObserver):
             for participant in self.participants.values():
                 if participant.is_bot:
                     continue
-                self.garages[participant.player_id].metrics.rematches_started += 1
+                self.garage_manager.get_profile(
+                    participant.player_id
+                ).metrics.rematches_started += 1
         return result, detail
 
     async def _start_fresh_game(self) -> tuple[bool, str]:
@@ -280,14 +285,14 @@ class Lobby(GameObserver):
             return "Ничья: обе команды уничтожены"
         return f"Победила команда {self.game.winner}!"
 
-    async def announce_game_end_once(self) -> None:
-        if self.game is None or not self.game.ended or self.game.end_announced:
+    async def publish_game_end_if_needed(self) -> None:
+        if self.game is None or not self.game.ended or self.end_announced:
             return
 
         print("GAME END")
         await self.broadcast_game_event(GameEvent(message=self._winner_message()))
         await self.broadcast_game_event(GameEvent(message="Игра закончилась"))
-        self.game.end_announced = True
+        self.end_announced = True
 
     async def handle_game_action(self, requester: str | Actor, payload: dict) -> bool:
         async with self.lock:
@@ -320,7 +325,7 @@ class Lobby(GameObserver):
         await self.broadcast_game_state()
         await self.run_automated_turns()
         await self.broadcast_game_state()
-        await self.announce_game_end_once()
+        await self.publish_game_end_if_needed()
 
     async def publish_after_game_action(self, performed: bool) -> None:
         if not performed:
@@ -328,7 +333,7 @@ class Lobby(GameObserver):
         await self.broadcast_game_state()
         await self.run_automated_turns()
         await self.broadcast_game_state()
-        await self.announce_game_end_once()
+        await self.publish_game_end_if_needed()
 
     async def finalize_match_rewards(self) -> None:
         await LobbyRewards(self).finalize_match_rewards()
