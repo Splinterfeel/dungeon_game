@@ -174,16 +174,6 @@ class Lobby(GameObserver):
             return False, detail
         if self.vs_bot:
             self._add_bot_participant()
-        # arena = Arena(
-        #     enemies_num=2,
-        #     width=20,
-        #     height=15,
-        #     min_rooms=3,
-        #     max_rooms=4,
-        #     min_room_size=3,
-        #     max_room_size=5,
-        # )
-
         arena_map = ArenaMap(
             width=copy.deepcopy(default.map_2["width"]),
             height=copy.deepcopy(default.map_2["height"]),

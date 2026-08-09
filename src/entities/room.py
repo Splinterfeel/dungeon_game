@@ -15,7 +15,7 @@ class Room(BaseModel):
     def center(self) -> Point:
         center_x = self.x + self.width // 2
         center_y = self.y + self.height // 2
-        return Point(center_x, center_y)
+        return Point(x=center_x, y=center_y)
 
     def intersects(self, other: Self) -> bool:
         # Check if they don't overlap first.
