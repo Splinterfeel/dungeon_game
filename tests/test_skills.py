@@ -11,7 +11,7 @@ from src.game import Game
 from src.map import ArenaMap
 from src.maps import default
 from src.mech.catalog import default_mech
-from src.skills_catalog import ACCURATE_SHOT, COMBAT_IMPULSE, DODGE, HEAVY_STRIKE
+from src.skills_catalog import Skills
 
 
 def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
@@ -73,7 +73,9 @@ def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
 
 def test_accurate_shot_can_turn_miss_into_hit(monkeypatch):
     async def scenario():
-        game, attacker, target = build_players(skills_a=[ACCURATE_SHOT.model_copy()])
+        game, attacker, target = build_players(
+            skills_a=[Skills.ACCURATE_SHOT.model_copy()]
+        )
         weapon = attacker.inventory.weapons[0]
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit",
@@ -107,7 +109,7 @@ def test_heavy_strike_adds_bonus_melee_damage(monkeypatch):
             hand="right",
         )
         game, attacker, target = build_players(
-            skills_a=[HEAVY_STRIKE.model_copy()],
+            skills_a=[Skills.HEAVY_STRIKE.model_copy()],
             weapon_a=weapon,
         )
         target.position = Point(x=4, y=5)
@@ -133,7 +135,9 @@ def test_heavy_strike_adds_bonus_melee_damage(monkeypatch):
 
 def test_combat_impulse_refunds_action_points(monkeypatch):
     async def scenario():
-        game, attacker, target = build_players(skills_a=[COMBAT_IMPULSE.model_copy()])
+        game, attacker, target = build_players(
+            skills_a=[Skills.COMBAT_IMPULSE.model_copy()]
+        )
         weapon = attacker.inventory.weapons[0]
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
@@ -156,7 +160,9 @@ def test_combat_impulse_refunds_action_points(monkeypatch):
 
 def test_combat_impulse_cannot_start_attack_without_base_action_points(monkeypatch):
     async def scenario():
-        game, attacker, target = build_players(skills_a=[COMBAT_IMPULSE.model_copy()])
+        game, attacker, target = build_players(
+            skills_a=[Skills.COMBAT_IMPULSE.model_copy()]
+        )
         weapon = attacker.inventory.weapons[0]
         attacker.current_action_points = 0
 
@@ -232,7 +238,7 @@ def test_melee_attack_reaches_diagonally_adjacent_cell(monkeypatch):
 
 def test_dodge_avoids_regular_attack(monkeypatch):
     async def scenario():
-        game, attacker, target = build_players(skills_b=[DODGE.model_copy()])
+        game, attacker, target = build_players(skills_b=[Skills.DODGE.model_copy()])
         weapon = attacker.inventory.weapons[0]
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
@@ -255,7 +261,7 @@ def test_dodge_avoids_regular_attack(monkeypatch):
 
 def test_dodge_avoids_overwatch_shot(monkeypatch):
     async def scenario():
-        game, watcher, mover = build_players(skills_b=[DODGE.model_copy()])
+        game, watcher, mover = build_players(skills_b=[Skills.DODGE.model_copy()])
         weapon = watcher.inventory.weapons[0]
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
@@ -296,8 +302,11 @@ def test_overwatch_hit_applies_locational_damage(monkeypatch):
 def test_only_one_skill_procs_per_actor_during_regular_attack(monkeypatch):
     async def scenario():
         game, attacker, target = build_players(
-            skills_a=[ACCURATE_SHOT.model_copy(), COMBAT_IMPULSE.model_copy()],
-            skills_b=[DODGE.model_copy()],
+            skills_a=[
+                Skills.ACCURATE_SHOT.model_copy(),
+                Skills.COMBAT_IMPULSE.model_copy(),
+            ],
+            skills_b=[Skills.DODGE.model_copy()],
         )
         weapon = attacker.inventory.weapons[0]
         monkeypatch.setattr(
@@ -323,7 +332,9 @@ def test_only_one_skill_procs_per_actor_during_regular_attack(monkeypatch):
 
 def test_second_attack_same_turn_can_proc_again(monkeypatch):
     async def scenario():
-        game, attacker, target = build_players(skills_a=[ACCURATE_SHOT.model_copy()])
+        game, attacker, target = build_players(
+            skills_a=[Skills.ACCURATE_SHOT.model_copy()]
+        )
         weapon = attacker.inventory.weapons[0]
         attacker.current_action_points = 10
         monkeypatch.setattr(
@@ -348,8 +359,8 @@ def test_second_attack_same_turn_can_proc_again(monkeypatch):
 def test_only_one_skill_procs_per_actor_during_overwatch(monkeypatch):
     async def scenario():
         game, watcher, mover = build_players(
-            skills_a=[ACCURATE_SHOT.model_copy()],
-            skills_b=[DODGE.model_copy()],
+            skills_a=[Skills.ACCURATE_SHOT.model_copy()],
+            skills_b=[Skills.DODGE.model_copy()],
         )
         weapon = watcher.inventory.weapons[0]
         monkeypatch.setattr(

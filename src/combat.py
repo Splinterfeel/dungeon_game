@@ -4,15 +4,18 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from src.entities.base import Actor, Weapon, WeaponType
+from src.entities.base import Actor, HandSide, Weapon, WeaponType
 from src.entities.player import Player
-from src.skills_catalog import Skill
+from src.skills_catalog import Skill, Skills
 
 if typing.TYPE_CHECKING:
     from src.game import Game
 
 
-HAND_LABELS_RU = {"left": "левая рука", "right": "правая рука"}
+HAND_LABELS_RU = {
+    HandSide.LEFT: "левая рука",
+    HandSide.RIGHT: "правая рука",
+}
 
 
 class AttackKind(str, Enum):
@@ -50,11 +53,18 @@ class CombatResolver:
 
     @staticmethod
     def _try_proc_skill(
-        actor: Actor, skill_key: str, procced_actor_ids: set[str]
+        actor: Actor, skill_definition: Skill, procced_actor_ids: set[str]
     ) -> Skill | None:
         if str(actor.id) in procced_actor_ids or not isinstance(actor, Player):
             return None
-        skill = next((s for s in actor.skills if s.skill_key == skill_key), None)
+        skill = next(
+            (
+                owned_skill
+                for owned_skill in actor.skills
+                if owned_skill.skill_key == skill_definition.skill_key
+            ),
+            None,
+        )
         if skill is None or random.random() >= skill.proc_chance:
             return None
         procced_actor_ids.add(str(actor.id))
@@ -92,39 +102,39 @@ class CombatResolver:
             action_cost=weapon.cost_ap if kind == AttackKind.REGULAR else 0,
         )
 
-        if weapon.type == WeaponType.RANGED and (
-            skill := self._try_proc_skill(attacker, "accurate_shot", procced_actor_ids)
-        ):
-            accuracy_bonus += 15
-            outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
-        if (
-            kind == AttackKind.REGULAR
-            and weapon.type == WeaponType.MELEE
-            and (
-                skill := self._try_proc_skill(
-                    attacker, "heavy_strike", procced_actor_ids
-                )
+        if weapon.type == WeaponType.RANGED:
+            skill = self._try_proc_skill(
+                attacker, Skills.ACCURATE_SHOT, procced_actor_ids
             )
-        ):
-            damage_bonus += 3
-            outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
-        if kind == AttackKind.REGULAR and (
-            skill := self._try_proc_skill(attacker, "combat_impulse", procced_actor_ids)
-        ):
-            outcome.action_cost = 0
-            outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
+            if skill is not None:
+                accuracy_bonus += 15
+                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
+        if kind == AttackKind.REGULAR and weapon.type == WeaponType.MELEE:
+            skill = self._try_proc_skill(
+                attacker, Skills.HEAVY_STRIKE, procced_actor_ids
+            )
+            if skill is not None:
+                damage_bonus += 3
+                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
+        if kind == AttackKind.REGULAR:
+            skill = self._try_proc_skill(
+                attacker, Skills.COMBAT_IMPULSE, procced_actor_ids
+            )
+            if skill is not None:
+                outcome.action_cost = 0
+                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
 
         attack_stats = attacker.stats.model_copy(
             update={"accuracy": attacker.stats.accuracy + accuracy_bonus}
         )
         outcome.hit = weapon.check_hit(actor_stats=attack_stats, distance=distance)
-        if outcome.hit and (
-            skill := self._try_proc_skill(target, "dodge", procced_actor_ids)
-        ):
-            outcome.hit = False
-            outcome.skill_messages.append(
-                f"срабатывает навык «{skill.name}» у {target.name}"
-            )
+        if outcome.hit:
+            skill = self._try_proc_skill(target, Skills.DODGE, procced_actor_ids)
+            if skill is not None:
+                outcome.hit = False
+                outcome.skill_messages.append(
+                    f"срабатывает навык «{skill.name}» у {target.name}"
+                )
 
         if not outcome.hit:
             return outcome

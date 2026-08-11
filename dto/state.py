@@ -2,6 +2,8 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 from dto.base import PointState
+from src.entities.base import HandSide, WeaponType
+from src.skills_catalog import SkillTrigger
 
 
 class LobbyStatePayload(BaseModel):
@@ -28,14 +30,14 @@ class CharacherStatsState(BaseModel):
 
 class WeaponState(BaseModel):
     id: str
-    type: Literal["melee", "ranged"]
+    type: WeaponType
     name: str
     damage: int
     cost_ap: int
     range: int
     accuracy: int
     weight: int
-    hand: Optional[str] = None
+    hand: HandSide | None = None
 
 
 class InventoryState(BaseModel):
@@ -49,7 +51,7 @@ class OverwatchStateDTO(BaseModel):
 class SkillState(BaseModel):
     skill_key: str
     name: str
-    trigger: str
+    trigger: SkillTrigger
     proc_chance: float
     description: str
 

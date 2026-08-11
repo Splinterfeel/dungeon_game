@@ -1,12 +1,14 @@
 import uuid
-from typing import Literal
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
 from src.entities.base import UUIDStr
 
 
-SkillTrigger = Literal["attack", "defense"]
+class SkillTrigger(str, Enum):
+    ATTACK = "attack"
+    DEFENSE = "defense"
 
 
 class Skill(BaseModel):
@@ -18,63 +20,55 @@ class Skill(BaseModel):
     description: str
 
 
-ACCURATE_SHOT = Skill(
-    skill_key="accurate_shot",
-    name="Точный выстрел",
-    trigger="attack",
-    proc_chance=0.15,
-    description="Шанс на атаку: +15 к точности для текущего выстрела.",
-)
+class Skills:
+    ACCURATE_SHOT = Skill(
+        skill_key="accurate_shot",
+        name="Точный выстрел",
+        trigger=SkillTrigger.ATTACK,
+        proc_chance=0.15,
+        description="Шанс на атаку: +15 к точности для текущего выстрела.",
+    )
+    HEAVY_STRIKE = Skill(
+        skill_key="heavy_strike",
+        name="Усиленный удар",
+        trigger=SkillTrigger.ATTACK,
+        proc_chance=0.15,
+        description="Шанс на атаку: +3 к силе удара для текущей атаки ближнего боя.",
+    )
+    COMBAT_IMPULSE = Skill(
+        skill_key="combat_impulse",
+        name="Боевой импульс",
+        trigger=SkillTrigger.ATTACK,
+        proc_chance=0.12,
+        description="Шанс, что текущая атака не потратит очки действия.",
+    )
+    DODGE = Skill(
+        skill_key="dodge",
+        name="Уклонение",
+        trigger=SkillTrigger.DEFENSE,
+        proc_chance=0.15,
+        description="Шанс полностью избежать входящего удара или выстрела.",
+    )
 
-HEAVY_STRIKE = Skill(
-    skill_key="heavy_strike",
-    name="Усиленный удар",
-    trigger="attack",
-    proc_chance=0.15,
-    description="Шанс на атаку: +3 к силе удара для текущей атаки ближнего боя.",
-)
-
-COMBAT_IMPULSE = Skill(
-    skill_key="combat_impulse",
-    name="Боевой импульс",
-    trigger="attack",
-    proc_chance=0.12,
-    description="Шанс, что текущая атака не потратит очки действия.",
-)
-
-DODGE = Skill(
-    skill_key="dodge",
-    name="Уклонение",
-    trigger="defense",
-    proc_chance=0.15,
-    description="Шанс полностью избежать входящего удара или выстрела.",
-)
-
-DEFAULT_PLAYER_SKILLS = [ACCURATE_SHOT, HEAVY_STRIKE, COMBAT_IMPULSE, DODGE]
 
 SKILLS_BY_KEY: dict[str, Skill] = {
-    skill.skill_key: skill for skill in DEFAULT_PLAYER_SKILLS
+    skill.skill_key: skill
+    for skill in vars(Skills).values()
+    if isinstance(skill, Skill)
 }
 
-LEVEL_SKILL_CHOICES: dict[int, tuple[str, ...]] = {
-    2: ("accurate_shot", "heavy_strike"),
-}
-
-LEVEL_BRANCH_SKILL_CHOICES: dict[int, dict[str, tuple[str, ...]]] = {
+SKILL_TREE: dict[int, dict[str | None, tuple[Skill, ...]]] = {
+    2: {
+        None: (Skills.ACCURATE_SHOT, Skills.HEAVY_STRIKE),
+    },
     3: {
-        "accurate_shot": ("combat_impulse",),
-        "heavy_strike": ("dodge",),
-    }
+        Skills.ACCURATE_SHOT.skill_key: (Skills.COMBAT_IMPULSE,),
+        Skills.HEAVY_STRIKE.skill_key: (Skills.DODGE,),
+    },
 }
 
 
-def fresh_default_player_skills() -> list[Skill]:
-    return [
-        skill.model_copy(update={"id": uuid.uuid4()}) for skill in DEFAULT_PLAYER_SKILLS
-    ]
-
-
-def fresh_skills_by_keys(skill_keys: list[str]) -> list[Skill]:
+def build_skills_by_keys(skill_keys: list[str]) -> list[Skill]:
     return [
         SKILLS_BY_KEY[skill_key].model_copy(update={"id": uuid.uuid4()})
         for skill_key in skill_keys
@@ -83,21 +77,10 @@ def fresh_skills_by_keys(skill_keys: list[str]) -> list[Skill]:
 
 
 def get_skill_choice_options(level: int, owned_skill_keys: list[str]) -> list[Skill]:
-    direct_choices = LEVEL_SKILL_CHOICES.get(level)
-    if direct_choices is not None:
-        return [
-            SKILLS_BY_KEY[skill_key].model_copy(update={"id": uuid.uuid4()})
-            for skill_key in direct_choices
-        ]
-
-    branch_choices = LEVEL_BRANCH_SKILL_CHOICES.get(level)
-    if branch_choices is None:
-        return []
-
-    for prerequisite_key, option_keys in branch_choices.items():
-        if prerequisite_key in owned_skill_keys:
-            return [
-                SKILLS_BY_KEY[skill_key].model_copy(update={"id": uuid.uuid4()})
-                for skill_key in option_keys
-            ]
-    return []
+    options = []
+    for required_skill_key, skills in SKILL_TREE.get(level, {}).items():
+        if required_skill_key is None or required_skill_key in owned_skill_keys:
+            options.extend(
+                skill.model_copy(update={"id": uuid.uuid4()}) for skill in skills
+            )
+    return options

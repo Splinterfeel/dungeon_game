@@ -1,6 +1,6 @@
 import random
 from enum import Enum
-from typing import Annotated, ClassVar, Dict, Literal, Optional
+from typing import Annotated, ClassVar, Dict, Optional
 import uuid
 import names
 from pydantic import BaseModel, ConfigDict, Field, PlainSerializer, model_validator
@@ -13,6 +13,11 @@ UUIDStr = Annotated[uuid.UUID, PlainSerializer(lambda x: str(x), return_type=str
 class WeaponType(str, Enum):
     MELEE = "melee"
     RANGED = "ranged"
+
+
+class HandSide(str, Enum):
+    LEFT = "left"
+    RIGHT = "right"
 
 
 class Entity(BaseModel):
@@ -61,7 +66,7 @@ class Weapon(BaseModel):
     # слот под одно оружие. None - у оружия врагов (у Enemy нет меха/рук) и как
     # безопасный дефолт; у оружия игрока рука обязательна (см. Player.check_weapon_loadout).
     # Уничтожение руки делает привязанное к ней оружие недоступным (см. Mech.arm_for).
-    hand: Optional[Literal["left", "right"]] = None
+    hand: HandSide | None = None
 
     def roll_damage(self) -> int:
         "Урон одного попадания с разбросом ±DAMAGE_VARIANCE, округление к целому, минимум 1"

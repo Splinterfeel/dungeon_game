@@ -3,7 +3,7 @@ from typing import ClassVar, Optional
 
 from pydantic import BaseModel, computed_field, model_validator
 
-from src.entities.base import CharacterStats
+from src.entities.base import CharacterStats, HandSide
 from src.mech.part import Part, PartSlot
 
 
@@ -69,16 +69,16 @@ class Mech(BaseModel):
                 )
         return self
 
-    def arm_for(self, hand: str) -> Part:
+    def arm_for(self, hand: HandSide) -> Part:
         "Деталь руки по стороне оружия (Weapon.hand): 'left' -> arms_left, иначе arms_right"
-        return self.arms_left if hand == "left" else self.arms_right
+        return self.arms_left if hand == HandSide.LEFT else self.arms_right
 
-    def hand_side_of(self, part: Part) -> Optional[str]:
+    def hand_side_of(self, part: Part) -> HandSide | None:
         "Сторона руки ('left'/'right') для конкретного экземпляра детали, иначе None"
         if part is self.arms_left:
-            return "left"
+            return HandSide.LEFT
         if part is self.arms_right:
-            return "right"
+            return HandSide.RIGHT
         return None
 
     @computed_field  # type: ignore[misc]

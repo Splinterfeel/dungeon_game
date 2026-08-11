@@ -3,7 +3,7 @@ import uuid
 
 from pydantic import BaseModel
 
-from src.entities.base import Weapon, WeaponType
+from src.entities.base import HandSide, Weapon, WeaponType
 from src.mech.mech import Mech
 from src.mech.catalog import (
     STEELMAN_TORSO,
@@ -56,7 +56,7 @@ STEELMAN_PRESET = MechPreset(
             range=1,
             accuracy=95,
             weight=8,
-            hand="right",
+            hand=HandSide.RIGHT,
         ),
         Weapon(
             type=WeaponType.RANGED,
@@ -66,7 +66,7 @@ STEELMAN_PRESET = MechPreset(
             range=3,
             accuracy=75,
             weight=2,
-            hand="left",
+            hand=HandSide.LEFT,
         ),
     ],
 )
@@ -97,7 +97,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             range=5,
             accuracy=90,
             weight=5,
-            hand="right",
+            hand=HandSide.RIGHT,
         ),
         Weapon(
             type=WeaponType.MELEE,
@@ -107,7 +107,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             range=1,
             accuracy=90,
             weight=1,
-            hand="left",
+            hand=HandSide.LEFT,
         ),
     ],
 )
@@ -144,7 +144,7 @@ STRIKEFORCE_PRESET = MechPreset(
             range=6,
             accuracy=80,
             weight=14,
-            hand="right",
+            hand=HandSide.RIGHT,
         ),
         # намеренно слабое аварийное оружие: хуже "Аварийного клинка" Fireworks
         # по урону/точности/AP, при этом легче него по весу. Задел под будущий
@@ -159,7 +159,7 @@ STRIKEFORCE_PRESET = MechPreset(
             range=1,
             accuracy=65,
             weight=2,
-            hand="left",
+            hand=HandSide.LEFT,
         ),
     ],
 )

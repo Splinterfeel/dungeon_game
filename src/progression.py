@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from src.skills_catalog import fresh_skills_by_keys, get_skill_choice_options
+from src.skills_catalog import build_skills_by_keys, get_skill_choice_options
 
 
 MATCH_XP_REWARDS = {"winner": 70, "loser": 30}
@@ -19,7 +19,7 @@ class ProgressionResult(BaseModel):
 
 
 def build_skills(owned_skill_keys: list[str]):
-    return fresh_skills_by_keys(owned_skill_keys)
+    return build_skills_by_keys(owned_skill_keys)
 
 
 def get_pending_skill_options(

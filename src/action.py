@@ -1,18 +1,18 @@
 from typing import Optional, Union
 import uuid
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-from enum import Enum, auto
+from enum import Enum
 from src.base import Point
 
 
-class ActionType(Enum):
-    END_TURN = auto()
-    MOVE = auto()
-    INSPECT = auto()
-    ATTACK = auto()
-    HEAVY_ATTACK = auto()
-    OVERWATCH = auto()
+class ActionType(str, Enum):
+    END_TURN = "END_TURN"
+    MOVE = "MOVE"
+    INSPECT = "INSPECT"
+    ATTACK = "ATTACK"
+    HEAVY_ATTACK = "HEAVY_ATTACK"
+    OVERWATCH = "OVERWATCH"
 
 
 class AttackActionParams(BaseModel):
@@ -29,18 +29,6 @@ class Action(BaseModel):
     type: ActionType
     cell: Point
     params: Optional[Union[AttackActionParams, OverwatchActionParams]] = None
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def decode_action_type(cls, value):
-        # Если пришла строка (например, с фронта), ищем её в именах ActionType
-        if isinstance(value, str):
-            try:
-                return ActionType[value]
-            except KeyError:
-                raise ValueError(f"Unknown action type: {value}")
-        return value
-
 
 class ActionResult(BaseModel):
     action: Action

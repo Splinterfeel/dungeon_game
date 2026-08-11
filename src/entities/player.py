@@ -1,9 +1,9 @@
 import names
 from pydantic import Field, model_validator
 
-from src.entities.base import Actor, UUIDStr, Weapon
+from src.entities.base import Actor, HandSide, UUIDStr, Weapon
 from src.mech.mech import Mech
-from src.skills_catalog import Skill, fresh_default_player_skills
+from src.skills_catalog import Skill
 
 
 class Player(Actor):
@@ -15,7 +15,7 @@ class Player(Actor):
     mech: Mech
     xp: int = 0
     level: int = 1
-    skills: list[Skill] = Field(default_factory=fresh_default_player_skills)
+    skills: list[Skill] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def set_default_owner(self):
@@ -45,9 +45,9 @@ class Player(Actor):
             raise ValueError(
                 f"{self.name or 'Пилот'}: у меха две руки, оружия не может быть больше двух"
             )
-        used_hands = []
+        used_hands: set[HandSide] = set()
         for w in weapons:
-            if w.hand not in ("left", "right"):
+            if w.hand is None:
                 raise ValueError(
                     f"{self.name or 'Пилот'}: оружие «{w.name}» должно быть взято в руку (left/right)"
                 )
@@ -55,7 +55,7 @@ class Player(Actor):
                 raise ValueError(
                     f"{self.name or 'Пилот'}: в руку «{w.hand}» взято более одного оружия"
                 )
-            used_hands.append(w.hand)
+            used_hands.add(w.hand)
         return self
 
     @model_validator(mode="after")
