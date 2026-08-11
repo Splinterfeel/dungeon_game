@@ -13,6 +13,7 @@ from src.ai.player import PlayerBotAI
 from src.arena import Arena
 from src.constants import CELL_TYPE
 from src.entities.base import Inventory
+from src.entities.enemy import build_default_enemy
 from src.entities.player import Player
 from src.game import Game
 from src.map import ArenaMap
@@ -48,10 +49,13 @@ def build_squad_game(enemies_num: int = 0) -> tuple[Game, list[Player]]:
         make_player(2, "SteelMan", owner_b),
         make_player(2, "Fireworks Mk. 1", owner_b),
     ]
-    return (
-        Game(arena=Arena(enemies_num=enemies_num, map=arena_map), players=players),
-        players,
-    )
+    arena = Arena(map=arena_map)
+    enemies = []
+    for spawn_point in arena.choose_enemy_spawn_points(enemies_num):
+        enemy = build_default_enemy(9, 12)
+        enemy.position = spawn_point
+        enemies.append(enemy)
+    return Game(arena=arena, players=players, enemies=enemies), players
 
 
 def build_overwatch_kill_game() -> tuple[Game, list[Player]]:
@@ -76,7 +80,7 @@ def build_overwatch_kill_game() -> tuple[Game, list[Player]]:
         make_player(2, "SteelMan", owner_b),
         make_player(2, "Fireworks Mk. 1", owner_b),
     ]
-    return Game(arena=Arena(enemies_num=0, map=arena_map), players=players), players
+    return Game(arena=Arena(map=arena_map), players=players, enemies=[]), players
 
 
 async def end_current_turn(game: Game) -> None:
@@ -135,7 +139,7 @@ def test_neutral_ai_starts_only_after_all_living_player_mechs():
             await end_current_turn(game)
 
         assert game.turn.phase == GamePhase.AI_ENEMY_PHASE
-        assert game.turn.current_actor in game.arena.enemies
+        assert game.turn.current_actor in game.enemies
 
         await end_current_turn(game)
         assert game.turn.phase == GamePhase.PLAYER_PHASE

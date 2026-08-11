@@ -125,9 +125,8 @@ def build_game(team1_builds, team2_builds) -> Game:
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    # enemies_num=0: чистый PvP без нейтрального ИИ, чтобы не шуметь поверх
-    # баланса пресетов.
-    arena = Arena(enemies_num=0, map=arena_map)
+    # Чистый PvP без нейтрального ИИ, чтобы не шуметь поверх баланса пресетов.
+    arena = Arena(map=arena_map)
     # Целевой формат: один пилот на сторону управляет двумя независимыми
     # лоадаутами. На решения бота владелец не влияет, но модель совпадает с
     # серверным боем и пригодна для будущих пилотских эффектов.
@@ -136,7 +135,7 @@ def build_game(team1_builds, team2_builds) -> Game:
     players = [make_player(1, p, owner_team_1) for p in team1_builds] + [
         make_player(2, p, owner_team_2) for p in team2_builds
     ]
-    return Game(arena=arena, players=players)
+    return Game(arena=arena, players=players, enemies=[])
 
 
 def _hand_stats(players, team):

@@ -18,6 +18,7 @@ from src.arena import Arena
 from src.map import ArenaMap
 from src.maps import default
 from src.entities.player import Player
+from src.entities.enemy import build_default_enemy
 from src.entities.base import Inventory, Weapon
 from src.game import Game
 from src.base import Point
@@ -36,7 +37,12 @@ def _build_game() -> tuple[Game, Arena, Player]:
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(enemies_num=2, map=arena_map)
+    arena = Arena(map=arena_map)
+    enemies = []
+    for spawn_point in arena.choose_enemy_spawn_points(2):
+        enemy = build_default_enemy(9, 12)
+        enemy.position = spawn_point
+        enemies.append(enemy)
     mech = default_mech()
     player = Player(
         team=1,
@@ -57,14 +63,14 @@ def _build_game() -> tuple[Game, Arena, Player]:
             ]
         ),
     )
-    game = Game(arena=arena, players=[player])
+    game = Game(arena=arena, players=[player], enemies=enemies)
     return game, arena, player
 
 
 def test_enemy_vacated_cell_is_free():
     """Клетка, которую покинул враг, должна снова стать свободной."""
     game, arena, _ = _build_game()
-    enemy = arena.enemies[0]
+    enemy = game.enemies[0]
     start = enemy.position
     target = next(c for c in _neighbors(start) if arena.map.is_free(c))
 

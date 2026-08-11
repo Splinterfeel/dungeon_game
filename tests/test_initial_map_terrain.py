@@ -15,6 +15,7 @@ from src.map import ArenaMap
 from src.maps import default
 from src.base import Point
 from src.entities.player import Player
+from src.entities.enemy import build_default_enemy
 from src.entities.base import Inventory, Weapon
 from src.game import Game
 from src.mech.catalog import default_mech
@@ -39,7 +40,10 @@ def test_enemy_vacated_cell_is_free():
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(enemies_num=1, map=arena_map)
+    arena = Arena(map=arena_map)
+    enemy = build_default_enemy(9, 12)
+    enemy.position = arena.choose_enemy_spawn_points(1)[0]
+    enemies = [enemy]
     mech = default_mech()
     player = Player(
         team=1,
@@ -47,9 +51,9 @@ def test_enemy_vacated_cell_is_free():
         stats=mech.build_character_stats(action_points=10),
         inventory=Inventory(weapons=[_one_weapon()]),
     )
-    game = Game(arena=arena, players=[player])
+    game = Game(arena=arena, players=[player], enemies=enemies)
 
-    enemy = arena.enemies[0]
+    enemy = game.enemies[0]
     start = enemy.position
     target = next(
         Point(x=start.x + dx, y=start.y + dy)

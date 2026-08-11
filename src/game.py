@@ -24,6 +24,7 @@ class Game:
         self,
         arena: Arena,
         players: List[Player],
+        enemies: List[Enemy],
         turn: Turn = None,
         version: int = 0,
     ):
@@ -38,6 +39,9 @@ class Game:
         self.version = version
         self.arena = arena
         self.players = players
+        self.enemies = enemies
+        for enemy in self.enemies:
+            self.arena.map.set(enemy.position, CELL_TYPE.ENEMY.value)
         if turn is not None:
             self.turn = turn
         else:
@@ -92,7 +96,7 @@ class Game:
         self.turn.set_current_actor(actor)
 
     def get_actors(self) -> list[Actor]:
-        return [*self.players, *self.arena.enemies]
+        return [*self.players, *self.enemies]
 
     def get_actor_at(self, cell: Point) -> Actor | None:
         return next(
@@ -112,10 +116,10 @@ class Game:
         if not actor.is_dead():
             raise ValueError(f"Нельзя удалить живого актора {actor.name}")
         if isinstance(actor, Player):
-            self.arena.remove_dead_player(actor)
             self.players.remove(actor)
         elif isinstance(actor, Enemy):
-            self.arena.remove_dead_enemy(actor)
+            self.enemies.remove(actor)
+        self.arena.reset_map_cell(actor.position)
 
     async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
         for watcher in self.get_actors():
@@ -223,7 +227,7 @@ class Game:
             self.turn.phase = GamePhase.AI_ENEMY_PHASE
             self.turn.current_actor = None
 
-        for enemy in self.arena.enemies:
+        for enemy in self.enemies:
             if enemy.is_dead():
                 continue
             if str(enemy.id) in self.turn.actor_ids_passed_turn:
@@ -280,6 +284,7 @@ class Game:
         dump = {
             "arena": self.arena.model_dump(),
             "players": [p.model_dump() for p in self.players],
+            "enemies": [enemy.model_dump() for enemy in self.enemies],
             "turn": self.turn.model_dump(),
             "version": self.version,
             "ended": self.ended,

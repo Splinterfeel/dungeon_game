@@ -30,6 +30,7 @@ class Action(BaseModel):
     cell: Point
     params: Optional[Union[AttackActionParams, OverwatchActionParams]] = None
 
+
 class ActionResult(BaseModel):
     action: Action
     performed: bool = True

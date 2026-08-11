@@ -20,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.game import Game
 from src.arena import Arena, ArenaMap
 from src.entities.player import Player
+from src.entities.enemy import build_default_enemy
 from src.entities.base import Inventory, Weapon
 from src.constants import Accuracy
 from src.mech.catalog import default_mech
@@ -123,7 +124,7 @@ def create_test_arena() -> Arena:
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    return Arena(enemies_num=2, map=arena_map)
+    return Arena(map=arena_map)
 
 
 def test_game_serialization():
@@ -133,9 +134,14 @@ def test_game_serialization():
     # Create test data
     players = create_test_players()
     arena = create_test_arena()
+    enemies = []
+    for spawn_point in arena.choose_enemy_spawn_points(2):
+        enemy = build_default_enemy(9, 12)
+        enemy.position = spawn_point
+        enemies.append(enemy)
 
     # Create game instance
-    game = Game(arena=arena, players=players)
+    game = Game(arena=arena, players=players, enemies=enemies)
 
     # Register mock observer
     observer = MockGameObserver()
@@ -176,6 +182,8 @@ def test_game_serialization():
         # Verify specific fields
         assert "arena" in game_dict, "Missing 'arena' in serialized data"
         assert "players" in game_dict, "Missing 'players' in serialized data"
+        assert "enemies" in game_dict, "Missing 'enemies' in serialized data"
+        assert "enemies" not in game_dict["arena"]
         assert "turn" in game_dict, "Missing 'turn' in serialized data"
         assert "version" in game_dict, "Missing 'version' in serialized data"
         assert "ended" in game_dict, "Missing 'ended' in serialized data"

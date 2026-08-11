@@ -16,6 +16,7 @@ from src.lobby.automation import LobbyAutomation
 from src.lobby.rewards import LobbyRewards
 from src.lobby.state_view import LobbyStateView
 from src.entities.base import Actor, Inventory
+from src.entities.enemy import build_default_enemy
 from src.game import Game
 from src.arena import Arena
 from src.entities.player import Player
@@ -179,7 +180,15 @@ class Lobby(GameObserver):
             height=copy.deepcopy(default.map_2["height"]),
             tiles=copy.deepcopy(default.map_2["tiles"]),
         )
-        arena = Arena(enemies_num=2, map=arena_map)
+        arena = Arena(map=arena_map)
+        enemies = []
+        for spawn_point in arena.choose_enemy_spawn_points(2):
+            enemy = build_default_enemy(
+                min_action_points=9,
+                max_action_points=12,
+            )
+            enemy.position = spawn_point
+            enemies.append(enemy)
         self.players = {}
         for participant in self.participants.values():
             participant.actor_ids = []
@@ -198,7 +207,11 @@ class Lobby(GameObserver):
                 actor_id = str(actor.id)
                 participant.actor_ids.append(actor_id)
                 self.players[actor_id] = actor
-        self.game = Game(arena=arena, players=list(self.players.values()))
+        self.game = Game(
+            arena=arena,
+            players=list(self.players.values()),
+            enemies=enemies,
+        )
         self.end_announced = False
         self.game.set_observer(self)  # Register as observer
         await self.game.launch()
@@ -289,7 +302,7 @@ class Lobby(GameObserver):
             if not self.game or self.game.ended:
                 return False
             action = Action(**payload)
-            actors = {str(e.id): e for e in self.game.arena.enemies}
+            actors = {str(enemy.id): enemy for enemy in self.game.enemies}
             actors.update(self.players)
             actor = actors.get(action.actor_id)
             if actor is None:

@@ -130,13 +130,13 @@ class MapState(BaseModel):
 
 
 class ArenaState(BaseModel):
-    enemies: list[ActorState]
     map: MapState
 
 
 class GameState(BaseModel):
     arena: ArenaState
     players: list[PlayerState]
+    enemies: list[ActorState]
     turn: TurnState
     version: int
     ended: bool

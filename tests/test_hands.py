@@ -150,11 +150,11 @@ async def check_1_and_2():
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(enemies_num=1, map=arena_map)
+    arena = Arena(map=arena_map)
     # два игрока вплотную, разные команды
     attacker = _mk_player(1, Point(x=5, y=5), [_melee("right"), _ranged("left")])
     target = _mk_player(2, Point(x=6, y=5), [_melee("right")])
-    game = Game(arena=arena, players=[attacker, target])
+    game = Game(arena=arena, players=[attacker, target], enemies=[])
     game.turn.current_actor = attacker
     attacker.current_action_points = 20
     # выставим маркеры игроков на карту (иначе типы клеток не PLAYER)
@@ -220,10 +220,10 @@ async def check_5_overwatch():
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(enemies_num=1, map=arena_map)
+    arena = Arena(map=arena_map)
     watcher = _mk_player(1, Point(x=5, y=5), [_ranged("right")])
     mover = _mk_player(2, Point(x=7, y=5), [_melee("left")])
-    game = Game(arena=arena, players=[watcher, mover])
+    game = Game(arena=arena, players=[watcher, mover], enemies=[])
     ow_weapon = watcher.inventory.weapons[0]
     watcher.overwatch = OverwatchState(weapon_id=ow_weapon.id)
     # уничтожаем руку с оружием дозора

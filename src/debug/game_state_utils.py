@@ -104,42 +104,21 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
 
 def restore_arena_from_data(arena_data: Dict[str, Any]) -> Arena:
     """Restore an Arena object from dump data"""
-    map_data = arena_data["map"]
+    arena_map = ArenaMap.model_validate(arena_data["map"])
 
-    # Extract start points from tiles
-    tiles = map_data["tiles"]
-    start_points_team_1 = []
-    start_points_team_2 = []
-
-    for y, row in enumerate(tiles):
-        for x, cell in enumerate(row):
-            if isinstance(cell, str):
-                if "S1" in cell:
-                    start_points_team_1.append(Point(x=x, y=y))
-                elif "S2" in cell:
-                    start_points_team_2.append(Point(x=x, y=y))
-
-    # Create ArenaMap
-    arena_map = ArenaMap.model_construct(
-        width=map_data["width"],
-        height=map_data["height"],
-        tiles=map_data["tiles"],
-        start_points_team_1=start_points_team_1,
-        start_points_team_2=start_points_team_2,
-    )
-
-    # Restore enemies
-    restored_enemies = []
-    for e in arena_data["enemies"]:
-        restored_enemies.append(Enemy.model_validate(e))
-
-    # Create Arena
     arena = Arena.model_construct(
-        enemies_num=arena_data["enemies_num"],
         map=arena_map,
-        start_points_team_1=start_points_team_1,
-        start_points_team_2=start_points_team_2,
-        enemies=restored_enemies,
+        start_points_team_1=[
+            Point.model_validate(point)
+            for point in arena_data["start_points_team_1"]
+        ],
+        start_points_team_2=[
+            Point.model_validate(point)
+            for point in arena_data["start_points_team_2"]
+        ],
+        enemy_spawn_points=[
+            Point.model_validate(point) for point in arena_data["enemy_spawn_points"]
+        ],
     )
 
     # Initialize _initial_map since model_construct bypasses validation.
@@ -228,6 +207,10 @@ def restore_game_state(
 
     # Restore arena
     arena = restore_arena_from_data(game_data["arena"])
+    restored_enemies = [
+        Enemy.model_validate(enemy_data)
+        for enemy_data in game_data["enemies"]
+    ]
 
     # Restore players list for game
     restored_players = list(lobby.players.values())
@@ -239,6 +222,7 @@ def restore_game_state(
     lobby.game = Game(
         arena=arena,
         players=restored_players,
+        enemies=restored_enemies,
         turn=turn,
         version=game_data.get("version", 0),
     )
@@ -251,7 +235,7 @@ def restore_game_state(
     # Restore current actor reference
     if game_data["turn"].get("current_actor"):
         current_actor = find_current_actor(
-            game_data["turn"]["current_actor"], restored_players, arena.enemies
+            game_data["turn"]["current_actor"], restored_players, restored_enemies
         )
         lobby.game.turn.current_actor = current_actor
     else:

@@ -33,7 +33,7 @@ class LobbyStateView:
         visible_enemies = []
         visible_players = [player for player in team_players]
 
-        for enemy in game_state.arena.enemies:
+        for enemy in game_state.enemies:
             for player in team_players:
                 if self.game.arena.map.can_see(player, enemy):
                     visible_enemies.append(enemy)
@@ -46,7 +46,7 @@ class LobbyStateView:
                     break
 
         game_state.players = visible_players
-        game_state.arena.enemies = visible_enemies
+        game_state.enemies = visible_enemies
 
         if (
             game_state.turn.current_actor is not None

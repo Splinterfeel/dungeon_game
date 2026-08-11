@@ -20,7 +20,7 @@ def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
         height=copy.deepcopy(default.map_2["height"]),
         tiles=copy.deepcopy(default.map_2["tiles"]),
     )
-    arena = Arena(enemies_num=0, map=arena_map)
+    arena = Arena(map=arena_map)
     player_a = Player(
         team=1,
         position=Point(x=4, y=4),
@@ -65,7 +65,7 @@ def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
     )
     arena.map.set(player_a.position, CELL_TYPE.PLAYER.value)
     arena.map.set(player_b.position, CELL_TYPE.PLAYER.value)
-    game = Game(arena=arena, players=[player_a, player_b])
+    game = Game(arena=arena, players=[player_a, player_b], enemies=[])
     game.turn.current_actor = player_a
     player_a.current_action_points = 10
     return game, player_a, player_b
