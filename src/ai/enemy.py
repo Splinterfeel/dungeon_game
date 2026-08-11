@@ -4,6 +4,7 @@ import time
 from src.action import Action, ActionType, AttackActionParams, OverwatchActionParams
 from src.ai.base import AI
 from src.base import Point
+from src.entities.base import WeaponType
 
 
 class SimpleEnemyAI(AI):
@@ -19,7 +20,9 @@ class SimpleEnemyAI(AI):
 
         # сначала проверяем ranged-атаку (до движения, чтобы хватило AP)
         if not self.attacked_on_turn:
-            ranged_weapon = next(iter(self.actor.get_usable_weapons("ranged")), None)
+            ranged_weapon = next(
+                iter(self.actor.get_usable_weapons(WeaponType.RANGED)), None
+            )
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
@@ -86,7 +89,9 @@ class SimpleEnemyAI(AI):
                 nearest_player_for_attack = player
                 break
         if nearest_player_for_attack and not self.attacked_on_turn:
-            melee_weapon = next(iter(self.actor.get_usable_weapons("melee")), None)
+            melee_weapon = next(
+                iter(self.actor.get_usable_weapons(WeaponType.MELEE)), None
+            )
             if (
                 melee_weapon
                 and self.actor.current_action_points >= melee_weapon.cost_ap
@@ -103,7 +108,9 @@ class SimpleEnemyAI(AI):
 
         # если не атаковали и не двигались — пробуем огневой дозор
         if self.actor.overwatch is None:
-            ranged_weapon = next(iter(self.actor.get_usable_weapons("ranged")), None)
+            ranged_weapon = next(
+                iter(self.actor.get_usable_weapons(WeaponType.RANGED)), None
+            )
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap

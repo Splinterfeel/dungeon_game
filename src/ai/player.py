@@ -30,7 +30,7 @@ class PlayerBotAI(AI):
             return self.end_turn()
 
         if not self.attacked_on_turn:
-            ranged_weapon = self._pick_weapon("ranged")
+            ranged_weapon = self._pick_weapon(WeaponType.RANGED)
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap
@@ -79,7 +79,7 @@ class PlayerBotAI(AI):
             None,
         )
         if adjacent_target and not self.attacked_on_turn:
-            melee_weapon = self._pick_weapon("melee")
+            melee_weapon = self._pick_weapon(WeaponType.MELEE)
             if (
                 melee_weapon
                 and self.actor.current_action_points >= melee_weapon.cost_ap
@@ -93,7 +93,7 @@ class PlayerBotAI(AI):
                 )
 
         if self.actor.overwatch is None:
-            ranged_weapon = self._pick_weapon("ranged")
+            ranged_weapon = self._pick_weapon(WeaponType.RANGED)
             if (
                 ranged_weapon
                 and self.actor.current_action_points >= ranged_weapon.cost_ap

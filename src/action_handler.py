@@ -85,7 +85,7 @@ class ActionHandler:
                 f"{actor.name}, нельзя атаковать своего сокомандника",
             )
 
-        if weapon.type == "ranged":
+        if weapon.type == WeaponType.RANGED:
             distance = Point.distance_euklid(actor.position, action.cell)
             if distance > weapon.range:
                 return self._reject(
@@ -165,7 +165,7 @@ class ActionHandler:
             actor=actor,
             action=action,
             purpose="огневого дозора",
-            required_weapon_type="ranged",
+            required_weapon_type=WeaponType.RANGED,
         )
         if isinstance(prepared, ActionResult):
             return prepared
@@ -256,7 +256,7 @@ class ActionHandler:
             )
 
         death_detail = ""
-        if outcome.killed:
+        if outcome.target_killed:
             death_detail = (
                 f" Мех {target.name} уничтожен!"
                 if isinstance(target, Player)

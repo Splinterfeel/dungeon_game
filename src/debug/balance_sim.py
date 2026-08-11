@@ -50,7 +50,7 @@ action_handler_module.asyncio.sleep = _no_sleep
 
 from src.ai.player import PlayerBotAI
 from src.arena import Arena
-from src.entities.base import Inventory
+from src.entities.base import Inventory, WeaponType
 from src.mech.part import PartSlot
 from src.entities.player import Player
 from src.game import Game
@@ -326,7 +326,7 @@ def _supports_stat(preset_name: str, stat_name: str) -> bool:
     if stat_name == "melee_power":
         return preset.mech.arms_left.melee_power > 0
     if stat_name == "accuracy":
-        return any(w.type == "ranged" for w in preset.weapons)
+        return any(w.type == WeaponType.RANGED for w in preset.weapons)
     return True
 
 

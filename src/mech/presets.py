@@ -3,7 +3,7 @@ import uuid
 
 from pydantic import BaseModel
 
-from src.entities.base import Weapon
+from src.entities.base import Weapon, WeaponType
 from src.mech.mech import Mech
 from src.mech.catalog import (
     STEELMAN_TORSO,
@@ -49,7 +49,7 @@ STEELMAN_PRESET = MechPreset(
     ),
     weapons=[
         Weapon(
-            type="melee",
+            type=WeaponType.MELEE,
             name="Кувалда «SteelMan»",
             damage=6,
             cost_ap=6,
@@ -59,7 +59,7 @@ STEELMAN_PRESET = MechPreset(
             hand="right",
         ),
         Weapon(
-            type="ranged",
+            type=WeaponType.RANGED,
             name="Мех-пистолет",
             damage=3,
             cost_ap=6,
@@ -90,7 +90,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
     ),
     weapons=[
         Weapon(
-            type="ranged",
+            type=WeaponType.RANGED,
             name="Штурмовая винтовка «Fireworks»",
             damage=5,
             cost_ap=8,
@@ -100,7 +100,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
             hand="right",
         ),
         Weapon(
-            type="melee",
+            type=WeaponType.MELEE,
             name="Аварийный клинок",
             damage=2,
             cost_ap=5,
@@ -137,7 +137,7 @@ STRIKEFORCE_PRESET = MechPreset(
     ),
     weapons=[
         Weapon(
-            type="ranged",
+            type=WeaponType.RANGED,
             name="Рейлган «StrikeForce»",
             damage=10,
             cost_ap=8,
@@ -152,7 +152,7 @@ STRIKEFORCE_PRESET = MechPreset(
         # сознательно рискуя остаться безоружным при потере правой руки - сейчас
         # выбора нет, пресет фиксирован, но сама механика уже позволяет это.
         Weapon(
-            type="melee",
+            type=WeaponType.MELEE,
             name="Коготь",
             damage=2,
             cost_ap=4,

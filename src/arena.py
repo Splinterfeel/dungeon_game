@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from src.base import Point
 from src.constants import CELL_TYPE, Accuracy
-from src.entities.base import CharacterStats, Inventory, Weapon
+from src.entities.base import CharacterStats, Inventory, Weapon, WeaponType
 from src.entities.enemy import Enemy
 from src.entities.player import Player
 from src.map import ArenaMap
@@ -66,7 +66,7 @@ class Arena(BaseModel):
             inventory = Inventory(
                 weapons=[
                     Weapon(
-                        type="melee",
+                        type=WeaponType.MELEE,
                         name="Повреждённый ударный модуль",
                         damage=3,
                         cost_ap=5,
@@ -74,7 +74,7 @@ class Arena(BaseModel):
                         accuracy=Accuracy.DEFAULT_ENEMY_MELEE_WEAPON_ACCURACY,
                     ),
                     Weapon(
-                        type="ranged",
+                        type=WeaponType.RANGED,
                         name="Ржавая мех-винтовка",
                         damage=4,
                         cost_ap=8,

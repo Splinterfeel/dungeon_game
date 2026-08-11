@@ -1,4 +1,5 @@
 import random
+from enum import Enum
 from typing import Annotated, ClassVar, Dict, Literal, Optional
 import uuid
 import names
@@ -7,7 +8,11 @@ from src.base import Point
 
 
 UUIDStr = Annotated[uuid.UUID, PlainSerializer(lambda x: str(x), return_type=str)]
-WeaponType = Literal["melee", "ranged"]
+
+
+class WeaponType(str, Enum):
+    MELEE = "melee"
+    RANGED = "ranged"
 
 
 class Entity(BaseModel):
@@ -69,7 +74,7 @@ class Weapon(BaseModel):
         if distance > self.range:
             return 0.0
         base_chance = actor_stats.accuracy * (self.accuracy / 100.0)
-        if self.type != "melee":
+        if self.type != WeaponType.MELEE:
             distance_penalty = (distance - 1) * (20 / self.range)
             hit_chance = base_chance - distance_penalty
         else:

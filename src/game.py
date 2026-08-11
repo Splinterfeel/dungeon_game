@@ -157,7 +157,7 @@ class Game:
             )
             return
         death_detail = ""
-        if outcome.killed:
+        if outcome.target_killed:
             if isinstance(target, Player):
                 death_detail = f" Мех {target.name} уничтожен!"
             elif isinstance(target, Enemy):
