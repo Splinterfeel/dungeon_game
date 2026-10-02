@@ -1,0 +1,28 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="app-shell">
+        <ui:VisualElement class="header">
+            <ui:Label text="DUNGEON CLIENT" class="title" />
+            <ui:Label text="Тестовый вход в профиль пилота" class="subtitle" />
+        </ui:VisualElement>
+        <ui:VisualElement class="content">
+            <ui:VisualElement class="panel pilot-panel">
+                <ui:VisualElement class="panel-header">
+                    <ui:Label text="Пилоты" class="panel-title" />
+                    <ui:Button name="RefreshPilotsButton" text="Обновить" />
+                </ui:VisualElement>
+                <ui:ScrollView name="PilotList" class="pilot-list" />
+                <ui:VisualElement class="new-pilot">
+                    <ui:Label text="Новый пилот" class="section-title" />
+                    <ui:TextField name="NewPilotName" label="Имя" max-length="48" />
+                    <ui:Button name="CreatePilotButton" text="Создать с двумя сборками" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="panel profile-panel">
+                <ui:Label text="Активный профиль" class="panel-title" />
+                <ui:Label name="SelectedPilotLabel" text="Пилот ещё не выбран." class="selected-pilot" />
+                <ui:Label name="GarageSummaryLabel" text="После выбора здесь появятся две постоянные сборки." class="garage-summary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label name="StatusLabel" text="Подключаемся к серверу…" class="status" />
+    </ui:VisualElement>
+</ui:UXML>

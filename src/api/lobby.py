@@ -6,6 +6,7 @@ from dto.base import (
     ConnectLobbyRequest,
     CreateLobbyRequest,
     DetailedBoolResponse,
+    LeaveLobbyRequest,
     LobbyDTO,
     StartGameRequest,
     StartGameResponse,
@@ -14,7 +15,6 @@ from dto.state import MechPresetState
 from src.api.deps import get_lobby_manager
 from src.lobby.manager import LobbyManager
 from src.mech.presets import MECH_PRESETS
-
 
 router = APIRouter()
 
@@ -57,15 +57,33 @@ async def connect_lobby(
     return DetailedBoolResponse(result=result, detail=detail)
 
 
+@router.post("/leave_lobby", description="Выйти из не начатого лобби")
+async def leave_lobby(
+    request: LeaveLobbyRequest,
+    lobby_manager: LobbyManager = Depends(get_lobby_manager),
+) -> DetailedBoolResponse:
+    result, detail = await lobby_manager.leave_lobby(
+        request.lobby_id, str(request.player_id)
+    )
+    if not result and detail == "Лобби не найдено":
+        raise HTTPException(status_code=404, detail=detail)
+    return DetailedBoolResponse(result=result, detail=detail)
+
+
 @router.post("/start_game", description="Стартовать игру")
 async def start_game(
     request: StartGameRequest,
     lobby_manager: LobbyManager = Depends(get_lobby_manager),
 ) -> StartGameResponse:
-    # TODO проверка что стартует именно тот игрок который указан как создатель в лобби (host)
     lobby = lobby_manager.get_lobby(request.lobby_id)
     if not lobby:
         raise HTTPException(status_code=404, detail="Lobby not found")
+    if str(request.host_player_id) != lobby.created_by_player_id:
+        return StartGameResponse(
+            lobby_id=request.lobby_id,
+            result=False,
+            detail="Стартовать матч может только хост",
+        )
     result, detail = await lobby.start_game()
     if result:
         await lobby.publish_started_game()

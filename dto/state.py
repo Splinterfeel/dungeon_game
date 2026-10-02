@@ -1,7 +1,7 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel
 
-from dto.base import PointState
+from dto.base import LobbyParticipantState, PointState
 from src.entities.base import HandSide, WeaponType
 from src.skills_catalog import SkillTrigger
 
@@ -11,6 +11,8 @@ class LobbyStatePayload(BaseModel):
     players_num: int
     connected_players: list[str]
     created_by_player_id: str
+    vs_bot: bool
+    participants: list[LobbyParticipantState]
 
 
 class LobbyState(BaseModel):

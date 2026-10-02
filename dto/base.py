@@ -30,6 +30,13 @@ class LobbyDTO(BaseModel):
     game_started: bool
 
 
+class LobbyParticipantState(BaseModel):
+    player_id: str
+    name: str
+    team: int
+    is_bot: bool
+
+
 class CreateLobbyRequest(BaseModel):
     name: str | None = None
     players_num: int = Field(gt=0)
@@ -42,8 +49,14 @@ class ConnectLobbyRequest(BaseModel):
     player: PlayerDTO
 
 
+class LeaveLobbyRequest(BaseModel):
+    lobby_id: str
+    player_id: UUID
+
+
 class StartGameRequest(BaseModel):
     lobby_id: str
+    host_player_id: UUID
 
 
 class StartGameResponse(DetailedBoolResponse):

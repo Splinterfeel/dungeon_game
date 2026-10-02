@@ -1,0 +1,13 @@
+{
+  "name": "DungeonClient.EditorTests",
+  "references": [
+    "DungeonClient.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "testAssemblies": true
+}

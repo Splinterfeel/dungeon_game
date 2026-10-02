@@ -5,8 +5,8 @@ from uuid import uuid4, UUID
 from fastapi import WebSocket
 from typing import Optional, List
 
-from dto.base import PlayerDTO
-from dto.event import GameEvent
+from dto.base import LobbyParticipantState, PlayerDTO
+from dto.event import ActionResultEvent, GameEvent, LobbyClosedEvent
 from dto.state import (
     GameState,
     LobbyState,
@@ -20,10 +20,10 @@ from src.entities.enemy import build_default_enemy
 from src.game import Game
 from src.arena import Arena
 from src.entities.player import Player
-from src.action import Action
+from src.action import Action, ActionResult
 from src.map import ArenaMap
 from src.maps import default
-from src.mech.presets import get_random_mech_preset, get_mech_preset_by_name
+from src.mech.presets import get_random_mech_preset
 from src.game_observer import GameObserver
 from src.garage_manager import GarageManager
 
@@ -32,6 +32,7 @@ from src.garage_manager import GarageManager
 class LobbyParticipant:
     player_id: str
     team: int
+    name: str
     actor_ids: list[str] = field(default_factory=list)
     is_bot: bool = False
 
@@ -93,6 +94,7 @@ class Lobby(GameObserver):
         self.participants[bot_player_id] = LobbyParticipant(
             player_id=bot_player_id,
             team=2,
+            name="Бот",
             is_bot=True,
         )
 
@@ -130,35 +132,32 @@ class Lobby(GameObserver):
         if len(self.participants) == self.players_num:
             print(f"Can't connect player {player}, lobby full")
             return False, "lobby full"
-        garage = self.garage_manager.find_profile(player_id)
+        garage = await self.garage_manager.find_profile(player_id)
         if garage is None:
-            presets = []
-            for preset_name in player.mech_presets:
-                if preset_name:
-                    preset = get_mech_preset_by_name(preset_name)
-                    if preset is None:
-                        return False, f"unknown mech preset: {preset_name}"
-                else:
-                    preset = get_random_mech_preset()
-                presets.append(preset)
-
-            starting_players = [
-                Player(
-                    id=player.id,
-                    team=player.team,
-                    mech=preset.mech,
-                    stats=preset.mech.build_character_stats(action_points=10),
-                    inventory=Inventory(weapons=preset.weapons),
+            try:
+                garage = await self.garage_manager.create_starting_profile(
+                    player_id=player.id,
+                    mech_presets=player.mech_presets,
                 )
-                for preset in presets
-            ]
-            self.garage_manager.create_profile(starting_players)
+            except ValueError as error:
+                return False, str(error)
         self.participants[player_id] = LobbyParticipant(
             player_id=player_id,
             team=player.team,
+            name=garage.name,
         )
         await self.broadcast_lobby_state()
         return True, "player connected"
+
+    async def leave_player(self, player_id: str) -> tuple[bool, str, bool]:
+        """Удаляет участника до старта и сообщает, ушёл ли хост."""
+        if self.game is not None:
+            return False, "Нельзя выйти из лобби после старта матча", False
+        participant = self.participants.pop(player_id, None)
+        if participant is None:
+            return False, "Пилот не состоит в лобби", False
+        self.disconnect(player_id)
+        return True, "Пилот вышел из лобби", player_id == self.created_by_player_id
 
     async def start_game(self) -> tuple[bool, str]:
         if self.game is not None:
@@ -196,11 +195,11 @@ class Lobby(GameObserver):
                 starting_players = self._temporary_bot_players(
                     participant.player_id, participant.team
                 )
-                actors = self.garage_manager.build_temporary_players(
+                actors = await self.garage_manager.build_temporary_players(
                     starting_players, participant.team
                 )
             else:
-                actors = self.garage_manager.build_players(
+                actors = await self.garage_manager.build_players(
                     participant.player_id, participant.team
                 )
             for actor in actors:
@@ -233,9 +232,7 @@ class Lobby(GameObserver):
             for participant in self.participants.values():
                 if participant.is_bot:
                     continue
-                self.garage_manager.get_profile(
-                    participant.player_id
-                ).metrics.rematches_started += 1
+                await self.garage_manager.record_rematch(participant.player_id)
         return result, detail
 
     async def _start_fresh_game(self) -> tuple[bool, str]:
@@ -261,6 +258,16 @@ class Lobby(GameObserver):
                 players_num=self.players_num,
                 connected_players=list(self.participants),
                 created_by_player_id=self.created_by_player_id,
+                vs_bot=self.vs_bot,
+                participants=[
+                    LobbyParticipantState(
+                        player_id=participant.player_id,
+                        name=participant.name,
+                        team=participant.team,
+                        is_bot=participant.is_bot,
+                    )
+                    for participant in self.participants.values()
+                ],
             )
         )
         for ws in list(self.connections.values()):
@@ -268,6 +275,30 @@ class Lobby(GameObserver):
                 await ws.send_json(state.model_dump())
             except Exception as e:
                 print("broadcast_lobby_state exception", e)
+
+    async def broadcast_lobby_closed(self) -> None:
+        event = LobbyClosedEvent(message="Хост закрыл лобби до старта матча")
+        for ws in list(self.connections.values()):
+            try:
+                await ws.send_json(event.model_dump())
+            except Exception as error:
+                print("broadcast_lobby_closed exception", error)
+
+    async def broadcast_action_result(
+        self, player_id: str, result: ActionResult
+    ) -> None:
+        websocket = self.connections.get(player_id)
+        if websocket is None:
+            return
+        event = ActionResultEvent(
+            action_id=str(result.action.id),
+            performed=result.performed,
+            detail=result.detail,
+        )
+        try:
+            await websocket.send_json(event.model_dump())
+        except Exception as error:
+            print("broadcast_action_result exception", error)
 
     async def broadcast_game_event(
         self, event: GameEvent, receiver_player_ids: list[str] = None
@@ -297,28 +328,54 @@ class Lobby(GameObserver):
         await self.broadcast_game_event(GameEvent(message="Игра закончилась"))
         self.end_announced = True
 
-    async def handle_game_action(self, requester: str | Actor, payload: dict) -> bool:
+    async def handle_game_action_result(
+        self, requester: str | Actor, payload: dict
+    ) -> ActionResult:
+        action = Action(**payload)
         async with self.lock:
-            if not self.game or self.game.ended:
-                return False
-            action = Action(**payload)
+            if not self.game:
+                return ActionResult(
+                    action=action, performed=False, detail="Матч ещё не начат"
+                )
+            if self.game.ended:
+                return ActionResult(
+                    action=action, performed=False, detail="Матч уже завершён"
+                )
             actors = {str(enemy.id): enemy for enemy in self.game.enemies}
             actors.update(self.players)
             actor = actors.get(action.actor_id)
             if actor is None:
-                return False
+                return ActionResult(
+                    action=action, performed=False, detail="Указанный мех не найден"
+                )
             if isinstance(requester, str):
                 if not isinstance(actor, Player):
-                    return False
+                    return ActionResult(
+                        action=action,
+                        performed=False,
+                        detail="Игрок не может управлять нейтральным врагом",
+                    )
                 if str(actor.owner_player_id) != requester:
-                    return False
+                    return ActionResult(
+                        action=action,
+                        performed=False,
+                        detail="Этот мех принадлежит другому пилоту",
+                    )
             elif actor is not requester:
-                return False
+                return ActionResult(
+                    action=action,
+                    performed=False,
+                    detail="ИИ отправил действие не от имени текущего актора",
+                )
             action_result = await self.game.perform_actor_action(actor, action)
             self.game.version += 1
             if self.game.ended:
                 await self.finalize_match_rewards()
-            return action_result.performed
+            return action_result
+
+    async def handle_game_action(self, requester: str | Actor, payload: dict) -> bool:
+        result = await self.handle_game_action_result(requester, payload)
+        return result.performed
 
     async def run_automated_turns(self) -> None:
         await LobbyAutomation(self).run_automated_turns()

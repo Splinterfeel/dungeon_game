@@ -88,7 +88,8 @@ def weighted_roll_int(weighted_values: tuple[tuple[int, float], ...]) -> int:
 
 
 def apply_random_affix(part: Part, affix_tier: int | None = None) -> Part:
-    affix_tier = affix_tier or weighted_roll_int(AFFIX_TIER_WEIGHTS)
+    if affix_tier is None:
+        affix_tier = weighted_roll_int(AFFIX_TIER_WEIGHTS)
     if affix_tier == 0:
         return part
 

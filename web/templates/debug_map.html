@@ -236,7 +236,14 @@ body {
 <fieldset class="panel-group">
 <legend>Игрок и WS-соединение</legend>
 <div class="control-row">
-    <label for="player_id_input">Player ID</label>
+    <label for="player_select">Пилот</label>
+    <select id="player_select" style="width: 40%; background: #222; color: #eee; padding: 5px;">
+        <option value="">-- Новый случайный UUID --</option>
+    </select>
+    <button onclick="refresh_pilots_list()">Обновить список</button>
+</div>
+<div class="control-row">
+    <label for="player_id_input">UUID пилота</label>
     <input type="text" value="45f613c8-df18-48ae-8b85-852a0beb9ca9" id="player_id_input" style="width: 40%;"/>
     <button onclick="generate_new_player_id()">Сгенерить новый</button>
 </div>
@@ -323,6 +330,15 @@ let socket;
 const _input = document.getElementById("player_id_input");
 _input.value = generateUUID();
 
+document.getElementById("player_select").addEventListener("change", function() {
+    if (this.value) {
+        document.getElementById("player_id_input").value = this.value;
+        set_preset_selects_disabled(true);
+        return;
+    }
+    generate_new_player_id();
+});
+
 // Event listener for lobby select dropdown
 document.getElementById("lobby_id_select").addEventListener("change", function() {
     document.getElementById("lobby_id_input").value = this.value;
@@ -331,6 +347,7 @@ document.getElementById("lobby_id_select").addEventListener("change", function()
 // Initialize lobbies list on page load
 refresh_lobbies_list();
 refresh_mech_presets();
+refresh_pilots_list();
 
 document.getElementById("vs_bot_input").addEventListener("change", function() {
     const playersInput = document.getElementById("input_players_num");
@@ -346,6 +363,39 @@ document.getElementById("vs_bot_input").addEventListener("change", function() {
 function generate_new_player_id(){
     const _input = document.getElementById("player_id_input");
     _input.value = generateUUID();
+    document.getElementById("player_select").value = "";
+    set_preset_selects_disabled(false);
+}
+
+function set_preset_selects_disabled(disabled) {
+    for (const id of ["mech_preset_select_1", "mech_preset_select_2"]) {
+        document.getElementById(id).disabled = disabled;
+    }
+}
+
+async function refresh_pilots_list() {
+    const select = document.getElementById("player_select");
+    const playerId = document.getElementById("player_id_input").value;
+    try {
+        const response = await fetch("http://{{ host }}/debug/pilots");
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const pilots = await response.json();
+        select.innerHTML = '<option value="">-- Новый случайный UUID --</option>';
+        for (const pilot of pilots) {
+            const option = document.createElement("option");
+            option.value = pilot.id;
+            option.textContent = `${pilot.name} — ур. ${pilot.level}, ${pilot.matches_finished} матчей`;
+            option.title = pilot.id;
+            option.selected = pilot.id === playerId;
+            select.appendChild(option);
+        }
+        set_preset_selects_disabled(select.value !== "");
+    } catch (e) {
+        console.error("Ошибка при получении списка пилотов:", e);
+        showToast("Не удалось получить список пилотов");
+    }
 }
 
 function generate_new_lobby_id(){
@@ -444,6 +494,7 @@ async function start_game() {
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 lobby_id: _input_lobby.value,
+                host_player_id: document.getElementById("player_id_input").value,
             })
         });
         const response_data = await response.json();
@@ -513,6 +564,7 @@ async function connect_to_lobby() {
 
         // Refresh lobbies list to update player counts
         await refresh_lobbies_list();
+        await refresh_pilots_list();
 
     } catch (e) {
         console.error("Ошибка при присоединении к лобби:", e);

@@ -7,7 +7,6 @@ from typing import Dict, Any
 from dto.debug import DebugDumpResponse, DebugRestoreResponse
 from src.arena import Arena, ArenaMap
 from src.entities.player import Player
-from src.garage import GarageProfile
 from src.garage_manager import GarageManager
 from src.entities.enemy import Enemy
 from src.entities.base import CharacterStats
@@ -50,21 +49,14 @@ def restore_player_from_data(player_data: Dict[str, Any]) -> Player:
 
     mech_data = player_data["mech"]
 
-    def restore_part(part_data: Dict[str, Any]) -> Part:
-        part = Part.model_validate(part_data)
-        # Part валидатор трактует 0 как начальную прочность; в дампе это может
-        # означать уже уничтоженную деталь, поэтому возвращаем боевое значение.
-        part.current_health = part_data["current_health"]
-        return part
-
     # Debug restore намеренно обходит обычную сборку из одной выбранной детали
     # рук: в дампе левая и правая руки уже имеют раздельное боевое состояние.
     restored_mech = Mech.model_construct(
-        torso=restore_part(mech_data["torso"]),
-        legs=restore_part(mech_data["legs"]),
-        arms_left=restore_part(mech_data["arms_left"]),
-        arms_right=restore_part(mech_data["arms_right"]),
-        head=restore_part(mech_data["head"]),
+        torso=Part.model_validate(mech_data["torso"]),
+        legs=Part.model_validate(mech_data["legs"]),
+        arms_left=Part.model_validate(mech_data["arms_left"]),
+        arms_right=Part.model_validate(mech_data["arms_right"]),
+        head=Part.model_validate(mech_data["head"]),
         preset_name=mech_data.get("preset_name"),
     )
 
@@ -109,12 +101,10 @@ def restore_arena_from_data(arena_data: Dict[str, Any]) -> Arena:
     arena = Arena.model_construct(
         map=arena_map,
         start_points_team_1=[
-            Point.model_validate(point)
-            for point in arena_data["start_points_team_1"]
+            Point.model_validate(point) for point in arena_data["start_points_team_1"]
         ],
         start_points_team_2=[
-            Point.model_validate(point)
-            for point in arena_data["start_points_team_2"]
+            Point.model_validate(point) for point in arena_data["start_points_team_2"]
         ],
         enemy_spawn_points=[
             Point.model_validate(point) for point in arena_data["enemy_spawn_points"]
@@ -165,7 +155,7 @@ def find_current_actor(
     return None
 
 
-def restore_game_state(
+async def restore_game_state(
     game_data: Dict[str, Any],
     lobby_id: UUID,
     lobby_name: str,
@@ -197,19 +187,20 @@ def restore_game_state(
         restored_by_owner.setdefault(owner_id, []).append(restored_player)
 
     for owner_id, owned_actors in restored_by_owner.items():
+        profile = await garage_manager.find_profile(owner_id)
+        if profile is None:
+            profile = await garage_manager.create_profile(owned_actors)
         lobby.participants[owner_id] = LobbyParticipant(
             player_id=owner_id,
             team=owned_actors[0].team,
+            name=profile.name,
             actor_ids=[str(actor.id) for actor in owned_actors],
         )
-        if garage_manager.find_profile(owner_id) is None:
-            garage_manager.register_profile(GarageProfile.from_players(owned_actors))
 
     # Restore arena
     arena = restore_arena_from_data(game_data["arena"])
     restored_enemies = [
-        Enemy.model_validate(enemy_data)
-        for enemy_data in game_data["enemies"]
+        Enemy.model_validate(enemy_data) for enemy_data in game_data["enemies"]
     ]
 
     # Restore players list for game
@@ -228,6 +219,8 @@ def restore_game_state(
     )
     lobby.game.ended = game_data.get("ended", False)
     lobby.game.winner = game_data.get("winner")
+    if game_data.get("id"):
+        lobby.game.id = UUID(str(game_data["id"]))
 
     # Register lobby as observer
     lobby.game.set_observer(lobby)

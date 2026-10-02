@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dto.state import CharacherStatsState, MechState, PartState, SkillState, WeaponState
 
@@ -11,6 +11,25 @@ class GarageMetricsState(BaseModel):
     rewards_received: int
     parts_equipped: int
     rematches_started: int
+
+
+class PilotSummaryState(BaseModel):
+    """Короткая карточка пилота для debug-выбора профиля."""
+
+    id: str
+    name: str
+    xp: int
+    level: int
+    matches_finished: int
+
+
+class CreatePilotRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=48)
+    mech_presets: list[str | None] = Field(
+        default_factory=lambda: [None, None],
+        min_length=2,
+        max_length=2,
+    )
 
 
 class GarageLoadoutState(BaseModel):

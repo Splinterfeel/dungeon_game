@@ -1,3 +1,31 @@
 *.pyc
 __pycache__/
 .aider*
+.env
+.venv/
+.pytest_cache/
+
+# Unity: храним исходники и настройки проекта, но не локальный кеш редактора.
+client/**/[Ll]ibrary/
+client/**/[Tt]emp/
+client/**/Assets/[Tt]emp.meta
+client/**/Assets/_Recovery/
+client/**/Assets/_Recovery.meta
+client/**/[Ll]ogs/
+client/**/[Oo]bj/
+client/**/[Bb]uild/
+client/**/[Bb]uilds/
+client/**/[Uu]serSettings/
+client/**/.vs/
+client/**/.vscode/
+client/**/*.csproj
+client/**/*.sln
+client/**/*.slnx
+
+# Ненужные демонстрационные ассеты стартового URP-шаблона Unity.
+client/DungeonClient/Assets/Readme.asset*
+client/DungeonClient/Assets/TutorialInfo/
+client/DungeonClient/Assets/TutorialInfo.meta
+client/DungeonClient/Assets/Scenes/SampleScene.unity*
+client/DungeonClient/Assets/Scenes.meta
+client/DungeonClient/Assets/Settings/SampleSceneProfile.asset*

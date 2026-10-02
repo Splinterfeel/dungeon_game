@@ -1,5 +1,6 @@
 import copy
 import random
+from uuid import uuid4
 from typing import Optional, List
 
 from src.action_handler import ActionHandler
@@ -15,7 +16,6 @@ from src.combat import AttackKind, CombatResolver
 from src.turn import GamePhase, Turn
 from src.game_observer import GameObserver
 
-
 ACTIONS_ENDS_TURN = {ActionType.END_TURN, ActionType.OVERWATCH}
 
 
@@ -29,6 +29,7 @@ class Game:
         version: int = 0,
     ):
         self._observer: Optional[GameObserver] = None
+        self.id = uuid4()
         self.ended = False
         # Награды начисляет Lobby, но флаг живёт у конкретного матча, чтобы
         # повторная проверка конца игры не выдала дроп второй раз.
@@ -282,6 +283,7 @@ class Game:
     def to_dict(self) -> dict:
         """Сериализует всё состояние игры в словарь"""
         dump = {
+            "id": str(self.id),
             "arena": self.arena.model_dump(),
             "players": [p.model_dump() for p in self.players],
             "enemies": [enemy.model_dump() for enemy in self.enemies],

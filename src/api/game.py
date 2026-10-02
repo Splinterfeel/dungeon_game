@@ -1,11 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
 from dto.action import GameActionState
-from dto.event import GameEvent
+from dto.event import ActionResultEvent, GameEvent
 from src.lobby.lobby import Lobby
 from src.lobby.manager import LobbyManager
 from src.ws_utils import WSCloseCodes
-
 
 router = APIRouter()
 
@@ -48,10 +48,21 @@ async def websocket_endpoint(
                 await lobby.broadcast_lobby_state()
                 continue
 
-            game_action_state = GameActionState.model_validate(data)
-            performed = await lobby.handle_game_action(
+            try:
+                game_action_state = GameActionState.model_validate(data)
+            except ValidationError as error:
+                await websocket.send_json(
+                    ActionResultEvent(
+                        action_id=None,
+                        performed=False,
+                        detail=f"Некорректная команда: {error.errors()[0]['msg']}",
+                    ).model_dump()
+                )
+                continue
+            result = await lobby.handle_game_action_result(
                 player_id, game_action_state.model_dump()
             )
-            await lobby.publish_after_game_action(performed)
+            await lobby.broadcast_action_result(player_id, result)
+            await lobby.publish_after_game_action(result.performed)
     except WebSocketDisconnect:
         lobby.disconnect(player_id)

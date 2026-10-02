@@ -14,6 +14,7 @@ from src.entities.base import Inventory, UUIDStr, Weapon
 from src.mech.mech import Mech
 from src.mech.part import Part, PartRarity, PartSlot
 from src.entities.player import Player
+from src.skills_catalog import Skill
 
 from src.progression import (
     MATCH_XP_REWARDS,
@@ -59,15 +60,6 @@ FIRE_CONTROL_DELTAS: dict[FireControlMode, tuple[int, int]] = {
 }
 
 
-def part_catalog_key(part: Part) -> str:
-    return part.catalog_key
-
-
-def fresh_part(part: Part, *, keep_id: bool = False) -> Part:
-    """Клонирует деталь как целую: прочность боя никогда не хранится в гараже."""
-    return part.fresh_copy(keep_id=keep_id)
-
-
 class GarageMetrics(BaseModel):
     matches_finished: int = 0
     reward_rolls: int = 0
@@ -96,20 +88,28 @@ class GarageProfile(BaseModel):
     level: int = 1
     owned_skill_keys: list[str] = Field(default_factory=list)
     pending_skill_choices: list[PendingSkillChoice] = Field(default_factory=list)
+    part_templates: list[Part] | None = Field(default=None, exclude=True)
+    skill_definitions: dict[str, Skill] | None = Field(default=None, exclude=True)
+    skill_choice_rules: dict[int, dict[str | None, tuple[str, ...]]] | None = Field(
+        default=None, exclude=True
+    )
 
     @classmethod
     def from_players(cls, players: list[Player]) -> "GarageProfile":
         if len(players) != 2:
             raise ValueError("Стартовый гараж должен содержать ровно два меха")
+        owner_id = players[0].owner_player_id
+        if any(player.owner_player_id != owner_id for player in players):
+            raise ValueError("Мехи гаража должны принадлежать одному пилоту")
 
         owned_parts: list[Part] = []
         loadouts: list[MechLoadout] = []
         for index, player in enumerate(players, start=1):
             parts = [
-                fresh_part(player.mech.torso, keep_id=True),
-                fresh_part(player.mech.legs, keep_id=True),
-                fresh_part(player.mech.arms_left, keep_id=True),
-                fresh_part(player.mech.head, keep_id=True),
+                player.mech.torso.fresh_copy(keep_id=True),
+                player.mech.legs.fresh_copy(keep_id=True),
+                player.mech.arms_left.fresh_copy(keep_id=True),
+                player.mech.head.fresh_copy(keep_id=True),
             ]
             owned_parts.extend(parts)
             loadouts.append(
@@ -125,7 +125,7 @@ class GarageProfile(BaseModel):
             )
 
         return cls(
-            player_id=players[0].id,
+            player_id=owner_id,
             name=players[0].name,
             owned_parts=owned_parts,
             loadouts=loadouts,
@@ -197,9 +197,31 @@ class GarageProfile(BaseModel):
         )
 
     def build_skills(self):
+        if self.skill_definitions is not None:
+            return [
+                self.skill_definitions[key].model_copy(update={"id": uuid.uuid4()})
+                for key in self.owned_skill_keys
+            ]
         return build_pilot_skills(self.owned_skill_keys)
 
     def get_pending_skill_options(self):
+        if self.skill_choice_rules is not None:
+            return [
+                (
+                    choice.level,
+                    [
+                        self.skill_definitions[key].model_copy(
+                            update={"id": uuid.uuid4()}
+                        )
+                        for required_key, keys in self.skill_choice_rules.get(
+                            choice.level, {}
+                        ).items()
+                        if required_key is None or required_key in self.owned_skill_keys
+                        for key in keys
+                    ],
+                )
+                for choice in self.pending_skill_choices
+            ]
         return get_progression_pending_skill_options(
             self.pending_skill_choices,
             self.owned_skill_keys,
@@ -215,6 +237,17 @@ class GarageProfile(BaseModel):
         return result
 
     def choose_skill(self, skill_key: str) -> None:
+        if self.skill_choice_rules is not None:
+            if not self.pending_skill_choices:
+                raise ValueError("У пилота нет доступного выбора навыка")
+            _, options = self.get_pending_skill_options()[0]
+            if skill_key not in {skill.skill_key for skill in options}:
+                raise ValueError("Выбран недоступный навык для текущего уровня")
+            if skill_key in self.owned_skill_keys:
+                raise ValueError("Этот навык уже выбран у пилота")
+            self.owned_skill_keys.append(skill_key)
+            self.pending_skill_choices.pop(0)
+            return
         choose_pilot_skill(
             owned_skill_keys=self.owned_skill_keys,
             pending_skill_choices=self.pending_skill_choices,
@@ -283,22 +316,25 @@ def roll_match_reward(profile: GarageProfile, is_winner: bool) -> RewardResult:
     if random.random() >= chance:
         return RewardResult(chance=chance, reason="Бросок награды не сработал")
 
-    owned_keys = {part_catalog_key(part) for part in profile.owned_parts}
+    owned_keys = {part.catalog_key for part in profile.owned_parts}
     selected_rarity = PartRarity.COMMON if random.random() < 0.70 else PartRarity.RARE
-    rarity_pool = [part for part in PART_TEMPLATES if part.rarity == selected_rarity]
+    templates = (
+        profile.part_templates if profile.part_templates is not None else PART_TEMPLATES
+    )
+    rarity_pool = [part for part in templates if part.rarity == selected_rarity]
     if not rarity_pool:
-        rarity_pool = list(PART_TEMPLATES)
+        rarity_pool = list(templates)
 
     affix_tier = weighted_roll_int(AFFIX_TIER_WEIGHTS)
     if affix_tier == 0:
         undiscovered_pool = [
-            part for part in rarity_pool if part_catalog_key(part) not in owned_keys
+            part for part in rarity_pool if part.catalog_key not in owned_keys
         ]
         selected_template = random.choice(undiscovered_pool or rarity_pool)
-        part = fresh_part(selected_template)
+        part = selected_template.fresh_copy()
     else:
         selected_template = random.choice(rarity_pool)
-        part = apply_random_affix(fresh_part(selected_template), affix_tier)
+        part = apply_random_affix(selected_template.fresh_copy(), affix_tier)
 
     profile.owned_parts.append(part)
     profile.metrics.rewards_received += 1
@@ -320,7 +356,5 @@ __all__ = [
     "RewardResult",
     "apply_random_affix",
     "AFFIX_VALUES_BY_STAT",
-    "fresh_part",
-    "part_catalog_key",
     "roll_match_reward",
 ]

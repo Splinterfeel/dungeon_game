@@ -1,0 +1,96 @@
+.app-shell {
+    flex-grow: 1;
+    padding: 28px;
+    background-color: #0a1018;
+    color: #e2edf7;
+}
+
+.header {
+    margin-bottom: 20px;
+}
+
+.title {
+    color: #71d6ff;
+    font-size: 26px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    margin-top: 4px;
+    color: #92a9bd;
+    font-size: 14px;
+}
+
+.content {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.panel {
+    flex-grow: 1;
+    min-width: 280px;
+    margin-right: 14px;
+    padding: 18px;
+    background-color: #14202c;
+    border-left-width: 2px;
+    border-left-color: #2b83ac;
+}
+
+.profile-panel {
+    margin-right: 0;
+    border-left-color: #d58f38;
+}
+
+.panel-header {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.panel-title {
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.section-title {
+    margin-bottom: 4px;
+    color: #71d6ff;
+}
+
+.pilot-list {
+    height: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 80px;
+    margin-bottom: 18px;
+}
+
+.pilot-button {
+    margin-bottom: 6px;
+    white-space: normal;
+}
+
+.new-pilot {
+    padding-top: 12px;
+    border-top-width: 1px;
+    border-top-color: #304659;
+}
+
+.selected-pilot {
+    margin-top: 18px;
+    font-size: 16px;
+    white-space: normal;
+}
+
+.garage-summary {
+    margin-top: 14px;
+    color: #c6d5e2;
+    white-space: normal;
+}
+
+.status {
+    margin-top: 18px;
+    color: #92a9bd;
+    white-space: normal;
+}

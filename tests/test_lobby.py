@@ -50,6 +50,53 @@ def test_join_lobby():
     assert response.json()["detail"] == "player connected"
 
 
+def test_create_pilot_before_joining_lobby():
+    response = client.post(
+        "/pilots",
+        json={
+            "name": "Тестовый пилот",
+            "mech_presets": ["SteelMan", "Fireworks Mk. 1"],
+        },
+    )
+
+    assert response.status_code == 200
+    garage = response.json()
+    assert garage["player_id"]
+    assert len(garage["loadouts"]) == 2
+    assert client.get("/pilots").json()
+
+
+def test_host_controls_start_and_participant_can_leave_waiting_lobby():
+    host_id = str(uuid4())
+    guest_id = str(uuid4())
+    lobby_id = client.post(
+        "/lobbies",
+        json={"players_num": 2, "created_by_player_id": host_id},
+    ).json()["lobby_id"]
+    for player_id, team in ((host_id, 1), (guest_id, 2)):
+        response = client.post(
+            "/connect_lobby",
+            json={"lobby_id": lobby_id, "player": {"id": player_id, "team": team}},
+        )
+        assert response.json()["result"] is True
+
+    denied = client.post(
+        "/start_game", json={"lobby_id": lobby_id, "host_player_id": guest_id}
+    )
+    assert denied.json() == {
+        "lobby_id": lobby_id,
+        "result": False,
+        "detail": "Стартовать матч может только хост",
+    }
+
+    left = client.post(
+        "/leave_lobby", json={"lobby_id": lobby_id, "player_id": guest_id}
+    )
+    assert left.json()["result"] is True
+    lobby = app.state.lobby_manager.get_lobby(lobby_id)
+    assert list(lobby.participants) == [host_id]
+
+
 def test_solo_lobby_starts_with_one_human_pilot():
     player_id = str(uuid4())
     lobby_id = client.post(
@@ -73,7 +120,9 @@ def test_solo_lobby_starts_with_one_human_pilot():
     )
     assert connected.json()["result"] is True
 
-    started = client.post("/start_game", json={"lobby_id": lobby_id})
+    started = client.post(
+        "/start_game", json={"lobby_id": lobby_id, "host_player_id": player_id}
+    )
 
     assert started.json()["result"] is True
     lobby_state = next(
@@ -136,7 +185,9 @@ def test_websocket_pilot_controls_current_owned_mech():
             },
         )
         assert response.json()["result"] is True
-    assert client.post("/start_game", json={"lobby_id": lobby_id}).json()["result"]
+    assert client.post(
+        "/start_game", json={"lobby_id": lobby_id, "host_player_id": player_1}
+    ).json()["result"]
 
     with client.websocket_connect(f"/ws/{lobby_id}/{player_1}") as websocket:
         initial_state = websocket.receive_json()
@@ -162,6 +213,17 @@ def test_websocket_pilot_controls_current_owned_mech():
             }
         )
 
+        action_result = None
+        for _ in range(4):
+            message = websocket.receive_json()
+            if message.get("type") == "action_result":
+                action_result = message
+                break
+        assert action_result is not None
+        assert action_result["type"] == "action_result"
+        assert action_result["performed"] is True
+        assert action_result["action_id"]
+        assert "завершает ход" in action_result["detail"]
         next_state = None
         for _ in range(8):
             message = websocket.receive_json()

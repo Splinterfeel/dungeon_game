@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Mapping
 from enum import Enum
 from typing import ClassVar
 
@@ -50,13 +51,15 @@ class Part(BaseModel):
     affix_stat: str | None = None
     affix_value: int = 0
 
-    @model_validator(mode="after")
-    def set_durability(self) -> "Part":
-        if self.max_health == 0:
-            self.max_health = self.DEFAULT_MAX_HEALTH
-        if self.current_health == 0:
-            self.current_health = self.max_health
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def set_initial_durability(cls, data):
+        """Отсутствующая прочность — полная; явный ноль — уничтоженная деталь."""
+        if isinstance(data, Mapping):
+            data = dict(data)
+            data["max_health"] = data.get("max_health") or cls.DEFAULT_MAX_HEALTH
+            data.setdefault("current_health", data["max_health"])
+        return data
 
     @computed_field  # type: ignore[misc]
     @property

@@ -25,6 +25,20 @@ class LobbyManager:
     def get_lobby(self, lobby_id: str) -> Lobby | None:
         return self.lobbies.get(lobby_id)
 
+    async def leave_lobby(self, lobby_id: str, player_id: str) -> tuple[bool, str]:
+        lobby = self.get_lobby(lobby_id)
+        if lobby is None:
+            return False, "Лобби не найдено"
+        result, detail, host_left = await lobby.leave_player(player_id)
+        if not result:
+            return result, detail
+        if host_left:
+            await lobby.broadcast_lobby_closed()
+            self.lobbies.pop(lobby_id, None)
+        else:
+            await lobby.broadcast_lobby_state()
+        return result, detail
+
     def get_lobbies_list(self) -> list[LobbyDTO]:
         return [
             LobbyDTO(

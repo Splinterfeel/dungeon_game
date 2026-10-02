@@ -9,7 +9,7 @@ from dto.debug import (
     DebugRestoreRequest,
     DebugRestoreResponse,
 )
-from dto.garage import RematchRequest
+from dto.garage import PilotSummaryState, RematchRequest
 from src.api.deps import get_garage_manager, get_lobby_manager
 from src.debug.game_state_utils import (
     create_debug_dump_response,
@@ -19,8 +19,14 @@ from src.debug.game_state_utils import (
 from src.lobby.manager import LobbyManager
 from src.garage_manager import GarageManager
 
-
 router = APIRouter(prefix="/debug")
+
+
+@router.get("/pilots", description="Краткий список сохранённых пилотов (только debug)")
+async def list_pilots(
+    garage_manager: GarageManager = Depends(get_garage_manager),
+) -> list[PilotSummaryState]:
+    return await garage_manager.list_pilots()
 
 
 @router.post("/rematch", description="Начать рематч тем же составом (debug only)")
@@ -78,7 +84,9 @@ async def restore_game_state(
         lobby_name = request.lobby_name or f"Restored Lobby {request.lobby_id[:8]}"
 
         # Restore game state using utility function
-        lobby = restore_game_state_util(game_data, lobby_id, lobby_name, garage_manager)
+        lobby = await restore_game_state_util(
+            game_data, lobby_id, lobby_name, garage_manager
+        )
 
         # Add the restored lobby to the lobby manager
         lobby_manager.lobbies[str(lobby_id)] = lobby

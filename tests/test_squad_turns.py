@@ -193,7 +193,8 @@ def test_solo_lobby_fills_team_two_and_runs_bot_turn():
         assert len(bot_participants) == 1
         assert bot_participants[0].team == 2
         assert (
-            manager.garage_manager.find_profile(bot_participants[0].player_id) is None
+            await manager.garage_manager.find_profile(bot_participants[0].player_id)
+            is None
         )
         assert len(lobby.players) == 4
 
@@ -220,11 +221,11 @@ def test_solo_lobby_fills_team_two_and_runs_bot_turn():
         lobby.game.winner = 1
         await lobby.finalize_match_rewards()
         assert (
-            manager.garage_manager.get_profile(str(owner_id)).metrics.matches_finished
-            == 1
-        )
+            await manager.garage_manager.get_profile(str(owner_id))
+        ).metrics.matches_finished == 1
         assert (
-            manager.garage_manager.find_profile(bot_participants[0].player_id) is None
+            await manager.garage_manager.find_profile(bot_participants[0].player_id)
+            is None
         )
 
     asyncio.run(scenario())
@@ -305,13 +306,11 @@ def test_match_reward_is_granted_once_per_pilot_not_per_mech():
         await lobby.finalize_match_rewards()
 
         assert (
-            manager.garage_manager.get_profile(str(owner_a)).metrics.matches_finished
-            == 1
-        )
+            await manager.garage_manager.get_profile(str(owner_a))
+        ).metrics.matches_finished == 1
         assert (
-            manager.garage_manager.get_profile(str(owner_b)).metrics.matches_finished
-            == 1
-        )
+            await manager.garage_manager.get_profile(str(owner_b))
+        ).metrics.matches_finished == 1
         assert len(lobby.players) == 4
 
     asyncio.run(scenario())

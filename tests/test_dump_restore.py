@@ -30,7 +30,9 @@ def _start_two_player_game() -> str:
         )
         assert resp.status_code == 200, resp.text
 
-    resp = client.post("/start_game", json={"lobby_id": lobby_id})
+    resp = client.post(
+        "/start_game", json={"lobby_id": lobby_id, "host_player_id": player1_id}
+    )
     assert resp.status_code == 200, resp.text
     return lobby_id
 
