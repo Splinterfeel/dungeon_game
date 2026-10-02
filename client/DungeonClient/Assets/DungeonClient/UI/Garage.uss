@@ -1,0 +1,146 @@
+.garage-shell {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: #0a1018;
+    color: #e2edf7;
+}
+
+.garage-header {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.garage-heading {
+    flex-grow: 1;
+    margin-left: 14px;
+    margin-right: 14px;
+}
+
+.garage-title {
+    color: #71d6ff;
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.garage-subtitle,
+.garage-metrics,
+.muted {
+    color: #92a9bd;
+}
+
+.garage-metrics {
+    margin-top: 3px;
+}
+
+.garage-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.section-title {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    color: #71d6ff;
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.loadouts-container {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.loadout-card {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 420px;
+    margin-right: 12px;
+    margin-bottom: 12px;
+    padding: 16px;
+    background-color: #14202c;
+    border-left-width: 2px;
+    border-left-color: #d58f38;
+}
+
+.loadout-title {
+    margin-bottom: 6px;
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.stats {
+    margin-top: 10px;
+    color: #dbe8f2;
+    white-space: normal;
+}
+
+.weight {
+    margin-top: 5px;
+    color: #d5ae73;
+}
+
+.subsection-title {
+    margin-top: 12px;
+    margin-bottom: 5px;
+    color: #71d6ff;
+    -unity-font-style: bold;
+}
+
+.item-row,
+.muted,
+.empty-state {
+    white-space: normal;
+}
+
+.item-row {
+    margin-top: 3px;
+    color: #c6d5e2;
+}
+
+.empty-state {
+    color: #7890a4;
+    -unity-font-style: italic;
+}
+
+.secondary-grid {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.secondary-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 360px;
+    margin-right: 12px;
+    margin-bottom: 12px;
+    padding: 14px;
+    background-color: #101a24;
+}
+
+.stored-part,
+.skill-row {
+    margin-bottom: 8px;
+    padding: 8px;
+    background-color: #182635;
+}
+
+.item-title {
+    -unity-font-style: bold;
+}
+
+.garage-status-bar {
+    flex-shrink: 0;
+    min-height: 34px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    background-color: #101a24;
+    border-left-width: 2px;
+    border-left-color: #304659;
+}
+
+.garage-status {
+    color: #92a9bd;
+    white-space: normal;
+}

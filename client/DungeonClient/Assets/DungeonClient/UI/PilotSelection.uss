@@ -24,11 +24,14 @@
 
 .content {
     flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
     flex-direction: row;
 }
 
 .panel {
     flex-grow: 1;
+    flex-shrink: 1;
     min-width: 280px;
     margin-right: 14px;
     padding: 18px;
@@ -72,9 +75,26 @@
 }
 
 .new-pilot {
-    padding-top: 12px;
+    flex-shrink: 0;
+    padding-top: 10px;
     border-top-width: 1px;
     border-top-color: #304659;
+}
+
+.new-pilot-row {
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+.new-pilot-name {
+    flex-grow: 1;
+    min-width: 120px;
+    margin-right: 8px;
+}
+
+.create-pilot-button {
+    flex-shrink: 0;
+    min-width: 126px;
 }
 
 .selected-pilot {
@@ -89,8 +109,17 @@
     white-space: normal;
 }
 
+.status-bar {
+    flex-shrink: 0;
+    min-height: 36px;
+    margin-top: 12px;
+    padding: 8px 10px;
+    background-color: #101a24;
+    border-left-width: 2px;
+    border-left-color: #304659;
+}
+
 .status {
-    margin-top: 18px;
     color: #92a9bd;
     white-space: normal;
 }

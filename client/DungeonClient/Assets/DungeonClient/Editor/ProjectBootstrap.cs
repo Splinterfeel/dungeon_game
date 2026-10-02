@@ -16,8 +16,10 @@ namespace DungeonClient.Editor
         private const string SceneFolder = "Assets/DungeonClient/Scenes";
         private const string ScenePath = SceneFolder + "/Bootstrap.unity";
         private const string UiFolder = "Assets/DungeonClient/UI";
-        private const string UiDocumentPath = UiFolder + "/PilotSelection.uxml";
-        private const string UiStylePath = UiFolder + "/PilotSelection.uss";
+        private const string PilotDocumentPath = UiFolder + "/PilotSelection.uxml";
+        private const string PilotStylePath = UiFolder + "/PilotSelection.uss";
+        private const string GarageDocumentPath = UiFolder + "/Garage.uxml";
+        private const string GarageStylePath = UiFolder + "/Garage.uss";
         private const string PanelSettingsPath = UiFolder + "/DungeonPanelSettings.asset";
 
         [MenuItem("Dungeon Client/Создать стартовую сцену")]
@@ -36,11 +38,9 @@ namespace DungeonClient.Editor
 
             var app = new GameObject("DungeonClient");
             app.AddComponent<ClientApp>();
-            var document = app.AddComponent<UIDocument>();
-            document.panelSettings = GetOrCreatePanelSettings();
-            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UiDocumentPath);
-            var pilotSelection = app.AddComponent<PilotSelectionScreen>();
-            pilotSelection.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(UiStylePath));
+            var panelSettings = GetOrCreatePanelSettings();
+            CreatePilotScreen(app.transform, panelSettings);
+            CreateGarageScreen(app.transform, panelSettings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[]
@@ -49,6 +49,32 @@ namespace DungeonClient.Editor
             };
             AssetDatabase.SaveAssets();
             Debug.Log("Стартовая сцена DungeonClient создана.");
+        }
+
+        private static void CreatePilotScreen(Transform parent, PanelSettings panelSettings)
+        {
+            var screen = new GameObject("PilotSelectionScreen");
+            screen.transform.SetParent(parent, false);
+            var document = screen.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                PilotDocumentPath
+            );
+            var controller = screen.AddComponent<PilotSelectionScreen>();
+            controller.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(PilotStylePath));
+        }
+
+        private static void CreateGarageScreen(Transform parent, PanelSettings panelSettings)
+        {
+            var screen = new GameObject("GarageScreen");
+            screen.transform.SetParent(parent, false);
+            var document = screen.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                GarageDocumentPath
+            );
+            var controller = screen.AddComponent<GarageScreen>();
+            controller.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(GarageStylePath));
         }
 
         private static void EnsureFolder(string path)

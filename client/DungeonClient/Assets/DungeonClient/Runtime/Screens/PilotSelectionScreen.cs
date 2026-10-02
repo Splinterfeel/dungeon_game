@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using DungeonClient.App;
 using DungeonClient.Contracts;
@@ -16,6 +15,7 @@ namespace DungeonClient.Screens
         private const string LastPilotIdKey = "dungeon-client.last-pilot-id";
 
         private UIDocument document;
+        private VisualElement root;
         private Label statusLabel;
         private Label selectedPilotLabel;
         private Label garageSummaryLabel;
@@ -40,7 +40,7 @@ namespace DungeonClient.Screens
 
         private void Start()
         {
-            var root = document.rootVisualElement;
+            root = document.rootVisualElement;
             if (styleSheet != null)
             {
                 root.styleSheets.Add(styleSheet);
@@ -56,6 +56,8 @@ namespace DungeonClient.Screens
 
             refreshButton.clicked += RefreshPilots;
             createPilotButton.clicked += CreatePilot;
+            ClientApp.Instance.Screens.Changed += OnScreenChanged;
+            OnScreenChanged(ClientApp.Instance.Screens.Current);
             RefreshPilots();
         }
 
@@ -70,6 +72,18 @@ namespace DungeonClient.Screens
             {
                 createPilotButton.clicked -= CreatePilot;
             }
+
+            if (ClientApp.Instance != null)
+            {
+                ClientApp.Instance.Screens.Changed -= OnScreenChanged;
+            }
+        }
+
+        private void OnScreenChanged(ScreenId screen)
+        {
+            root.style.display = screen == ScreenId.PilotSelection
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
         }
 
         private void RefreshPilots()
@@ -103,7 +117,6 @@ namespace DungeonClient.Screens
             }
 
             SetBusy(false, "Выбери пилота или создай нового.");
-            RestoreLastPilot();
         }
 
         private void RestoreLastPilot()
@@ -184,6 +197,7 @@ namespace DungeonClient.Screens
 
         private void ShowGarage(GarageState garage)
         {
+            ClientApp.Instance.Session.SetGarage(garage);
             var loadoutNames = new List<string>();
             foreach (var loadout in garage.Loadouts)
             {
@@ -196,7 +210,8 @@ namespace DungeonClient.Screens
             garageSummaryLabel.text = loadoutNames.Count == 0
                 ? "В гараже пока нет сборок."
                 : $"Гараж: {string.Join("  ·  ", loadoutNames)}";
-            SetBusy(false, "Профиль загружен. Следующий экран — лобби.");
+            SetBusy(false, "Гараж загружен.");
+            ClientApp.Instance.Screens.NavigateTo(ScreenId.Garage);
         }
 
         private void OnRequestFailed(string error)
