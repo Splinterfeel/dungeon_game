@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using DungeonClient.App;
 using DungeonClient.Contracts;
@@ -9,20 +11,52 @@ namespace DungeonClient.Screens
     [RequireComponent(typeof(UIDocument))]
     public sealed class GarageScreen : MonoBehaviour
     {
+        private static readonly SlotDefinition[] Slots =
+        {
+            new("torso", "Корпус"),
+            new("legs", "Ноги"),
+            new("arms", "Руки"),
+            new("head", "Голова"),
+        };
+
+        private static readonly ModeDefinition[] ReactorModes =
+        {
+            new("fortified", "Бронезащита", "+2 HP, −1 AP"),
+            new("neutral", "Норма", "без изменений"),
+            new("overdrive", "Форсаж", "−2 HP, +1 AP"),
+        };
+
+        private static readonly ModeDefinition[] FireControlModes =
+        {
+            new("precision", "Точная настройка", "+5 точности, −1 урон"),
+            new("neutral", "Норма", "без изменений"),
+            new("impact", "Форсированный выстрел", "−5 точности, +1 урон"),
+        };
+
+        [SerializeField]
+        private StyleSheet styleSheet;
+
         private UIDocument document;
         private VisualElement root;
+        private VisualElement screenRoot;
         private Label pilotLabel;
         private Label progressLabel;
         private Label metricsLabel;
         private Label statusLabel;
         private VisualElement loadoutsContainer;
+        private VisualElement storedPartsSection;
+        private VisualElement storedPartsSlotSelector;
         private VisualElement storedPartsContainer;
-        private VisualElement skillsContainer;
         private Button backButton;
         private Button refreshButton;
-        [SerializeField]
-        private StyleSheet styleSheet;
+        private GarageState garage;
+        private string selectedLoadoutId;
+        private string selectedSlot = "torso";
+        private string selectedPartId;
+        private string selectedSkillKey;
+        private bool isPilotTabSelected;
         private bool isRequestRunning;
+        private bool reloadBeforeNextMutation;
 
         private void Awake()
         {
@@ -42,13 +76,15 @@ namespace DungeonClient.Screens
                 root.styleSheets.Add(styleSheet);
             }
 
+            screenRoot = root.Q<VisualElement>(className: "garage-shell");
             pilotLabel = root.Q<Label>("GaragePilotLabel");
             progressLabel = root.Q<Label>("GarageProgressLabel");
             metricsLabel = root.Q<Label>("GarageMetricsLabel");
             statusLabel = root.Q<Label>("GarageStatusLabel");
             loadoutsContainer = root.Q<VisualElement>("LoadoutsContainer");
+            storedPartsSection = root.Q<VisualElement>("StoredPartsSection");
+            storedPartsSlotSelector = root.Q<VisualElement>("StoredPartsSlotSelector");
             storedPartsContainer = root.Q<VisualElement>("StoredPartsContainer");
-            skillsContainer = root.Q<VisualElement>("SkillsContainer");
             backButton = root.Q<Button>("BackButton");
             refreshButton = root.Q<Button>("RefreshGarageButton");
 
@@ -79,27 +115,27 @@ namespace DungeonClient.Screens
         private void OnScreenChanged(ScreenId screen)
         {
             var visible = screen == ScreenId.Garage;
-            root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            screenRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible)
             {
                 return;
             }
 
-            if (ClientApp.Instance.Session.Garage != null)
-            {
-                Render(ClientApp.Instance.Session.Garage);
-            }
-            else
+            if (ClientApp.Instance.Session.Garage == null)
             {
                 Refresh();
+                return;
             }
+
+            Render(ClientApp.Instance.Session.Garage);
+            SetStatus("Гараж загружен.");
         }
 
         private void Back()
         {
             if (!isRequestRunning)
             {
-                ClientApp.Instance.Screens.NavigateTo(ScreenId.PilotSelection);
+                ClientApp.Instance.Screens.NavigateTo(ScreenId.PilotHub);
             }
         }
 
@@ -119,36 +155,29 @@ namespace DungeonClient.Screens
 
             SetBusy(true, "Обновляем гараж…");
             StartCoroutine(
-                ClientApp.Instance.Server.GetGarage(
-                    session.Pilot.Id,
-                    OnGarageLoaded,
-                    OnRequestFailed
-                )
+                ClientApp.Instance.Server.GetGarage(session.Pilot.Id, OnGarageLoaded, OnRequestFailed)
             );
         }
 
-        private void OnGarageLoaded(GarageState garage)
+        private void OnGarageLoaded(GarageState updatedGarage)
         {
-            ClientApp.Instance.Session.SetGarage(garage);
-            Render(garage);
+            reloadBeforeNextMutation = false;
+            ClientApp.Instance.Session.SetGarage(updatedGarage);
+            Render(updatedGarage);
             SetBusy(false, "Данные гаража актуальны.");
         }
 
         private void OnRequestFailed(string error)
         {
+            reloadBeforeNextMutation = true;
             SetBusy(false, error);
         }
 
-        private void SetBusy(bool value, string message)
+        private void Render(GarageState updatedGarage)
         {
-            isRequestRunning = value;
-            refreshButton?.SetEnabled(!value);
-            backButton?.SetEnabled(!value);
-            statusLabel.text = message;
-        }
+            garage = updatedGarage;
+            EnsureSelection();
 
-        private void Render(GarageState garage)
-        {
             var pilot = ClientApp.Instance.Session.Pilot;
             pilotLabel.text = pilot == null ? "Гараж" : $"Гараж пилота «{pilot.Name}»";
             progressLabel.text = $"Уровень {garage.Level}  ·  XP {garage.Xp}";
@@ -156,59 +185,72 @@ namespace DungeonClient.Screens
                 ? string.Empty
                 : $"Матчей: {garage.Metrics.MatchesFinished}  ·  Наград: {garage.Metrics.RewardsReceived}";
 
+            BuildLoadouts();
+            storedPartsSection.style.display = isPilotTabSelected
+                ? DisplayStyle.None
+                : DisplayStyle.Flex;
+            if (!isPilotTabSelected)
+            {
+                BuildStoredParts();
+            }
+        }
+
+        private void BuildLoadouts()
+        {
             loadoutsContainer.Clear();
+            var tabs = new VisualElement();
+            tabs.AddToClassList("loadout-tabs");
             foreach (var loadout in garage.Loadouts)
             {
-                loadoutsContainer.Add(BuildLoadoutCard(loadout));
+                var tabLoadout = loadout;
+                var tab = new Button(() => SelectLoadout(tabLoadout.Id))
+                {
+                    text = string.IsNullOrWhiteSpace(tabLoadout.Name) ? "Сборка" : tabLoadout.Name,
+                };
+                tab.AddToClassList("loadout-tab");
+                if (!isPilotTabSelected && tabLoadout.Id == selectedLoadoutId)
+                {
+                    tab.AddToClassList("is-selected");
+                }
+
+                tabs.Add(tab);
+            }
+
+            var pilotTab = new Button(SelectPilotTab) { text = "Пилот" };
+            pilotTab.AddToClassList("loadout-tab");
+            if (isPilotTabSelected)
+            {
+                pilotTab.AddToClassList("is-selected");
+            }
+
+            tabs.Add(pilotTab);
+
+            loadoutsContainer.Add(tabs);
+            if (isPilotTabSelected)
+            {
+                loadoutsContainer.Add(BuildPilotCard());
+                return;
             }
 
             if (garage.Loadouts.Count == 0)
             {
                 loadoutsContainer.Add(EmptyState("Сборок пока нет."));
+                return;
             }
 
-            storedPartsContainer.Clear();
-            if (garage.StoredParts.Count == 0)
-            {
-                storedPartsContainer.Add(EmptyState("Свободных деталей пока нет."));
-            }
-            else
-            {
-                foreach (var part in garage.StoredParts)
-                {
-                    storedPartsContainer.Add(BuildStoredPart(part));
-                }
-            }
-
-            skillsContainer.Clear();
-            foreach (var skill in garage.OwnedSkills)
-            {
-                var row = new VisualElement();
-                row.AddToClassList("skill-row");
-                row.Add(Text($"{skill.Name} · шанс {Mathf.RoundToInt(skill.ProcChance * 100f)}%", "item-title"));
-                row.Add(Text(skill.Description, "muted"));
-                skillsContainer.Add(row);
-            }
-
-            foreach (var pending in garage.PendingSkillChoices)
-            {
-                skillsContainer.Add(
-                    EmptyState(
-                        $"На уровне {pending.Level} доступен выбор: "
-                        + string.Join(", ", pending.Options.Select(option => option.Name))
-                    )
-                );
-            }
-
-            if (garage.OwnedSkills.Count == 0 && garage.PendingSkillChoices.Count == 0)
-            {
-                skillsContainer.Add(EmptyState("Навыки ещё не открыты."));
-            }
-
-            SetBusy(false, "Гараж загружен.");
+            loadoutsContainer.Add(BuildLoadoutCard(SelectedLoadout));
         }
 
-        private static VisualElement BuildLoadoutCard(GarageLoadoutState loadout)
+        private VisualElement BuildPilotCard()
+        {
+            var card = new VisualElement();
+            card.AddToClassList("loadout-card");
+            card.Add(Text("Навыки пилота", "loadout-title"));
+            BuildSkills(card);
+            return card;
+        }
+
+        private VisualElement BuildLoadoutCard(GarageLoadoutState loadout)
         {
             var card = new VisualElement();
             card.AddToClassList("loadout-card");
@@ -216,12 +258,7 @@ namespace DungeonClient.Screens
                 ? loadout.Name
                 : $"{loadout.Name} · {loadout.PresetName}";
             card.Add(Text(preset, "loadout-title"));
-            card.Add(
-                Text(
-                    $"Реактор: {TranslateMode(loadout.ReactorMode)}  ·  Огонь: {TranslateMode(loadout.FireControlMode)}",
-                    "muted"
-                )
-            );
+            card.Add(BuildTuningControls(loadout));
 
             if (loadout.Stats != null)
             {
@@ -246,11 +283,10 @@ namespace DungeonClient.Screens
                     )
                 );
                 card.Add(Text("Детали", "subsection-title"));
-                card.Add(BuildPartRow("Корпус", loadout.Mech.Torso));
-                card.Add(BuildPartRow("Ноги", loadout.Mech.Legs));
-                card.Add(BuildPartRow("Левая рука", loadout.Mech.ArmsLeft));
-                card.Add(BuildPartRow("Правая рука", loadout.Mech.ArmsRight));
-                card.Add(BuildPartRow("Голова", loadout.Mech.Head));
+                foreach (var slot in Slots)
+                {
+                    card.Add(BuildInstalledPart(slot, GetInstalledPart(loadout, slot.Key)));
+                }
             }
 
             card.Add(Text("Оружие", "subsection-title"));
@@ -276,35 +312,464 @@ namespace DungeonClient.Screens
             return card;
         }
 
-        private static VisualElement BuildPartRow(string slot, PartState part)
+        private VisualElement BuildTuningControls(GarageLoadoutState loadout)
         {
-            if (part == null)
-            {
-                return EmptyState($"{slot}: не установлено");
-            }
-
-            var affix = part.AffixTier > 0
-                ? $" · аффикс +{part.AffixValue} {part.AffixStat}"
-                : string.Empty;
-            return Text(
-                $"{slot}: {part.Name} [{TranslateRarity(part.Rarity)}] · вес {part.Weight}{affix}",
-                "item-row"
+            var tuning = new VisualElement();
+            tuning.AddToClassList("tuning-controls");
+            tuning.Add(Text("Тюнинг", "subsection-title"));
+            tuning.Add(
+                BuildModeSelector(
+                    "Реактор",
+                    loadout.ReactorMode,
+                    ReactorModes,
+                    mode => UpdateTuning(loadout, mode, loadout.FireControlMode)
+                )
             );
+            tuning.Add(
+                BuildModeSelector(
+                    "Наведение",
+                    loadout.FireControlMode,
+                    FireControlModes,
+                    mode => UpdateTuning(loadout, loadout.ReactorMode, mode)
+                )
+            );
+            return tuning;
         }
 
-        private static VisualElement BuildStoredPart(PartState part)
+        private static VisualElement BuildModeSelector(
+            string title,
+            string currentMode,
+            IEnumerable<ModeDefinition> modes,
+            Action<string> onSelected
+        )
+        {
+            var control = new VisualElement();
+            control.AddToClassList("mode-control");
+            control.Add(Text(title, "mode-label"));
+            var buttons = new VisualElement();
+            buttons.AddToClassList("mode-buttons");
+            foreach (var mode in modes)
+            {
+                var modeDefinition = mode;
+                var button = new Button(() => onSelected(modeDefinition.Key))
+                {
+                    text = modeDefinition.Name,
+                    tooltip = modeDefinition.Effect,
+                };
+                button.AddToClassList("mode-button");
+                if (modeDefinition.Key == currentMode)
+                {
+                    button.AddToClassList("is-selected");
+                }
+
+                buttons.Add(button);
+            }
+
+            control.Add(buttons);
+            var selectedMode = modes.FirstOrDefault(mode => mode.Key == currentMode);
+            control.Add(Text(selectedMode?.Effect ?? "без изменений", "mode-effect"));
+            return control;
+        }
+
+        private VisualElement BuildSlotSelector()
+        {
+            var selector = new VisualElement();
+            selector.AddToClassList("slot-selector");
+            selector.Add(Text("Слот на складе", "mode-label"));
+            var buttons = new VisualElement();
+            buttons.AddToClassList("slot-buttons");
+            foreach (var slot in Slots)
+            {
+                var slotDefinition = slot;
+                var button = new Button(() => SelectSlot(slotDefinition.Key))
+                {
+                    text = slotDefinition.Name,
+                };
+                button.AddToClassList("slot-button");
+                if (slotDefinition.Key == selectedSlot)
+                {
+                    button.AddToClassList("is-selected");
+                }
+
+                buttons.Add(button);
+            }
+
+            selector.Add(buttons);
+            return selector;
+        }
+
+        private static VisualElement BuildInstalledPart(SlotDefinition slot, PartState part)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("installed-part");
+            row.Add(Text(slot.Name, "part-slot-title"));
+            if (part == null)
+            {
+                row.Add(EmptyState("Не установлено"));
+                return row;
+            }
+
+            row.Add(Text($"{part.Name} [{TranslateRarity(part.Rarity)}]", "item-row"));
+            row.Add(Text(DescribePart(part), "muted"));
+            return row;
+        }
+
+        private void BuildStoredParts()
+        {
+            storedPartsSlotSelector.Clear();
+            storedPartsSlotSelector.Add(BuildSlotSelector());
+            storedPartsContainer.Clear();
+            storedPartsContainer.Add(Text($"Слот: {SelectedSlot.Name}", "filter-title"));
+            var candidates = garage.StoredParts.Where(part => part.Slot == selectedSlot).ToList();
+            if (candidates.Count == 0)
+            {
+                storedPartsContainer.Add(EmptyState("Свободных деталей для этого слота нет."));
+                return;
+            }
+
+            var selectedPart = candidates.FirstOrDefault(part => part.Id == selectedPartId);
+            if (selectedPart != null && garage.Loadouts.Count > 0 && !isPilotTabSelected)
+            {
+                storedPartsContainer.Add(BuildComparison(selectedPart));
+            }
+
+            foreach (var part in candidates)
+            {
+                storedPartsContainer.Add(BuildStoredPart(part));
+            }
+        }
+
+        private VisualElement BuildStoredPart(PartState part)
         {
             var row = new VisualElement();
             row.AddToClassList("stored-part");
+            if (part.Id == selectedPartId)
+            {
+                row.AddToClassList("is-selected");
+            }
+
             row.Add(Text($"{part.Name} [{TranslateRarity(part.Rarity)}]", "item-title"));
-            row.Add(
-                Text(
-                    $"Слот: {TranslateSlot(part.Slot)} · вес {part.Weight}"
-                    + $" · HP +{part.Health} · скорость +{part.Speed} · точность +{part.Accuracy}",
-                    "muted"
+            row.Add(Text(DescribePart(part), "muted"));
+            var actions = new VisualElement();
+            actions.AddToClassList("part-actions");
+            var compareButton = new Button(() => SelectPart(part.Id))
+            {
+                text = part.Id == selectedPartId ? "Выбрано" : "Сравнить",
+            };
+            compareButton.AddToClassList("part-action");
+            actions.Add(compareButton);
+            var equipButton = new Button(() => EquipPart(part)) { text = "Установить" };
+            equipButton.AddToClassList("primary-action");
+            actions.Add(equipButton);
+            row.Add(actions);
+            return row;
+        }
+
+        private VisualElement BuildComparison(PartState candidate)
+        {
+            var comparison = new VisualElement();
+            comparison.AddToClassList("comparison-panel");
+            var installed = GetInstalledPart(SelectedLoadout, selectedSlot);
+            comparison.Add(Text("Сравнение деталей", "subsection-title"));
+            comparison.Add(Text($"Установлено: {installed?.Name ?? "нет детали"}", "muted"));
+            comparison.Add(Text($"Кандидат: {candidate.Name}", "item-row"));
+            comparison.Add(ComparisonRow("HP", installed?.Health ?? 0, candidate.Health));
+            comparison.Add(ComparisonRow("Скорость", installed?.Speed ?? 0, candidate.Speed));
+            comparison.Add(ComparisonRow("Точность", installed?.Accuracy ?? 0, candidate.Accuracy));
+            comparison.Add(ComparisonRow("Ближний бой", installed?.MeleePower ?? 0, candidate.MeleePower));
+            comparison.Add(ComparisonRow("Обзор", installed?.ViewDistance ?? 0, candidate.ViewDistance));
+            comparison.Add(ComparisonRow("Грузоподъёмность", installed?.CarryCapacity ?? 0, candidate.CarryCapacity));
+            comparison.Add(ComparisonRow("Вес", installed?.Weight ?? 0, candidate.Weight));
+            comparison.Add(Text($"Аффикс: {DescribeAffix(candidate)}. Бонус уже учтён в характеристиках детали.", "muted"));
+            return comparison;
+        }
+
+        private void BuildSkills(VisualElement container)
+        {
+            foreach (var skill in garage.OwnedSkills)
+            {
+                var row = new VisualElement();
+                row.AddToClassList("skill-row");
+                row.Add(Text($"{skill.Name} · шанс {Mathf.RoundToInt(skill.ProcChance * 100f)}%", "item-title"));
+                row.Add(Text($"Условие: {skill.Trigger}", "muted"));
+                row.Add(Text(skill.Description, "muted"));
+                container.Add(row);
+            }
+
+            var pending = garage.PendingSkillChoices.FirstOrDefault();
+            if (pending == null)
+            {
+                if (garage.OwnedSkills.Count == 0)
+                {
+                    container.Add(EmptyState("Навыки ещё не открыты."));
+                }
+
+                return;
+            }
+
+            container.Add(Text($"Выбор навыка на уровне {pending.Level}", "subsection-title"));
+            if (pending.Options.Count == 0)
+            {
+                container.Add(EmptyState("Для этого уровня сервер не вернул доступных навыков."));
+                return;
+            }
+
+            foreach (var skill in pending.Options)
+            {
+                container.Add(BuildSkillOption(skill));
+            }
+        }
+
+        private VisualElement BuildSkillOption(SkillState skill)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("skill-row");
+            if (skill.SkillKey == selectedSkillKey)
+            {
+                card.AddToClassList("is-selected");
+            }
+
+            card.Add(Text(skill.Name, "item-title"));
+            card.Add(Text($"Условие: {skill.Trigger} · шанс {Mathf.RoundToInt(skill.ProcChance * 100f)}%", "muted"));
+            card.Add(Text(skill.Description, "muted"));
+            var selectButton = new Button(() => SelectSkill(skill.SkillKey))
+            {
+                text = skill.SkillKey == selectedSkillKey ? "Выбрано" : "Выбрать",
+            };
+            selectButton.AddToClassList("part-action");
+            card.Add(selectButton);
+            if (skill.SkillKey == selectedSkillKey)
+            {
+                var confirmButton = new Button(() => ChooseSkill(skill)) { text = "Подтвердить выбор" };
+                confirmButton.AddToClassList("primary-action");
+                card.Add(confirmButton);
+            }
+
+            return card;
+        }
+
+        private void SelectLoadout(string loadoutId)
+        {
+            if (!isRequestRunning && (isPilotTabSelected || selectedLoadoutId != loadoutId))
+            {
+                isPilotTabSelected = false;
+                selectedLoadoutId = loadoutId;
+                selectedPartId = null;
+                Render(garage);
+            }
+        }
+
+        private void SelectPilotTab()
+        {
+            if (!isRequestRunning && !isPilotTabSelected)
+            {
+                isPilotTabSelected = true;
+                selectedPartId = null;
+                Render(garage);
+            }
+        }
+
+        private void SelectSlot(string slot)
+        {
+            if (!isRequestRunning && selectedSlot != slot)
+            {
+                selectedSlot = slot;
+                selectedPartId = null;
+                Render(garage);
+            }
+        }
+
+        private void SelectPart(string partId)
+        {
+            if (!isRequestRunning)
+            {
+                selectedPartId = partId;
+                Render(garage);
+            }
+        }
+
+        private void SelectSkill(string skillKey)
+        {
+            if (!isRequestRunning)
+            {
+                selectedSkillKey = skillKey;
+                Render(garage);
+            }
+        }
+
+        private void UpdateTuning(GarageLoadoutState loadout, string reactorMode, string fireControlMode)
+        {
+            if (reactorMode == loadout.ReactorMode && fireControlMode == loadout.FireControlMode)
+            {
+                return;
+            }
+
+            if (!BeginMutation("Сохраняем тюнинг…"))
+            {
+                return;
+            }
+
+            StartCoroutine(
+                ClientApp.Instance.Server.UpdateGarageTuning(
+                    ClientApp.Instance.Session.Pilot.Id,
+                    loadout.Id,
+                    reactorMode,
+                    fireControlMode,
+                    updated => OnMutationSucceeded(updated, "Тюнинг сохранён."),
+                    OnMutationFailed
                 )
             );
-            return row;
+        }
+
+        private void EquipPart(PartState part)
+        {
+            if (!BeginMutation("Устанавливаем деталь…"))
+            {
+                return;
+            }
+
+            StartCoroutine(
+                ClientApp.Instance.Server.EquipGaragePart(
+                    ClientApp.Instance.Session.Pilot.Id,
+                    SelectedLoadout.Id,
+                    part.Id,
+                    updated => OnMutationSucceeded(updated, "Деталь установлена."),
+                    OnMutationFailed
+                )
+            );
+        }
+
+        private void ChooseSkill(SkillState skill)
+        {
+            if (!BeginMutation("Подтверждаем навык…"))
+            {
+                return;
+            }
+
+            StartCoroutine(
+                ClientApp.Instance.Server.ChooseGarageSkill(
+                    ClientApp.Instance.Session.Pilot.Id,
+                    skill.SkillKey,
+                    updated => OnMutationSucceeded(updated, $"Выбран навык «{skill.Name}»."),
+                    OnMutationFailed
+                )
+            );
+        }
+
+        private bool BeginMutation(string status)
+        {
+            if (isRequestRunning)
+            {
+                return false;
+            }
+
+            if (reloadBeforeNextMutation)
+            {
+                Refresh();
+                return false;
+            }
+
+            SetBusy(true, status);
+            return true;
+        }
+
+        private void OnMutationSucceeded(GarageState updatedGarage, string status)
+        {
+            reloadBeforeNextMutation = false;
+            selectedPartId = null;
+            selectedSkillKey = null;
+            ClientApp.Instance.Session.SetGarage(updatedGarage);
+            Render(updatedGarage);
+            SetBusy(false, status);
+        }
+
+        private void OnMutationFailed(string error)
+        {
+            reloadBeforeNextMutation = true;
+            SetBusy(false, $"{error} Перед следующей командой гараж будет перечитан.");
+        }
+
+        private void EnsureSelection()
+        {
+            if (garage.Loadouts.Count == 0)
+            {
+                isPilotTabSelected = true;
+            }
+
+            if (garage.Loadouts.All(loadout => loadout.Id != selectedLoadoutId))
+            {
+                selectedLoadoutId = garage.Loadouts.FirstOrDefault()?.Id;
+            }
+
+            if (garage.StoredParts.All(part => part.Id != selectedPartId || part.Slot != selectedSlot))
+            {
+                selectedPartId = null;
+            }
+
+            var pending = garage.PendingSkillChoices.FirstOrDefault();
+            if (pending == null || pending.Options.All(skill => skill.SkillKey != selectedSkillKey))
+            {
+                selectedSkillKey = null;
+            }
+        }
+
+        private void SetBusy(bool value, string message)
+        {
+            isRequestRunning = value;
+            root?.SetEnabled(!value);
+            refreshButton?.SetEnabled(!value);
+            backButton?.SetEnabled(!value);
+            SetStatus(message);
+        }
+
+        private void SetStatus(string message)
+        {
+            if (statusLabel != null)
+            {
+                statusLabel.text = message;
+            }
+        }
+
+        private GarageLoadoutState SelectedLoadout => garage.Loadouts.First(loadout => loadout.Id == selectedLoadoutId);
+
+        private SlotDefinition SelectedSlot => Slots.First(slot => slot.Key == selectedSlot);
+
+        private static PartState GetInstalledPart(GarageLoadoutState loadout, string slot)
+        {
+            if (loadout?.Mech == null)
+            {
+                return null;
+            }
+
+            return slot switch
+            {
+                "torso" => loadout.Mech.Torso,
+                "legs" => loadout.Mech.Legs,
+                "arms" => loadout.Mech.ArmsLeft,
+                "head" => loadout.Mech.Head,
+                _ => null,
+            };
+        }
+
+        private static Label ComparisonRow(string label, int installed, int candidate)
+        {
+            var difference = candidate - installed;
+            var differenceText = difference > 0 ? $"+{difference}" : difference.ToString();
+            return Text($"{label}: {installed} → {candidate} ({differenceText})", "comparison-row");
+        }
+
+        private static string DescribePart(PartState part)
+        {
+            return $"Вес {part.Weight} · HP {part.Health} · скорость {part.Speed} · точность {part.Accuracy}"
+                + $" · ближний бой {part.MeleePower} · обзор {part.ViewDistance}"
+                + $" · грузоподъёмность {part.CarryCapacity} · {DescribeAffix(part)}";
+        }
+
+        private static string DescribeAffix(PartState part)
+        {
+            return part.AffixTier > 0
+                ? $"аффикс +{part.AffixValue} {part.AffixStat}"
+                : "без аффикса";
         }
 
         private static Label Text(string value, string className)
@@ -319,18 +784,6 @@ namespace DungeonClient.Screens
             return Text(value, "empty-state");
         }
 
-        private static string TranslateMode(string mode)
-        {
-            return mode switch
-            {
-                "fortified" => "защита",
-                "overdrive" => "форсаж",
-                "precision" => "точность",
-                "impact" => "мощность",
-                _ => "нейтральный",
-            };
-        }
-
         private static string TranslateRarity(string rarity)
         {
             return rarity switch
@@ -342,16 +795,33 @@ namespace DungeonClient.Screens
             };
         }
 
-        private static string TranslateSlot(string slot)
+        private sealed class SlotDefinition
         {
-            return slot switch
+            public SlotDefinition(string key, string name)
             {
-                "torso" => "корпус",
-                "legs" => "ноги",
-                "arms" => "руки",
-                "head" => "голова",
-                _ => slot,
-            };
+                Key = key;
+                Name = name;
+            }
+
+            public string Key { get; }
+
+            public string Name { get; }
+        }
+
+        private sealed class ModeDefinition
+        {
+            public ModeDefinition(string key, string name, string effect)
+            {
+                Key = key;
+                Name = name;
+                Effect = effect;
+            }
+
+            public string Key { get; }
+
+            public string Name { get; }
+
+            public string Effect { get; }
         }
     }
 }

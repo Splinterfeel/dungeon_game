@@ -20,6 +20,8 @@ namespace DungeonClient.Editor
         private const string PilotStylePath = UiFolder + "/PilotSelection.uss";
         private const string GarageDocumentPath = UiFolder + "/Garage.uxml";
         private const string GarageStylePath = UiFolder + "/Garage.uss";
+        private const string PilotHubDocumentPath = UiFolder + "/PilotHub.uxml";
+        private const string PilotHubStylePath = UiFolder + "/PilotHub.uss";
         private const string PanelSettingsPath = UiFolder + "/DungeonPanelSettings.asset";
 
         [MenuItem("Dungeon Client/Создать стартовую сцену")]
@@ -40,6 +42,7 @@ namespace DungeonClient.Editor
             app.AddComponent<ClientApp>();
             var panelSettings = GetOrCreatePanelSettings();
             CreatePilotScreen(app.transform, panelSettings);
+            CreatePilotHubScreen(app.transform, panelSettings);
             CreateGarageScreen(app.transform, panelSettings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -49,6 +52,36 @@ namespace DungeonClient.Editor
             };
             AssetDatabase.SaveAssets();
             Debug.Log("Стартовая сцена DungeonClient создана.");
+        }
+
+        [MenuItem("Dungeon Client/Добавить экран маршрута пилота")]
+        public static void AddPilotHubToOpenScene()
+        {
+            if (Object.FindFirstObjectByType<PilotHubScreen>() != null)
+            {
+                Debug.Log("Экран маршрута пилота уже есть в сцене.");
+                return;
+            }
+
+            var app = Object.FindFirstObjectByType<ClientApp>();
+            var pilotScreen = Object.FindFirstObjectByType<PilotSelectionScreen>();
+            if (app == null || pilotScreen == null)
+            {
+                throw new System.InvalidOperationException(
+                    "В открытой сцене нет стартового объекта DungeonClient"
+                );
+            }
+
+            var panelSettings = pilotScreen.GetComponent<UIDocument>().panelSettings;
+            if (panelSettings == null)
+            {
+                throw new System.InvalidOperationException("Не настроена панель UI Toolkit");
+            }
+
+            CreatePilotHubScreen(app.transform, panelSettings);
+            EditorSceneManager.MarkSceneDirty(app.gameObject.scene);
+            EditorSceneManager.SaveScene(app.gameObject.scene);
+            Debug.Log("Экран маршрута пилота добавлен в сцену.");
         }
 
         private static void CreatePilotScreen(Transform parent, PanelSettings panelSettings)
@@ -75,6 +108,19 @@ namespace DungeonClient.Editor
             );
             var controller = screen.AddComponent<GarageScreen>();
             controller.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(GarageStylePath));
+        }
+
+        private static void CreatePilotHubScreen(Transform parent, PanelSettings panelSettings)
+        {
+            var screen = new GameObject("PilotHubScreen");
+            screen.transform.SetParent(parent, false);
+            var document = screen.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+                PilotHubDocumentPath
+            );
+            var controller = screen.AddComponent<PilotHubScreen>();
+            controller.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(PilotHubStylePath));
         }
 
         private static void EnsureFolder(string path)

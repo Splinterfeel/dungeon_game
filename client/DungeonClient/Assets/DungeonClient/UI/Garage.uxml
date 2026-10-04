@@ -10,16 +10,12 @@
             <ui:Button name="RefreshGarageButton" text="Обновить" />
         </ui:VisualElement>
         <ui:ScrollView name="GarageScroll" class="garage-scroll">
-            <ui:Label text="Боевые сборки" class="section-title" />
             <ui:VisualElement name="LoadoutsContainer" class="loadouts-container" />
-            <ui:VisualElement class="secondary-grid">
+            <ui:VisualElement name="StoredPartsSection" class="secondary-grid">
                 <ui:VisualElement class="secondary-panel">
+                    <ui:VisualElement name="StoredPartsSlotSelector" />
                     <ui:Label text="Склад деталей" class="section-title" />
                     <ui:VisualElement name="StoredPartsContainer" />
-                </ui:VisualElement>
-                <ui:VisualElement class="secondary-panel">
-                    <ui:Label text="Навыки пилота" class="section-title" />
-                    <ui:VisualElement name="SkillsContainer" />
                 </ui:VisualElement>
             </ui:VisualElement>
         </ui:ScrollView>

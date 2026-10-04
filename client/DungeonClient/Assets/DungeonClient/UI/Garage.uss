@@ -1,5 +1,10 @@
 .garage-shell {
+    width: 100%;
+    height: 100%;
     flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    min-height: 0;
     padding: 24px;
     background-color: #0a1018;
     color: #e2edf7;
@@ -48,15 +53,70 @@
 }
 
 .loadouts-container {
+    min-width: 0;
+}
+
+.loadout-tabs,
+.mode-buttons,
+.slot-buttons {
     flex-direction: row;
-    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.loadout-tabs > Button,
+.mode-buttons > Button,
+.slot-buttons > Button {
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.loadout-tabs {
+    margin-bottom: 10px;
+}
+
+.loadout-tab,
+.mode-button,
+.slot-button,
+.part-action,
+.primary-action {
+    border-radius: 3px;
+}
+
+.loadout-tab.is-selected,
+.mode-button.is-selected,
+.slot-button.is-selected {
+    background-color: #25637b;
+    color: #f1fbff;
+}
+
+.tuning-controls {
+    margin-top: 6px;
+    margin-bottom: 10px;
+}
+
+.mode-control,
+.slot-selector {
+    margin-top: 7px;
+}
+
+.mode-label,
+.part-slot-title,
+.filter-title {
+    color: #d5ae73;
+    -unity-font-style: bold;
+}
+
+.mode-effect {
+    margin-top: 3px;
+    color: #92a9bd;
+}
+
+.slot-selector {
+    margin-bottom: 8px;
 }
 
 .loadout-card {
-    flex-grow: 1;
-    flex-basis: 0;
-    min-width: 420px;
-    margin-right: 12px;
+    min-width: 0;
     margin-bottom: 12px;
     padding: 16px;
     background-color: #14202c;
@@ -99,6 +159,13 @@
     color: #c6d5e2;
 }
 
+.installed-part {
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top-width: 1px;
+    border-top-color: #304659;
+}
+
 .empty-state {
     color: #7890a4;
     -unity-font-style: italic;
@@ -106,6 +173,7 @@
 
 .secondary-grid {
     flex-direction: row;
+    min-width: 0;
     align-items: flex-start;
 }
 
@@ -124,6 +192,45 @@
     margin-bottom: 8px;
     padding: 8px;
     background-color: #182635;
+}
+
+.stored-part.is-selected,
+.skill-row.is-selected {
+    border-left-width: 2px;
+    border-left-color: #71d6ff;
+}
+
+.comparison-panel {
+    margin-bottom: 10px;
+    padding: 8px 0;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-top-color: #d58f38;
+    border-bottom-color: #d58f38;
+}
+
+.comparison-row {
+    margin-top: 2px;
+    color: #c6d5e2;
+}
+
+.part-action,
+.primary-action {
+    align-self: flex-start;
+    margin-top: 7px;
+}
+
+.part-actions {
+    flex-direction: row;
+}
+
+.part-actions > Button {
+    margin-right: 6px;
+}
+
+.primary-action {
+    background-color: #25637b;
+    color: #f1fbff;
 }
 
 .item-title {

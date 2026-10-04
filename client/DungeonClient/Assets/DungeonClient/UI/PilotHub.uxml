@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement class="hub-shell">
+        <ui:VisualElement class="hub-header">
+            <ui:Label text="DUNGEON CLIENT" class="hub-title" />
+            <ui:Button name="ChangePilotButton" text="Пилоты" class="back-button" />
+        </ui:VisualElement>
+        <ui:Label name="HubPilotLabel" text="Пилот" class="hub-pilot" />
+        <ui:VisualElement class="hub-actions">
+            <ui:Button name="OpenGarageButton" text="Гараж" class="hub-action garage-action" />
+            <ui:Button name="OpenLobbyButton" text="Лобби" class="hub-action lobby-action" />
+        </ui:VisualElement>
+        <ui:VisualElement class="hub-status-bar">
+            <ui:Label name="HubStatusLabel" text="Выбери следующий маршрут." class="hub-status" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

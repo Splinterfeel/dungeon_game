@@ -53,6 +53,57 @@ namespace DungeonClient.Networking
             yield return PostJson("/pilots", request, onSuccess, onFailure);
         }
 
+        public IEnumerator EquipGaragePart(
+            string playerId,
+            string loadoutId,
+            string partId,
+            Action<GarageState> onSuccess,
+            Action<string> onFailure
+        )
+        {
+            var request = new EquipGaragePartRequest
+            {
+                PlayerId = playerId,
+                LoadoutId = loadoutId,
+                PartId = partId,
+            };
+            yield return PostJson("/garages/equip", request, onSuccess, onFailure);
+        }
+
+        public IEnumerator UpdateGarageTuning(
+            string playerId,
+            string loadoutId,
+            string reactorMode,
+            string fireControlMode,
+            Action<GarageState> onSuccess,
+            Action<string> onFailure
+        )
+        {
+            var request = new UpdateGarageTuningRequest
+            {
+                PlayerId = playerId,
+                LoadoutId = loadoutId,
+                ReactorMode = reactorMode,
+                FireControlMode = fireControlMode,
+            };
+            yield return PostJson("/garages/tuning", request, onSuccess, onFailure);
+        }
+
+        public IEnumerator ChooseGarageSkill(
+            string playerId,
+            string skillKey,
+            Action<GarageState> onSuccess,
+            Action<string> onFailure
+        )
+        {
+            var request = new ChooseGarageSkillRequest
+            {
+                PlayerId = playerId,
+                SkillKey = skillKey,
+            };
+            yield return PostJson("/garages/choose_skill", request, onSuccess, onFailure);
+        }
+
         private IEnumerator GetJson<T>(
             string path,
             Action<T> onSuccess,
@@ -154,6 +205,45 @@ namespace DungeonClient.Networking
 
             [JsonProperty("mech_presets")]
             public string[] MechPresets { get; set; }
+        }
+
+        [Serializable]
+        private sealed class EquipGaragePartRequest
+        {
+            [JsonProperty("player_id")]
+            public string PlayerId { get; set; }
+
+            [JsonProperty("loadout_id")]
+            public string LoadoutId { get; set; }
+
+            [JsonProperty("part_id")]
+            public string PartId { get; set; }
+        }
+
+        [Serializable]
+        private sealed class UpdateGarageTuningRequest
+        {
+            [JsonProperty("player_id")]
+            public string PlayerId { get; set; }
+
+            [JsonProperty("loadout_id")]
+            public string LoadoutId { get; set; }
+
+            [JsonProperty("reactor_mode")]
+            public string ReactorMode { get; set; }
+
+            [JsonProperty("fire_control_mode")]
+            public string FireControlMode { get; set; }
+        }
+
+        [Serializable]
+        private sealed class ChooseGarageSkillRequest
+        {
+            [JsonProperty("player_id")]
+            public string PlayerId { get; set; }
+
+            [JsonProperty("skill_key")]
+            public string SkillKey { get; set; }
         }
 
         [Serializable]
