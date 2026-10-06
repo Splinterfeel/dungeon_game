@@ -22,6 +22,45 @@ namespace DungeonClient.Networking
             this.httpUrl = httpUrl.TrimEnd('/');
         }
 
+        public string WebSocketUrl => ServerEndpoint.ToWebSocketUrl(httpUrl);
+
+        public IEnumerator GetLobbies(Action<List<LobbySummary>> success, Action<string> failure)
+        {
+            yield return GetJson("/lobbies", success, failure);
+        }
+
+        public IEnumerator CreateLobby(string name, string pilotId, bool vsBot,
+            Action<CreatedLobbyResponse> success, Action<string> failure)
+        {
+            yield return PostJson("/lobbies", new { name, players_num = 2,
+                created_by_player_id = pilotId, vs_bot = vsBot }, success, failure);
+        }
+
+        public IEnumerator JoinLobby(string lobbyId, string pilotId, int team,
+            Action<LobbyCommandResponse> success, Action<string> failure)
+        {
+            yield return PostJson("/connect_lobby", new { lobby_id = lobbyId,
+                player = new { id = pilotId, team, mech_presets = new string[2] } }, success, failure);
+        }
+
+        public IEnumerator LeaveLobby(string lobbyId, string pilotId,
+            Action<LobbyCommandResponse> success, Action<string> failure)
+        {
+            yield return PostJson("/leave_lobby", new { lobby_id = lobbyId, player_id = pilotId }, success, failure);
+        }
+
+        public IEnumerator StartLobby(string lobbyId, string pilotId,
+            Action<LobbyCommandResponse> success, Action<string> failure)
+        {
+            yield return PostJson("/start_game", new { lobby_id = lobbyId, host_player_id = pilotId }, success, failure);
+        }
+
+        public IEnumerator Rematch(string lobbyId, string pilotId,
+            Action<LobbyCommandResponse> success, Action<string> failure)
+        {
+            yield return PostJson("/debug/rematch", new { lobby_id = lobbyId, host_player_id = pilotId }, success, failure);
+        }
+
         public IEnumerator GetPilots(
             Action<List<PilotSummary>> onSuccess,
             Action<string> onFailure
@@ -175,13 +214,14 @@ namespace DungeonClient.Networking
             {
                 try
                 {
-                    var error = JsonConvert.DeserializeObject<ApiErrorResponse>(
-                        request.downloadHandler.text
-                    );
-                    if (!string.IsNullOrWhiteSpace(error?.Detail))
+                    var detail = Newtonsoft.Json.Linq.JObject.Parse(request.downloadHandler.text)["detail"];
+                    if (detail is Newtonsoft.Json.Linq.JArray validation)
                     {
-                        return error.Detail;
+                        return "Некорректный запрос: " + string.Join("; ",
+                            System.Linq.Enumerable.Select(validation, item => (string)item["msg"]));
                     }
+                    if (detail?.Type == Newtonsoft.Json.Linq.JTokenType.String)
+                        return (string)detail;
                 }
                 catch (JsonException)
                 {
@@ -246,11 +286,5 @@ namespace DungeonClient.Networking
             public string SkillKey { get; set; }
         }
 
-        [Serializable]
-        private sealed class ApiErrorResponse
-        {
-            [JsonProperty("detail")]
-            public string Detail { get; set; }
-        }
     }
 }

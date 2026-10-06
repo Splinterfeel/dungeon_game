@@ -135,7 +135,7 @@ namespace DungeonClient.Screens
         {
             if (!isRequestRunning)
             {
-                ClientApp.Instance.Screens.NavigateTo(ScreenId.PilotHub);
+                ClientApp.Instance.Screens.NavigateTo(ScreenId.LobbyList);
             }
         }
 

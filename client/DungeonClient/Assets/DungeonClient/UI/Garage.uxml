@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
     <ui:VisualElement class="garage-shell">
         <ui:VisualElement class="garage-header">
-            <ui:Button name="BackButton" text="← Пилоты" class="back-button" />
+            <ui:Button name="BackButton" text="← Лобби" class="back-button" />
             <ui:VisualElement class="garage-heading">
                 <ui:Label name="GaragePilotLabel" text="Гараж" class="garage-title" />
                 <ui:Label name="GarageProgressLabel" text="Уровень 1 · XP 0" class="garage-subtitle" />

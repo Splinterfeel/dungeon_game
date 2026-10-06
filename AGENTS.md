@@ -32,7 +32,8 @@ PUBG) и асинхронное PvP против сборок других иг�
 
 Для управления открытым Unity Editor используется пакет `com.unity.pipeline`
 в `client/DungeonClient/`; его CLI доступен пользователю как `unity` и у агента
-по пути `C:\Program Files\Unity Hub\resources\unity.exe`. После установки
+по пути `C:\Users\user\AppData\Local\Unity\bin\unity.exe` (проверено
+2026-10-06; прежний путь в `Unity Hub\resources` больше не существует). После установки
 Pipeline Editor нужно перезапустить и проверить `unity status --json`.
 
 Pipeline хранит порт и bearer-токен в

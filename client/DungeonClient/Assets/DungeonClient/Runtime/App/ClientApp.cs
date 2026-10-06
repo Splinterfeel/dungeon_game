@@ -16,6 +16,8 @@ namespace DungeonClient.App
 
         public ServerApi Server { get; private set; }
 
+        public LobbyConnection Lobby { get; private set; }
+
         [SerializeField]
         private string serverUrl = ServerEndpoint.DefaultHttpUrl;
 
@@ -32,7 +34,9 @@ namespace DungeonClient.App
             Session = new ClientSession();
             Screens = new ScreenNavigator();
             Server = new ServerApi(serverUrl);
+            Lobby = gameObject.AddComponent<LobbyConnection>();
             Application.targetFrameRate = 30;
+            Application.runInBackground = true;
         }
     }
 }

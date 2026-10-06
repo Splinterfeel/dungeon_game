@@ -1,0 +1,20 @@
+.lobby-shell { flex-grow: 1; width: 100%; height: 100%; padding: 24px; background-color: #0a1018; color: #e2edf7; }
+.lobby-title { font-size: 24px; color: #71d6ff; -unity-font-style: bold; margin-bottom: 12px; }
+.lobby-actions { flex-direction: row; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; }
+.lobby-shell Button { min-height: 36px; padding: 8px 14px; margin-right: 8px; background-color: #22394b; color: #e2edf7; }
+.lobby-shell Button:disabled { background-color: #17212b; color: #667785; }
+.lobby-columns { flex-direction: row; flex-grow: 1; min-height: 0; }
+.lobby-browser { width: 58%; margin-right: 16px; min-width: 0; }
+.lobby-columns > .lobby-card { width: 38%; flex-shrink: 0; }
+.lobby-rows { height: 230px; flex-shrink: 0; min-height: 80px; }
+.lobby-row { white-space: normal; -unity-text-align: middle-left; margin-bottom: 6px; min-height: 78px; }
+.lobby-row.selected { border-left-width: 3px; border-left-color: #71d6ff; background-color: #30566b; }
+.lobby-card { padding: 14px; margin-top: 12px; margin-bottom: 12px; background-color: #101e2b; flex-shrink: 0; }
+.lobby-card TextField, .lobby-card Toggle { margin-top: 8px; margin-bottom: 8px; }
+.room-teams { font-size: 18px; white-space: normal; min-height: 210px; }
+.lobby-status { color: #d5ae73; white-space: normal; margin-top: 12px; }
+#LobbyListPanel { flex-shrink: 1; min-height: 0; }
+#ReconnectLobby { align-self: flex-start; }
+.lobby-shell Label { white-space: normal; flex-shrink: 0; }
+.lobby-shell TextField, .lobby-shell Toggle, .lobby-shell Button { flex-shrink: 0; }
+#LobbyName .unity-text-field__input { color: #000000; }

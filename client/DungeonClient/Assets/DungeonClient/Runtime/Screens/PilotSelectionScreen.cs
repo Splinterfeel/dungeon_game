@@ -151,7 +151,7 @@ namespace DungeonClient.Screens
             PlayerPrefs.Save();
             selectedPilotLabel.text = $"Пилот: {pilot.Name} · уровень {pilot.Level} · XP {pilot.Xp}";
             SetBusy(true, "Загружаем гараж…");
-            StartCoroutine(ClientApp.Instance.Server.GetGarage(pilot.Id, OpenPilotHub, OnRequestFailed));
+            StartCoroutine(ClientApp.Instance.Server.GetGarage(pilot.Id, OpenLobby, OnRequestFailed));
         }
 
         private void CreatePilot()
@@ -193,11 +193,11 @@ namespace DungeonClient.Screens
             PlayerPrefs.SetString(LastPilotIdKey, pilot.Id);
             PlayerPrefs.Save();
             selectedPilotLabel.text = $"Пилот: {pilot.Name} · уровень {pilot.Level} · XP {pilot.Xp}";
-            OpenPilotHub(garage);
+            OpenLobby(garage);
             RefreshPilots();
         }
 
-        private void OpenPilotHub(GarageState garage)
+        private void OpenLobby(GarageState garage)
         {
             ClientApp.Instance.Session.SetGarage(garage);
             var loadoutNames = new List<string>();
@@ -213,7 +213,7 @@ namespace DungeonClient.Screens
                 ? "В гараже пока нет сборок."
                 : $"Гараж: {string.Join("  ·  ", loadoutNames)}";
             SetBusy(false, "Профиль загружен.");
-            ClientApp.Instance.Screens.NavigateTo(ScreenId.PilotHub);
+            ClientApp.Instance.Screens.NavigateTo(ScreenId.LobbyList);
         }
 
         private void OnRequestFailed(string error)
