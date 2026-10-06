@@ -23,6 +23,7 @@ namespace DungeonClient.Screens
         private BattleState state;
         private readonly List<string> events = new();
         private readonly Dictionary<string, Label> actorLabels = new();
+        private readonly List<(Label label, Vector3 position, float started, float offset)> combatTexts = new();
         private string inspectedId, lastOwnId, weaponId, weaponActorId, loadedResultId;
         private BattleCell hovered;
         private bool visible, resultBusy, recoveringGarage;
@@ -65,6 +66,8 @@ namespace DungeonClient.Screens
             rematch = Bind("ResultRematch", () => StartCoroutine(Rematch()));
             resultReconnect = Bind("ResultReconnect", () => App.Lobby.Reconnect());
             arena = GetComponent<BattleArenaView>(); arena.Initialize();
+            arena.AttackEffects.AttackPlayed += ShowCombatText;
+            arena.AttackEffects.Cleared += ClearCombatTexts;
             App.Screens.Changed += OnScreen;
             App.Lobby.Changed += OnConnection;
             App.Lobby.MessageReceived += OnMessage;
@@ -78,6 +81,11 @@ namespace DungeonClient.Screens
 
         private void OnDestroy()
         {
+            if (arena != null && arena.AttackEffects != null)
+            {
+                arena.AttackEffects.AttackPlayed -= ShowCombatText;
+                arena.AttackEffects.Cleared -= ClearCombatTexts;
+            }
             if (ClientApp.Instance == null) return;
             App.Screens.Changed -= OnScreen;
             App.Lobby.Changed -= OnConnection;
@@ -104,6 +112,7 @@ namespace DungeonClient.Screens
         private void OnConnection()
         {
             if (!visible) return;
+            if (!App.Lobby.SnapshotReady) arena.StopMovement();
             var next = App.Lobby.State;
             if (next != null && !ReferenceEquals(next, state))
             {
@@ -119,6 +128,7 @@ namespace DungeonClient.Screens
                 if (own != null) ownTeam = own.Team;
                 if (Active?.OwnerId == App.Session.Pilot?.Id) lastOwnId = Active.Id;
                 if (Find(inspectedId) == null) inspectedId = null;
+                if (startingMatch) arena.StopMovement();
                 arena.Apply(state, ownTeam);
                 if (startingMatch) arena.StartCamera(OwnCurrent?.Position);
                 SyncLabels();
@@ -141,6 +151,15 @@ namespace DungeonClient.Screens
         private void OnMessage(JObject message)
         {
             if (!visible) return;
+            if ((string)message["type"] == "actor_attacked")
+                arena.ShowAttack(message.ToObject<BattleAttackState>());
+            if ((string)message["type"] == "actor_moved")
+            {
+                var route = message.ToObject<BattleMovementState>();
+                arena.AnimateMovement(route);
+                if (route.Actor != null) SetActorLabel(route.Actor);
+                foreach (var sighting in route.Sightings) SetActorLabel(sighting);
+            }
             if ((string)message["type"] == "game_event") AddEvent((string)message["message"]);
             if ((string)message["type"] == "action_result" && (bool?)message["performed"] == false)
                 AddEvent((string)message["detail"]);
@@ -158,7 +177,7 @@ namespace DungeonClient.Screens
         {
             if (state == null) { status.text = "Ждём состояние боя…"; return; }
             phase.text = $"Раунд {state.Turn.Number} · " + (state.Ended ? "Матч завершён" : state.Turn.Phase == 2 ? "Ход нейтральных врагов" :
-                Active == null ? "Ход противника" : "Ход: " + Active.Name);
+                Active == null ? "Ход противника" : $"Ход: {Active.Name} · ОД {Active.CurrentAp}/{Active.Stats.ActionPoints}");
             status.text = App.Lobby.Error ?? App.Lobby.ActionNotice ?? (App.Lobby.Connecting ? "Восстанавливаем соединение…" : "ЛКМ — осмотр · ПКМ — действие · WASD/стрелки — камера · Q/E — поворот · СКМ + мышь — наклон · Колесо — зум");
             reconnect.style.display = !App.Lobby.Connected || App.Lobby.ActionUncertain ? DisplayStyle.Flex : DisplayStyle.None;
             reconnect.SetEnabled(!App.Lobby.Connecting && App.Lobby.Lobby != null);
@@ -319,24 +338,72 @@ namespace DungeonClient.Screens
 
         private void SyncLabels()
         {
-            foreach (var label in actorLabels.Values) label.RemoveFromHierarchy();
-            actorLabels.Clear();
             foreach (var actor in state.Players.Concat(state.Enemies))
+                SetActorLabel(actor);
+        }
+
+        private void SetActorLabel(BattleActorState actor)
+        {
+            if (!actorLabels.TryGetValue(actor.Id, out var label))
             {
-                var label = new Label(actor.Name + "\n" + actor.Stats.Health + "/" + actor.Stats.MaxHealth) { pickingMode = PickingMode.Ignore };
+                label = new Label { pickingMode = PickingMode.Ignore };
                 label.AddToClassList("actor-label"); labels.Add(label); actorLabels.Add(actor.Id, label);
             }
+            label.text = actor.Name + "\n" + actor.Stats.Health + "/" + actor.Stats.MaxHealth;
+            if (actor.Id == Active?.Id) label.text += $" · ОД {actor.CurrentAp}/{actor.Stats.ActionPoints}";
+        }
+
+        private void ShowCombatText(BattleAttackState attack)
+        {
+            // Не показываем исход для скрытой цели; используем только серверную клетку.
+            if (attack.ToCell == null) return;
+            var position = BattleArenaView.Position(attack.ToCell) + Vector3.up * 1.1f;
+            var label = new Label(attack.Hit ? $"−{attack.Damage}" : "Промах") { pickingMode = PickingMode.Ignore };
+            label.AddToClassList("combat-text");
+            label.AddToClassList(attack.Hit ? "combat-damage" : "combat-miss");
+            labels.Add(label);
+            var offset = combatTexts.Count(item => (item.position - position).sqrMagnitude < .1f) * 28f;
+            combatTexts.Add((label, position, Time.unscaledTime, offset));
+        }
+
+        private void ClearCombatTexts()
+        {
+            foreach (var item in combatTexts) item.label.RemoveFromHierarchy();
+            combatTexts.Clear();
         }
 
         private void PositionLabels()
         {
+            var visibleIds = arena.Figures.Select(figure => figure.Key).ToHashSet();
+            foreach (var id in actorLabels.Keys.Where(id => !visibleIds.Contains(id)).ToList())
+            {
+                actorLabels[id].RemoveFromHierarchy();
+                actorLabels.Remove(id);
+            }
             foreach (var figure in arena.Figures)
             {
                 if (!actorLabels.TryGetValue(figure.Key, out var label)) continue;
                 var screen = arena.Camera.WorldToScreenPoint(figure.Value.transform.position + Vector3.up * .65f);
-                label.style.display = screen.z > 0 && arena.Camera.pixelRect.Contains(new Vector2(screen.x, screen.y)) ? DisplayStyle.Flex : DisplayStyle.None;
+                label.style.display = figure.Value.activeSelf && screen.z > 0 && arena.Camera.pixelRect.Contains(new Vector2(screen.x, screen.y)) ? DisplayStyle.Flex : DisplayStyle.None;
                 var point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
                 label.style.left = point.x - 90; label.style.top = point.y - 30;
+            }
+            for (var index = combatTexts.Count - 1; index >= 0; index--)
+            {
+                var item = combatTexts[index];
+                var age = Time.unscaledTime - item.started;
+                const float duration = 1.2f;
+                if (age >= duration)
+                {
+                    item.label.RemoveFromHierarchy(); combatTexts.RemoveAt(index);
+                    continue;
+                }
+                var screen = arena.Camera.WorldToScreenPoint(item.position);
+                item.label.style.display = screen.z > 0 && arena.Camera.pixelRect.Contains(new Vector2(screen.x, screen.y)) ? DisplayStyle.Flex : DisplayStyle.None;
+                var point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
+                item.label.style.left = point.x - 90;
+                item.label.style.top = point.y - 45 - age * 38f - item.offset;
+                item.label.style.opacity = Mathf.Clamp01((duration - age) / .4f);
             }
         }
 

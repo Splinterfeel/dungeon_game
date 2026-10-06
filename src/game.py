@@ -1,18 +1,18 @@
 import copy
 import random
-from uuid import uuid4
+from uuid import UUID, uuid4
 from typing import Optional, List
 
 from src.action_handler import ActionHandler
 from dto.event import GameEvent
-from src.action import Action, ActionResult, ActionType
-from src.entities.base import Actor
+from src.action import Action, ActionResult, ActionType, ActorMovement
+from src.entities.base import Actor, Weapon
 from src.base import Point
 from src.entities.player import Player
 from src.entities.enemy import Enemy
 from src.arena import Arena
 from src.constants import CELL_TYPE
-from src.combat import AttackKind, CombatResolver
+from src.combat import ActorAttack, AttackKind, AttackOutcome, CombatResolver
 from src.turn import GamePhase, Turn
 from src.game_observer import GameObserver
 
@@ -81,6 +81,64 @@ class Game:
         if self._observer:
             await self._observer.on_state_change()
 
+    async def _notify_actor_moved(self, movements: dict[int, ActorMovement]) -> None:
+        if self._observer:
+            await self._observer.on_actor_moved(movements)
+
+    def actor_visible_to_team(self, actor: Actor, team: int) -> bool:
+        if isinstance(actor, Player) and actor.team == team:
+            return True
+        return any(
+            player.team == team
+            and not player.is_dead()
+            and self.arena.map.can_see(player, actor)
+            for player in self.players
+        )
+
+    async def resolve_and_publish_attack(
+        self,
+        attacker: Actor,
+        target: Actor,
+        weapon: Weapon,
+        distance: float,
+        kind: AttackKind,
+        movement_action_id: UUID | None = None,
+    ) -> AttackOutcome:
+        # Видимость и позиции фиксируем до урона: цель может стать последним
+        # погибшим наблюдателем команды, но её попадание всё равно видно.
+        attack_id = uuid4()
+        attacks: dict[int, ActorAttack] = {}
+        for team in (1, 2):
+            attacker_visible = self.actor_visible_to_team(attacker, team)
+            target_visible = self.actor_visible_to_team(target, team)
+            if not attacker_visible and not target_visible:
+                continue
+            attacks[team] = ActorAttack(
+                attack_id=attack_id,
+                attacker_id=str(attacker.id) if attacker_visible else None,
+                target_id=str(target.id) if target_visible else None,
+                from_cell=attacker.position.model_copy() if attacker_visible else None,
+                to_cell=target.position.model_copy() if target_visible else None,
+                weapon_type=weapon.type,
+                kind=kind,
+                movement_action_id=movement_action_id,
+            )
+        outcome = self.combat.resolve_attack(
+            attacker=attacker,
+            target=target,
+            weapon=weapon,
+            distance=distance,
+            kind=kind,
+        )
+        for attack in attacks.values():
+            attack.hit = outcome.hit
+            if attack.to_cell is not None:
+                attack.damage = outcome.damage
+                attack.target_killed = outcome.target_killed
+        if self._observer and attacks:
+            await self._observer.on_actor_attacked(attacks)
+        return outcome
+
     async def launch(self):
         self._init_players()
 
@@ -122,7 +180,9 @@ class Game:
             self.enemies.remove(actor)
         self.arena.reset_map_cell(actor.position)
 
-    async def check_overwatch_triggers(self, moving_actor: Actor) -> bool:
+    async def check_overwatch_triggers(
+        self, moving_actor: Actor, movement_action_id: UUID | None = None
+    ) -> bool:
         for watcher in self.get_actors():
             if watcher.overwatch is None or watcher.is_dead():
                 continue
@@ -138,21 +198,30 @@ class Game:
                 watcher.overwatch = None
                 continue
             if self.arena.map.can_shoot(watcher, weapon, moving_actor.position):
-                await self._fire_overwatch_shot(watcher, weapon, moving_actor)
+                await self._fire_overwatch_shot(
+                    watcher, weapon, moving_actor, movement_action_id
+                )
                 watcher.overwatch = None
                 return True
         return False
 
-    async def _fire_overwatch_shot(self, watcher: Actor, weapon, target: Actor):
+    async def _fire_overwatch_shot(
+        self,
+        watcher: Actor,
+        weapon: Weapon,
+        target: Actor,
+        movement_action_id: UUID | None = None,
+    ):
         # Дальнобойная атака формирует визуальный круг, поэтому и обычный
         # выстрел, и огневой дозор используют евклидово расстояние.
         distance = Point.distance_euklid(watcher.position, target.position)
-        outcome = self.combat.resolve_attack(
+        outcome = await self.resolve_and_publish_attack(
             attacker=watcher,
             target=target,
             weapon=weapon,
             distance=distance,
             kind=AttackKind.OVERWATCH,
+            movement_action_id=movement_action_id,
         )
         if not outcome.hit:
             await self._notify_event(

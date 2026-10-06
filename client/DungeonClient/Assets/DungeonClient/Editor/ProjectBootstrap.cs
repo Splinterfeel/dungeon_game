@@ -6,6 +6,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace DungeonClient.Editor
 {
@@ -170,11 +172,53 @@ namespace DungeonClient.Editor
 
         private static void CreateLight()
         {
-            var lightObject = new GameObject("Directional Light");
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            var light = lightObject.AddComponent<Light>();
+            var lightObject = GameObject.Find("Directional Light") ?? new GameObject("Directional Light");
+            lightObject.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+            var light = lightObject.GetComponent<Light>();
+            if (light == null) light = lightObject.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.2f;
+            light.color = new Color(1f, .88f, .74f);
+            light.intensity = 1.65f;
+            light.shadows = LightShadows.Soft;
+            light.shadowStrength = .78f;
+            light.shadowBias = .03f;
+            light.shadowNormalBias = .18f;
+            light.GetUniversalAdditionalLightData().usePipelineSettings = false;
+            RenderSettings.sun = light;
+
+            var fillObject = GameObject.Find("Battle Fill Light") ?? new GameObject("Battle Fill Light");
+            fillObject.transform.rotation = Quaternion.Euler(32f, 145f, 0f);
+            var fill = fillObject.GetComponent<Light>();
+            if (fill == null) fill = fillObject.AddComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.color = new Color(.48f, .67f, 1f);
+            fill.intensity = .45f;
+            fill.shadows = LightShadows.None;
+
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(.28f, .34f, .48f);
+            RenderSettings.ambientEquatorColor = new Color(.16f, .19f, .26f);
+            RenderSettings.ambientGroundColor = new Color(.07f, .085f, .12f);
+            RenderSettings.ambientIntensity = 1f;
+            // В общем обзоре карты тени тоже остаются видны.
+            var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/PC_RPAsset.asset");
+            if (pipeline != null)
+            {
+                pipeline.shadowDistance = 85f;
+                EditorUtility.SetDirty(pipeline);
+            }
+            DynamicGI.UpdateEnvironment();
+        }
+
+        [MenuItem("Dungeon Client/Обновить освещение арены")]
+        public static void ApplyBattleLightingToOpenScene()
+        {
+            if (EditorApplication.isPlaying) throw new System.InvalidOperationException("Сохранять освещение нужно вне Play Mode");
+            CreateLight();
+            var scene = SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
         }
 
         private static PanelSettings GetOrCreatePanelSettings()

@@ -5,12 +5,20 @@ from uuid import uuid4, UUID
 from fastapi import WebSocket
 from typing import Optional, List
 
-from dto.base import LobbyParticipantState, PlayerDTO
-from dto.event import ActionResultEvent, GameEvent, LobbyClosedEvent
+from dto.base import LobbyParticipantState, PlayerDTO, PointState
+from dto.event import (
+    ActionResultEvent,
+    ActorAttackedEvent,
+    ActorMovedEvent,
+    GameEvent,
+    LobbyClosedEvent,
+)
 from dto.state import (
+    ActorState,
     GameState,
     LobbyState,
     LobbyStatePayload,
+    PlayerState,
 )
 from src.lobby.automation import LobbyAutomation
 from src.lobby.rewards import LobbyRewards
@@ -18,9 +26,10 @@ from src.lobby.state_view import LobbyStateView
 from src.entities.base import Actor, Inventory
 from src.entities.enemy import build_default_enemy
 from src.game import Game
+from src.combat import ActorAttack
 from src.arena import Arena
 from src.entities.player import Player
-from src.action import Action, ActionResult
+from src.action import Action, ActionResult, ActorMovement
 from src.map import ArenaMap
 from src.maps import default
 from src.mech.presets import get_random_mech_preset
@@ -70,6 +79,51 @@ class Lobby(GameObserver):
     async def on_state_change(self) -> None:
         """Observer interface implementation"""
         await self.broadcast_game_state()
+
+    async def on_actor_moved(self, movements: dict[int, ActorMovement]) -> None:
+        def actor_state(actor: Actor) -> PlayerState | ActorState:
+            actor_type = PlayerState if isinstance(actor, Player) else ActorState
+            return actor_type.model_validate(actor.model_dump())
+
+        events = {}
+        for team, movement in movements.items():
+            event = ActorMovedEvent(
+                action_id=str(movement.action_id),
+                actor=actor_state(movement.actor),
+                paths=[
+                    [PointState.model_validate(cell.model_dump()) for cell in path]
+                    for path in movement.paths
+                ],
+                sightings=[actor_state(actor) for actor in movement.sightings],
+            )
+            events[team] = event.model_dump(mode="json")
+        # Получатели определяются участниками, а не выжившими мехами пилота.
+        for player_id, ws in list(self.connections.items()):
+            participant = self.participants.get(player_id)
+            event = events.get(participant.team) if participant else None
+            if event is None:
+                continue
+            try:
+                await ws.send_json(event)
+            except Exception as error:
+                print("on_actor_moved exception", error)
+
+    async def on_actor_attacked(self, attacks: dict[int, ActorAttack]) -> None:
+        events = {
+            team: ActorAttackedEvent.model_validate(
+                attack.model_dump(mode="json")
+            ).model_dump(mode="json")
+            for team, attack in attacks.items()
+        }
+        for player_id, ws in list(self.connections.items()):
+            participant = self.participants.get(player_id)
+            event = events.get(participant.team) if participant else None
+            if event is None:
+                continue
+            try:
+                await ws.send_json(event)
+            except Exception as error:
+                print("on_actor_attacked exception", error)
 
     def _ready_to_start(self) -> bool:
         if not self.vs_bot:
@@ -384,7 +438,6 @@ class Lobby(GameObserver):
         await self.broadcast_lobby_state()
         await self.broadcast_game_state()
         await self.run_automated_turns()
-        await self.broadcast_game_state()
         await self.publish_game_end_if_needed()
 
     async def publish_after_game_action(self, performed: bool) -> None:
@@ -392,7 +445,6 @@ class Lobby(GameObserver):
             return
         await self.broadcast_game_state()
         await self.run_automated_turns()
-        await self.broadcast_game_state()
         await self.publish_game_end_if_needed()
 
     async def finalize_match_rewards(self) -> None:
@@ -404,23 +456,29 @@ class Lobby(GameObserver):
         return LobbyStateView(self.game).filter_available_moves(game_state, player_id)
 
     async def broadcast_game_state(self):
-        try:
-            state = GameState.model_validate(self.game.dump_state())
-        except Exception as e:
-            print(e)
-        else:
+        # В том числе reconnect ждёт завершения расчёта действия, а не видит его середину.
+        async with self.lock:
+            try:
+                state = GameState.model_validate(self.game.dump_state())
+            except Exception as error:
+                print(error)
+                return
             state_view = LobbyStateView(self.game)
             states_for_teams = state_view.build_states_for_teams(state)
+            messages = []
             for player_id, ws in self.connections.items():
                 participant = self.participants[player_id]
-                _state = states_for_teams[participant.team]
-                _state = state_view.filter_available_moves(_state, str(player_id))
-                try:
-                    await ws.send_json(
-                        {"type": "state_update", "payload": _state.model_dump()}
-                    )
-                except Exception as e:
-                    print(f"Error sending to ws {ws}: {e}")
+                player_state = state_view.filter_available_moves(
+                    states_for_teams[participant.team], str(player_id)
+                )
+                messages.append(
+                    (ws, {"type": "state_update", "payload": player_state.model_dump()})
+                )
+        for ws, message in messages:
+            try:
+                await ws.send_json(message)
+            except Exception as error:
+                print(f"Error sending to ws {ws}: {error}")
 
     def filter_visible_entities_for_team(
         self, game_state: GameState, team: int

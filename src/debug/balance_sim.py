@@ -34,20 +34,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import src.action_handler as action_handler_module
-
-
-# Продакшен-код намеренно делает await asyncio.sleep(0.1) на каждый шаг
-# движения (src/action_handler.py, __perform_action_move), чтобы реальный
-# клиент видел пошаговую анимацию по WS. Для headless-симуляции это не
-# нужно и сводит скорость к ~4.5s/матч - убираем задержку только здесь,
-# в реальном коде она остаётся.
-async def _no_sleep(*_args, **_kwargs):
-    return None
-
-
-action_handler_module.asyncio.sleep = _no_sleep
-
 from src.ai.player import PlayerBotAI
 from src.arena import Arena
 from src.entities.base import Inventory, WeaponType

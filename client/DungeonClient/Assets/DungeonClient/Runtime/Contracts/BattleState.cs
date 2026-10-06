@@ -102,6 +102,29 @@ namespace DungeonClient.Contracts
         [JsonProperty("detail")] public string Detail;
     }
 
+    public sealed class BattleMovementState
+    {
+        [JsonProperty("action_id")] public string ActionId;
+        [JsonProperty("actor")] public BattleActorState Actor;
+        [JsonProperty("paths")] public List<List<BattleCell>> Paths = new();
+        [JsonProperty("sightings")] public List<BattleActorState> Sightings = new();
+    }
+
+    public sealed class BattleAttackState
+    {
+        [JsonProperty("attack_id")] public string AttackId;
+        [JsonProperty("attacker_id")] public string AttackerId;
+        [JsonProperty("target_id")] public string TargetId;
+        [JsonProperty("from_cell")] public BattleCell FromCell;
+        [JsonProperty("to_cell")] public BattleCell ToCell;
+        [JsonProperty("weapon_type")] public string WeaponType;
+        [JsonProperty("kind")] public string Kind;
+        [JsonProperty("hit")] public bool Hit;
+        [JsonProperty("damage")] public int Damage;
+        [JsonProperty("target_killed")] public bool TargetKilled;
+        [JsonProperty("movement_action_id")] public string MovementActionId;
+    }
+
     public sealed class MatchResultState
     {
         [JsonProperty("match_id")] public string MatchId;

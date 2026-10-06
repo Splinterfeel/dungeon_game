@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from enum import Enum
 from src.base import Point
+from src.entities.base import Actor
 
 
 class ActionType(str, Enum):
@@ -37,3 +38,12 @@ class ActionResult(BaseModel):
     action_cost: int = 0
     speed_spent: int = 0
     detail: str = "ActionResult: no detail"
+
+
+class ActorMovement(BaseModel):
+    """Видимые одной команде участки фактически пройденного маршрута."""
+
+    action_id: uuid.UUID
+    actor: Actor
+    paths: list[list[Point]] = Field(default_factory=list)
+    sightings: list[Actor] = Field(default_factory=list)

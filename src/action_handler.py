@@ -1,9 +1,8 @@
-import asyncio
 import typing
 
 from pydantic import BaseModel
 
-from src.action import Action, ActionResult, ActionType
+from src.action import Action, ActionResult, ActionType, ActorMovement
 from src.base import Point
 from src.combat import AttackKind, HAND_LABELS_RU
 from src.entities.base import Actor, OverwatchState, Weapon, WeaponType
@@ -201,27 +200,74 @@ class ActionHandler:
                 action,
                 f"{actor.name}, недостаточно очков действия для перемещения в {action.cell}!",
             )
-        # шагаем по пути по одной клетке, проверяя огневой дозор
+        movements: dict[int, ActorMovement] = {}
+        last_visible = {1: False, 2: False}
+        known_actor_ids = (
+            {
+                str(other.id)
+                for other in self.game.get_actors()
+                if self.game.actor_visible_to_team(other, actor.team)
+            }
+            if isinstance(actor, Player)
+            else set()
+        )
+        self._record_visible_movement(
+            actor, action, movements, last_visible, known_actor_ids
+        )
+        # Расчёт остаётся пошаговым, а клиент получает весь фактический маршрут.
         step_path = list(reversed(path))[1:]  # путь от текущей позиции к цели
         for i, step_cell in enumerate(step_path):
             self.game.move_actor(actor, step_cell)
-            self.game.version += 1
-            await self.game._notify_state_change()
-            await asyncio.sleep(0.1)
-            overwatch_fired = await self.game.check_overwatch_triggers(actor)
+            # Сохраняем видимость до выстрела: погибший мех ещё дошёл до клетки.
+            self._record_visible_movement(
+                actor, action, movements, last_visible, known_actor_ids
+            )
+            overwatch_fired = await self.game.check_overwatch_triggers(actor, action.id)
             if overwatch_fired and actor.is_dead():
+                await self.game._notify_actor_moved(movements)
                 return ActionResult(
                     action=action,
                     action_cost=i + 1,
                     speed_spent=i + 1,
                     detail=f"{actor.name} убит огневым дозором при перемещении!",
                 )
+        await self.game._notify_actor_moved(movements)
         return ActionResult(
             action=action,
             action_cost=total_cost,
             speed_spent=total_cost,
             detail=f"{actor.name} перемещается в клетку {action.cell}",
         )
+
+    def _record_visible_movement(
+        self,
+        actor: Actor,
+        action: Action,
+        movements: dict[int, ActorMovement],
+        last_visible: dict[int, bool],
+        known_actor_ids: set[str],
+    ) -> None:
+        for team in (1, 2):
+            visible = self.game.actor_visible_to_team(actor, team)
+            if visible:
+                if team not in movements:
+                    movements[team] = ActorMovement(
+                        action_id=action.id, actor=actor.model_copy(deep=True)
+                    )
+                movement = movements[team]
+                if not last_visible[team]:
+                    movement.paths.append([])
+                movement.paths[-1].append(actor.position.model_copy())
+            last_visible[team] = visible
+        # Снимок в конце маршрута не должен терять врага, увиденного лишь по пути.
+        if isinstance(actor, Player):
+            for other in self.game.get_actors():
+                actor_id = str(other.id)
+                if actor_id not in known_actor_ids and self.game.actor_visible_to_team(
+                    other, actor.team
+                ):
+                    movements[actor.team].sightings.append(other.model_copy(deep=True))
+                    known_actor_ids.add(actor_id)
 
     async def __perform_action_attack(
         self, actor: Actor, action: Action
@@ -240,7 +286,7 @@ class ActionHandler:
         weapon = prepared_attack.weapon
         target = prepared_attack.target
 
-        outcome = self.game.combat.resolve_attack(
+        outcome = await self.game.resolve_and_publish_attack(
             attacker=actor,
             target=target,
             weapon=weapon,

@@ -1,10 +1,12 @@
 import random
 import typing
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 from src.entities.base import Actor, HandSide, Weapon, WeaponType
+from src.base import Point
 from src.entities.player import Player
 from src.skills_catalog import Skill, Skills
 
@@ -21,6 +23,22 @@ HAND_LABELS_RU = {
 class AttackKind(str, Enum):
     REGULAR = "regular"
     OVERWATCH = "overwatch"
+
+
+class ActorAttack(BaseModel):
+    """Наблюдаемые одной командой участники и исход отдельной атаки."""
+
+    attack_id: UUID
+    attacker_id: str | None
+    target_id: str | None
+    from_cell: Point | None
+    to_cell: Point | None
+    weapon_type: WeaponType
+    kind: AttackKind
+    hit: bool = False
+    damage: int = 0
+    target_killed: bool = False
+    movement_action_id: UUID | None = None
 
 
 class AttackOutcome(BaseModel):

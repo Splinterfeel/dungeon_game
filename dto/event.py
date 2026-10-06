@@ -1,5 +1,8 @@
-from pydantic import BaseModel
-from dto.state import PartState
+from pydantic import BaseModel, Field
+from dto.base import PointState
+from dto.state import ActorState, PartState, PlayerState
+from src.combat import AttackKind
+from src.entities.base import WeaponType
 
 
 class GameEvent(BaseModel):
@@ -13,6 +16,29 @@ class ActionResultEvent(BaseModel):
     action_id: str | None
     performed: bool
     detail: str
+
+
+class ActorMovedEvent(BaseModel):
+    type: str = "actor_moved"
+    action_id: str
+    actor: PlayerState | ActorState
+    paths: list[list[PointState]]
+    sightings: list[PlayerState | ActorState] = Field(default_factory=list)
+
+
+class ActorAttackedEvent(BaseModel):
+    type: str = "actor_attacked"
+    attack_id: str
+    attacker_id: str | None
+    target_id: str | None
+    from_cell: PointState | None
+    to_cell: PointState | None
+    weapon_type: WeaponType
+    kind: AttackKind
+    hit: bool
+    damage: int
+    target_killed: bool
+    movement_action_id: str | None = None
 
 
 class MatchResultEvent(BaseModel):
