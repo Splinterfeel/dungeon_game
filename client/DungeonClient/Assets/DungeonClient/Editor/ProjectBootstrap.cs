@@ -147,6 +147,9 @@ namespace DungeonClient.Editor
             }
 
             panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1280, 720);
+            panelSettings.screenMatchMode = PanelScreenMatchMode.Expand;
             AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
             return panelSettings;
         }

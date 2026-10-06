@@ -18,3 +18,4 @@
 .lobby-shell Label { white-space: normal; flex-shrink: 0; }
 .lobby-shell TextField, .lobby-shell Toggle, .lobby-shell Button { flex-shrink: 0; }
 #LobbyName .unity-text-field__input { color: #000000; }
+.lobby-shell, .lobby-shell Button, .lobby-shell TextField, .lobby-shell Toggle, .lobby-shell DropdownField { font-size: 16px; }

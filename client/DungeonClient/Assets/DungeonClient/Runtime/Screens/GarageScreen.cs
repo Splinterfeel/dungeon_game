@@ -13,9 +13,9 @@ namespace DungeonClient.Screens
     {
         private static readonly SlotDefinition[] Slots =
         {
-            new("torso", "Корпус"),
-            new("legs", "Ноги"),
             new("arms", "Руки"),
+            new("legs", "Ноги"),
+            new("torso", "Корпус"),
             new("head", "Голова"),
         };
 
@@ -44,14 +44,12 @@ namespace DungeonClient.Screens
         private Label metricsLabel;
         private Label statusLabel;
         private VisualElement loadoutsContainer;
-        private VisualElement storedPartsSection;
-        private VisualElement storedPartsSlotSelector;
-        private VisualElement storedPartsContainer;
         private Button backButton;
         private Button refreshButton;
         private GarageState garage;
         private string selectedLoadoutId;
-        private string selectedSlot = "torso";
+        // null означает вкладку тюнинга, остальные значения — слоты деталей.
+        private string selectedSlot;
         private string selectedPartId;
         private string selectedSkillKey;
         private bool isPilotTabSelected;
@@ -82,9 +80,6 @@ namespace DungeonClient.Screens
             metricsLabel = root.Q<Label>("GarageMetricsLabel");
             statusLabel = root.Q<Label>("GarageStatusLabel");
             loadoutsContainer = root.Q<VisualElement>("LoadoutsContainer");
-            storedPartsSection = root.Q<VisualElement>("StoredPartsSection");
-            storedPartsSlotSelector = root.Q<VisualElement>("StoredPartsSlotSelector");
-            storedPartsContainer = root.Q<VisualElement>("StoredPartsContainer");
             backButton = root.Q<Button>("BackButton");
             refreshButton = root.Q<Button>("RefreshGarageButton");
 
@@ -186,13 +181,6 @@ namespace DungeonClient.Screens
                 : $"Матчей: {garage.Metrics.MatchesFinished}  ·  Наград: {garage.Metrics.RewardsReceived}";
 
             BuildLoadouts();
-            storedPartsSection.style.display = isPilotTabSelected
-                ? DisplayStyle.None
-                : DisplayStyle.Flex;
-            if (!isPilotTabSelected)
-            {
-                BuildStoredParts();
-            }
         }
 
         private void BuildLoadouts()
@@ -258,7 +246,6 @@ namespace DungeonClient.Screens
                 ? loadout.Name
                 : $"{loadout.Name} · {loadout.PresetName}";
             card.Add(Text(preset, "loadout-title"));
-            card.Add(BuildTuningControls(loadout));
 
             if (loadout.Stats != null)
             {
@@ -282,13 +269,29 @@ namespace DungeonClient.Screens
                         "weight"
                     )
                 );
-                card.Add(Text("Детали", "subsection-title"));
-                foreach (var slot in Slots)
-                {
-                    card.Add(BuildInstalledPart(slot, GetInstalledPart(loadout, slot.Key)));
-                }
             }
 
+            card.Add(BuildMechTabs());
+            if (selectedSlot == null)
+            {
+                card.Add(BuildTuningControls(loadout));
+            }
+            else
+            {
+                card.Add(Text("Установленная деталь", "subsection-title"));
+                card.Add(BuildInstalledPart(SelectedSlot, GetInstalledPart(loadout, selectedSlot)));
+                if (selectedSlot == "arms")
+                {
+                    BuildWeapons(card, loadout);
+                }
+                card.Add(BuildStoredParts());
+            }
+
+            return card;
+        }
+
+        private static void BuildWeapons(VisualElement card, GarageLoadoutState loadout)
+        {
             card.Add(Text("Оружие", "subsection-title"));
             if (loadout.Weapons.Count == 0)
             {
@@ -309,7 +312,6 @@ namespace DungeonClient.Screens
                 }
             }
 
-            return card;
         }
 
         private VisualElement BuildTuningControls(GarageLoadoutState loadout)
@@ -371,13 +373,17 @@ namespace DungeonClient.Screens
             return control;
         }
 
-        private VisualElement BuildSlotSelector()
+        private VisualElement BuildMechTabs()
         {
-            var selector = new VisualElement();
-            selector.AddToClassList("slot-selector");
-            selector.Add(Text("Слот на складе", "mode-label"));
             var buttons = new VisualElement();
-            buttons.AddToClassList("slot-buttons");
+            buttons.AddToClassList("mech-tabs");
+            var tuningTab = new Button(() => SelectSlot(null)) { text = "Тюнинг" };
+            tuningTab.AddToClassList("mech-tab");
+            if (selectedSlot == null)
+            {
+                tuningTab.AddToClassList("is-selected");
+            }
+            buttons.Add(tuningTab);
             foreach (var slot in Slots)
             {
                 var slotDefinition = slot;
@@ -385,7 +391,7 @@ namespace DungeonClient.Screens
                 {
                     text = slotDefinition.Name,
                 };
-                button.AddToClassList("slot-button");
+                button.AddToClassList("mech-tab");
                 if (slotDefinition.Key == selectedSlot)
                 {
                     button.AddToClassList("is-selected");
@@ -394,8 +400,7 @@ namespace DungeonClient.Screens
                 buttons.Add(button);
             }
 
-            selector.Add(buttons);
-            return selector;
+            return buttons;
         }
 
         private static VisualElement BuildInstalledPart(SlotDefinition slot, PartState part)
@@ -414,17 +419,16 @@ namespace DungeonClient.Screens
             return row;
         }
 
-        private void BuildStoredParts()
+        private VisualElement BuildStoredParts()
         {
-            storedPartsSlotSelector.Clear();
-            storedPartsSlotSelector.Add(BuildSlotSelector());
-            storedPartsContainer.Clear();
-            storedPartsContainer.Add(Text($"Слот: {SelectedSlot.Name}", "filter-title"));
+            var storedPartsContainer = new VisualElement();
+            storedPartsContainer.AddToClassList("stored-parts");
+            storedPartsContainer.Add(Text("Склад · " + SelectedSlot.Name, "subsection-title"));
             var candidates = garage.StoredParts.Where(part => part.Slot == selectedSlot).ToList();
             if (candidates.Count == 0)
             {
                 storedPartsContainer.Add(EmptyState("Свободных деталей для этого слота нет."));
-                return;
+                return storedPartsContainer;
             }
 
             var selectedPart = candidates.FirstOrDefault(part => part.Id == selectedPartId);
@@ -437,6 +441,7 @@ namespace DungeonClient.Screens
             {
                 storedPartsContainer.Add(BuildStoredPart(part));
             }
+            return storedPartsContainer;
         }
 
         private VisualElement BuildStoredPart(PartState part)

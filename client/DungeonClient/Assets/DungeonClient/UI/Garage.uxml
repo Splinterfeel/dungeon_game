@@ -11,13 +11,6 @@
         </ui:VisualElement>
         <ui:ScrollView name="GarageScroll" class="garage-scroll">
             <ui:VisualElement name="LoadoutsContainer" class="loadouts-container" />
-            <ui:VisualElement name="StoredPartsSection" class="secondary-grid">
-                <ui:VisualElement class="secondary-panel">
-                    <ui:VisualElement name="StoredPartsSlotSelector" />
-                    <ui:Label text="Склад деталей" class="section-title" />
-                    <ui:VisualElement name="StoredPartsContainer" />
-                </ui:VisualElement>
-            </ui:VisualElement>
         </ui:ScrollView>
         <ui:VisualElement class="garage-status-bar">
             <ui:Label name="GarageStatusLabel" text="Загружаем гараж…" class="garage-status" />
