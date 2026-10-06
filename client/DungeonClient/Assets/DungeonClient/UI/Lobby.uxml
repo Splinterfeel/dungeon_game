@@ -34,13 +34,6 @@
         <ui:Button name="LeaveLobby" text="Выйти из лобби" />
       </ui:VisualElement>
     </ui:VisualElement>
-    <ui:VisualElement name="LobbyBattlePanel" style="display: none;">
-      <ui:Label name="BattleInfo" class="lobby-card room-teams" />
-      <ui:VisualElement class="lobby-actions">
-        <ui:Button name="RematchLobby" text="Рематч (хост)" />
-        <ui:Button name="DisconnectBattle" text="Отключиться от матча" />
-      </ui:VisualElement>
-    </ui:VisualElement>
     <ui:Button name="ReconnectLobby" text="Подключиться повторно" />
     <ui:Label name="LobbyStatus" class="lobby-status" />
   </ui:VisualElement>

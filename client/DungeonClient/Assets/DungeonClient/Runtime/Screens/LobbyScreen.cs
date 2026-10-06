@@ -13,13 +13,13 @@ namespace DungeonClient.Screens
     public sealed class LobbyScreen : MonoBehaviour
     {
         [SerializeField] private StyleSheet styleSheet;
-        private VisualElement shell, listPanel, roomPanel, battlePanel;
+        private VisualElement shell, listPanel, roomPanel;
         private ScrollView rows;
-        private Label pilotLabel, status, roomTitle, teams, battleInfo;
+        private Label pilotLabel, status, roomTitle, teams;
         private TextField lobbyName;
         private Toggle vsBot;
         private DropdownField team;
-        private Button refresh, create, join, start, leave, reconnect, rematch, back, garage, disconnect;
+        private Button refresh, create, join, start, leave, reconnect, back, garage;
         private List<LobbySummary> lobbies = new List<LobbySummary>();
         private LobbySummary selected, created;
         private bool busy, refreshing;
@@ -35,27 +35,21 @@ namespace DungeonClient.Screens
             var root = GetComponent<UIDocument>().rootVisualElement;
             if (styleSheet != null) root.styleSheets.Add(styleSheet);
             shell = root.Q("LobbyShell");
-            listPanel = root.Q("LobbyListPanel"); roomPanel = root.Q("LobbyRoomPanel"); battlePanel = root.Q("LobbyBattlePanel");
+            listPanel = root.Q("LobbyListPanel"); roomPanel = root.Q("LobbyRoomPanel");
             rows = root.Q<ScrollView>("LobbyRows");
             pilotLabel = root.Q<Label>("LobbyPilot"); status = root.Q<Label>("LobbyStatus");
-            roomTitle = root.Q<Label>("RoomTitle"); teams = root.Q<Label>("RoomTeams"); battleInfo = root.Q<Label>("BattleInfo");
+            roomTitle = root.Q<Label>("RoomTitle"); teams = root.Q<Label>("RoomTeams");
             lobbyName = root.Q<TextField>("LobbyName"); vsBot = root.Q<Toggle>("VsBot");
             team = root.Q<DropdownField>("LobbyTeam"); team.choices = new List<string> { "Команда 1", "Команда 2" }; team.index = 0;
             team.RegisterValueChangedCallback(_ => Render());
             refresh = Bind(root, "RefreshLobbies", Refresh);
             create = Bind(root, "CreateLobby", () => StartCoroutine(Create()));
             join = Bind(root, "JoinLobby", () => StartCoroutine(Join(created ?? selected)));
-            start = Bind(root, "StartLobby", () => StartCoroutine(Command(false)));
+            start = Bind(root, "StartLobby", () => StartCoroutine(StartMatch()));
             leave = Bind(root, "LeaveLobby", () => StartCoroutine(Leave()));
             reconnect = Bind(root, "ReconnectLobby", () => App.Lobby.Reconnect());
-            rematch = Bind(root, "RematchLobby", () => StartCoroutine(Command(true)));
             back = Bind(root, "LobbyBack", () => App.Screens.NavigateTo(ScreenId.PilotSelection));
             garage = Bind(root, "LobbyGarage", () => App.Screens.NavigateTo(ScreenId.Garage));
-            disconnect = Bind(root, "DisconnectBattle", () =>
-            {
-                App.Lobby.Clear(); notice = "Клиент отключён от матча. Это не сдача; место на сервере сохранено.";
-                App.Screens.NavigateTo(ScreenId.LobbyList);
-            });
             App.Screens.Changed += OnScreen;
             App.Lobby.Changed += OnConnection;
             OnScreen(App.Screens.Current);
@@ -75,7 +69,7 @@ namespace DungeonClient.Screens
         private void OnScreen(ScreenId screen)
         {
             listVersion++;
-            var visible = screen == ScreenId.LobbyList || screen == ScreenId.LobbyRoom || screen == ScreenId.Battle || screen == ScreenId.MatchResult;
+            var visible = screen == ScreenId.LobbyList || screen == ScreenId.LobbyRoom;
             shell.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             if (!visible) return;
             if (!App.Session.HasPilot) { App.Screens.NavigateTo(ScreenId.PilotSelection); return; }
@@ -85,7 +79,6 @@ namespace DungeonClient.Screens
             if (created != null && created.HostId != App.Session.Pilot.Id) created = null;
             listPanel.style.display = screen == ScreenId.LobbyList ? DisplayStyle.Flex : DisplayStyle.None;
             roomPanel.style.display = screen == ScreenId.LobbyRoom ? DisplayStyle.Flex : DisplayStyle.None;
-            battlePanel.style.display = screen == ScreenId.Battle || screen == ScreenId.MatchResult ? DisplayStyle.Flex : DisplayStyle.None;
             Render();
             if (screen == ScreenId.LobbyList) Refresh();
         }
@@ -175,15 +168,15 @@ namespace DungeonClient.Screens
             Render();
         }
 
-        private IEnumerator Command(bool isRematch)
+        private IEnumerator StartMatch()
         {
             if (busy || !App.Lobby.Connected || App.Lobby.Lobby == null) yield break;
             var id = App.Lobby.Lobby.Id; var pilot = App.Lobby.PilotId;
-            busy = true; notice = isRematch ? "Запускаем рематч…" : "Запускаем матч…"; Render();
+            busy = true; notice = "Запускаем матч…"; Render();
             Action<LobbyCommandResponse> success = result =>
             { if (App.Lobby.Lobby?.Id == id) notice = result.Result ? "Ждём снимок матча…" : result.Detail; };
             Action<string> failure = error => { if (App.Lobby.Lobby?.Id == id) notice = error; };
-            yield return isRematch ? App.Server.Rematch(id, pilot, success, failure) : App.Server.StartLobby(id, pilot, success, failure);
+            yield return App.Server.StartLobby(id, pilot, success, failure);
             busy = false; Render();
         }
 
@@ -247,11 +240,6 @@ namespace DungeonClient.Screens
                     p.Name + (p.PlayerId == connection.PilotId ? " · Вы" : "") + (p.PlayerId == room.HostId ? " · Хост" : "") + (p.IsBot ? " · Бот" : "") + " · 2 меха"))
                 + (room.VsBot && number == 2 && !participants.Any(p => p.IsBot) ? "Бот появится при старте · 2 меха" : "")))
                 + "\n\n" + (room.Status == "game started" ? "Матч запускается…" : ready ? "Ожидание старта хостом" : "Ожидание участников");
-            var result = connection.MatchResult;
-            battleInfo.text = result == null ? "Матч начат. Снимок сервера получен.\nУправление боем будет реализовано следующим этапом.\nСокет остаётся подключённым." :
-                $"Матч завершён · победитель: {result["winner"]}\nXP: {result["xp_awarded"]} · уровень: {result["level_before"]} → {result["level_after"]}\nНаграда: {(result["loot_part"] is Newtonsoft.Json.Linq.JObject loot ? (string)loot["name"] : "нет")}";
-            rematch.SetEnabled(!busy && host && connection.Connected && result != null);
-            disconnect.SetEnabled(!busy);
         }
 
         private static string Short(string id) => string.IsNullOrEmpty(id) ? "—" : id.Substring(0, Math.Min(8, id.Length));

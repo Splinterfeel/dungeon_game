@@ -14,6 +14,8 @@ namespace DungeonClient.App
 
         public bool HasPilot => Pilot != null;
 
+        public void InvalidateGarage() => Garage = null;
+
         public void SelectPilot(PilotSummary pilot)
         {
             if (Pilot?.Id != pilot.Id)

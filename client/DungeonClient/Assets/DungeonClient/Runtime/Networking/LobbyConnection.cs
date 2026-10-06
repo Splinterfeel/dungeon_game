@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DungeonClient.Contracts;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -24,7 +25,14 @@ namespace DungeonClient.Networking
         public string PilotId { get; private set; }
         public LobbyRoomState Room { get; private set; }
         public JObject Battle { get; private set; }
+        public BattleState State { get; private set; }
+        public string PendingActionId { get; private set; }
+        public bool ActionUncertain { get; private set; }
+        public bool SnapshotReady { get; private set; }
+        public string ActionNotice { get; private set; }
+        private float actionSentAt;
         public JObject MatchResult { get; private set; }
+        public MatchResultState Outcome { get; private set; }
         public List<JObject> RecentMessages { get; } = new List<JObject>();
         public bool Connected { get; private set; }
         public bool Connecting { get; private set; }
@@ -47,6 +55,7 @@ namespace DungeonClient.Networking
             Connected = false;
             Connecting = true;
             Room = null;
+            SnapshotReady = false;
             Error = null;
             Changed?.Invoke();
             socket = new ClientWebSocket();
@@ -57,6 +66,34 @@ namespace DungeonClient.Networking
         }
 
         private string ClientAppUrl() => App.ClientApp.Instance.Server.WebSocketUrl;
+
+        public void SendAction(BattleActionRequest action)
+        {
+            if (!Connected || !SnapshotReady || PendingActionId != null || ActionUncertain) return;
+            PendingActionId = action.Id;
+            ActionNotice = "Выполняем действие…";
+            actionSentAt = Time.unscaledTime;
+            var data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(action));
+            _ = Send(socket, cancellation.Token, generation, data);
+            Changed?.Invoke();
+        }
+
+        private async Task Send(ClientWebSocket client, CancellationToken token, int version, byte[] data)
+        {
+            try
+            {
+                await client.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Text, true, token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                if (!token.IsCancellationRequested) Enqueue(version, () =>
+                {
+                    ActionUncertain = true;
+                    ActionNotice = "Доставка команды не подтверждена. Подключитесь повторно: " + exception.Message;
+                    Changed?.Invoke();
+                });
+            }
+        }
 
         private void Enqueue(int version, Action action)
         {
@@ -129,11 +166,34 @@ namespace DungeonClient.Networking
             {
                 case "lobby_state": Room = message["payload"]?.ToObject<LobbyRoomState>(); break;
                 case "state_update":
+                    State = message["payload"]?.ToObject<BattleState>();
                     Battle = message;
+                    if (!SnapshotReady)
+                    {
+                        PendingActionId = null;
+                        ActionUncertain = false;
+                        ActionNotice = null;
+                    }
+                    SnapshotReady = true;
                     if ((bool?)message["payload"]?["ended"] != true)
+                    {
                         MatchResult = null;
+                        Outcome = null;
+                    }
                     break;
-                case "match_result": MatchResult = message; break;
+                case "action_result":
+                    var result = message.ToObject<BattleActionResult>();
+                    if (result.ActionId == PendingActionId || result.ActionId == null)
+                    {
+                        PendingActionId = null;
+                        ActionUncertain = false;
+                        ActionNotice = result.Detail;
+                    }
+                    break;
+                case "match_result":
+                    MatchResult = message;
+                    Outcome = message.ToObject<MatchResultState>();
+                    break;
                 case "lobby_closed":
                     var reason = (string)message["message"];
                     Clear();
@@ -150,6 +210,12 @@ namespace DungeonClient.Networking
             {
                 try { action(); }
                 catch (Exception exception) { Error = "Ошибка сообщения: " + exception.Message; Changed?.Invoke(); }
+            }
+            if (PendingActionId != null && !ActionUncertain && Time.unscaledTime - actionSentAt > 30f)
+            {
+                ActionUncertain = true;
+                ActionNotice = "Ответ на команду не получен. Подключитесь повторно для обновления состояния.";
+                Changed?.Invoke();
             }
         }
 
@@ -171,7 +237,13 @@ namespace DungeonClient.Networking
             PilotId = null;
             Room = null;
             Battle = null;
+            State = null;
+            PendingActionId = null;
+            ActionUncertain = false;
+            SnapshotReady = false;
+            ActionNotice = null;
             MatchResult = null;
+            Outcome = null;
             RecentMessages.Clear();
             Connected = false;
             Connecting = false;

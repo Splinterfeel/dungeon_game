@@ -1,0 +1,52 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+  <ui:VisualElement name="BattleShell" class="battle-shell" style="display: none;">
+    <ui:VisualElement name="BattleLabels" class="battle-labels" />
+    <ui:VisualElement class="battle-top battle-ui">
+      <ui:Label name="BattlePhase" class="phase-label" />
+      <ui:Button name="BattleCenter" text="Вся карта" />
+      <ui:Button name="BattleReconnect" text="Подключиться повторно" />
+      <ui:Button name="BattleExit" text="Отключиться" tooltip="Отключение клиента не считается сдачей" />
+    </ui:VisualElement>
+    <ui:Foldout text="Журнал боя" class="battle-journal battle-ui" value="false">
+      <ui:ScrollView><ui:Label name="BattleJournal" /></ui:ScrollView>
+    </ui:Foldout>
+    <ui:VisualElement name="BattleHud" class="battle-hud battle-ui">
+      <ui:VisualElement class="hud-row">
+        <ui:VisualElement class="actor-info">
+          <ui:Label name="BattleActorName" class="actor-name" />
+          <ui:Label name="BattleStats" />
+          <ui:Label name="BattleParts" class="part-hp" />
+          <ui:Button name="BattleShowDetails" text="Подробнее" />
+        </ui:VisualElement>
+        <ui:VisualElement class="actor-actions">
+          <ui:Label name="BattleActionsTitle" />
+          <ui:VisualElement name="BattleWeapons" class="weapon-row" />
+          <ui:VisualElement class="action-row">
+            <ui:Button name="BattleOverwatch" text="Overwatch" tooltip="Дальнобойное оружие · расход AP · завершает ход" />
+            <ui:Button name="BattleEndTurn" text="Завершить ход" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:Label name="BattleStatus" class="battle-status" />
+    </ui:VisualElement>
+    <ui:VisualElement name="BattleDetailsPanel" class="battle-overlay battle-ui" style="display: none;">
+      <ui:VisualElement class="overlay-card">
+        <ui:Label text="Информация о выбранной фигуре" class="actor-name" />
+        <ui:ScrollView class="details-scroll"><ui:Label name="BattleDetails" /></ui:ScrollView>
+        <ui:Button name="BattleCloseDetails" text="Закрыть" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="BattleResultPanel" class="battle-overlay battle-ui" style="display: none;">
+      <ui:VisualElement class="overlay-card result-card">
+        <ui:Label name="BattleResultTitle" class="result-title" />
+        <ui:Label name="BattleResultInfo" />
+        <ui:VisualElement class="action-row">
+          <ui:Button name="ResultGarage" text="Гараж" />
+          <ui:Button name="ResultLobby" text="Лобби" />
+          <ui:Button name="ResultRematch" text="Рематч (хост)" />
+          <ui:Button name="ResultReconnect" text="Подключиться повторно" />
+        </ui:VisualElement>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

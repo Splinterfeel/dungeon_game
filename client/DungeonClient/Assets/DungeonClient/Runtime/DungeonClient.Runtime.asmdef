@@ -1,4 +1,5 @@
 {
   "name": "DungeonClient.Runtime",
-  "rootNamespace": "DungeonClient"
+  "rootNamespace": "DungeonClient",
+  "references": ["Unity.InputSystem"]
 }

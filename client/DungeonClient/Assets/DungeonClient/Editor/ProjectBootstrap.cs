@@ -1,4 +1,5 @@
 using DungeonClient.App;
+using DungeonClient.Battle;
 using DungeonClient.Screens;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -42,6 +43,7 @@ namespace DungeonClient.Editor
             CreatePilotScreen(app.transform, panelSettings);
             CreateGarageScreen(app.transform, panelSettings);
             CreateLobbyScreen(app.transform, panelSettings);
+            CreateBattleScreen(app.transform, panelSettings);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[]
@@ -98,6 +100,43 @@ namespace DungeonClient.Editor
             );
             var controller = screen.AddComponent<GarageScreen>();
             controller.SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(GarageStylePath));
+        }
+
+        [MenuItem("Dungeon Client/Добавить экран боя")]
+        public static void AddBattleToOpenScene()
+        {
+            if (Object.FindAnyObjectByType<BattleScreen>() != null) return;
+            var app = Object.FindAnyObjectByType<ClientApp>();
+            if (app == null) throw new System.InvalidOperationException("Не найден ClientApp");
+            var pilot = Object.FindAnyObjectByType<PilotSelectionScreen>();
+            CreateBattleScreen(app.transform, pilot.GetComponent<UIDocument>().panelSettings);
+            EditorSceneManager.MarkSceneDirty(app.gameObject.scene);
+            EditorSceneManager.SaveScene(app.gameObject.scene);
+        }
+
+        private static void CreateBattleScreen(Transform parent, PanelSettings settings)
+        {
+            var screen = new GameObject("BattleScreen");
+            screen.transform.SetParent(parent, false);
+            var document = screen.AddComponent<UIDocument>();
+            document.panelSettings = settings;
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UiFolder + "/Battle.uxml");
+            var surface = BattleMaterial("BattleSurface", "Universal Render Pipeline/Lit");
+            var marker = BattleMaterial("BattleMarker", "Universal Render Pipeline/Unlit");
+            screen.AddComponent<BattleArenaView>().Configure(surface, marker);
+            screen.AddComponent<BattleScreen>().SetStyleSheet(AssetDatabase.LoadAssetAtPath<StyleSheet>(UiFolder + "/Battle.uss"));
+        }
+
+        private static Material BattleMaterial(string name, string shaderName)
+        {
+            var path = UiFolder + "/" + name + ".mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            var shader = Shader.Find(shaderName);
+            if (shader == null) throw new System.InvalidOperationException("Не найден шейдер " + shaderName);
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static void EnsureFolder(string path)

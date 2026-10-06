@@ -1,0 +1,27 @@
+.battle-shell { width: 100%; height: 100%; color: #e2edf7; font-size: 16px; }
+.battle-shell Button { font-size: 16px; min-height: 30px; padding: 5px 10px; margin-right: 6px; background-color: #22394b; color: #e2edf7; }
+.battle-shell Button:disabled { background-color: #17212b; color: #718393; }
+.battle-shell Label { white-space: normal; }
+.battle-top { position: absolute; top: 8px; left: 12px; right: 12px; flex-direction: row; align-items: center; padding: 6px; background-color: rgba(10, 16, 24, 0.9); }
+.phase-label { flex-grow: 1; color: #71d6ff; }
+.battle-labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.actor-label { position: absolute; width: 180px; -unity-text-align: middle-center; font-size: 12px; color: #ffffff; background-color: rgba(10, 16, 24, 0.7); }
+.battle-journal { position: absolute; top: 62px; right: 12px; width: 320px; padding: 8px; background-color: rgba(10, 16, 24, 0.85); }
+.battle-journal ScrollView { max-height: 220px; }
+.battle-journal Label { font-size: 13px; }
+.battle-hud { position: absolute; bottom: 0; left: 0; right: 0; height: 200px; min-height: 200px; max-height: 200px; padding: 10px 14px; background-color: #0a1018; border-top-width: 2px; border-top-color: #304659; }
+.hud-row { flex-direction: row; flex-grow: 1; min-height: 0; overflow: hidden; }
+.actor-info { width: 49%; margin-right: 14px; }
+.actor-actions { flex-grow: 1; min-width: 0; }
+.actor-name { color: #71d6ff; -unity-font-style: bold; margin-bottom: 4px; }
+.part-hp { font-size: 13px; color: #d5ae73; margin-top: 4px; margin-bottom: 4px; }
+.actor-info Button { align-self: flex-start; }
+.weapon-row, .action-row { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.weapon-button { flex-grow: 1; flex-basis: 0; white-space: normal; font-size: 13px; min-width: 140px; }
+.battle-shell .weapon-button.selected { border-left-width: 3px; border-left-color: #71d6ff; background-color: #30566b; }
+.battle-shell .battle-status { height: 18px; flex-shrink: 0; margin-top: 5px; color: #d5ae73; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battle-overlay { position: absolute; left: 0; right: 0; top: 0; bottom: 0; align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.6); }
+.overlay-card { width: 650px; max-height: 85%; padding: 24px; background-color: #101e2b; border-left-width: 3px; border-left-color: #71d6ff; }
+.details-scroll { height: 340px; margin-top: 12px; margin-bottom: 12px; }
+.result-title { font-size: 30px; color: #71d6ff; margin-bottom: 14px; }
+.result-card .action-row { margin-top: 20px; }
