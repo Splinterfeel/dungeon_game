@@ -21,16 +21,16 @@ namespace DungeonClient.Screens
 
         private static readonly ModeDefinition[] ReactorModes =
         {
-            new("fortified", "Бронезащита", "+2 HP, −1 AP"),
+            new("fortified", "Бронезащита", "+20 HP, −1 AP"),
             new("neutral", "Норма", "без изменений"),
-            new("overdrive", "Форсаж", "−2 HP, +1 AP"),
+            new("overdrive", "Форсаж", "−20 HP, +1 AP"),
         };
 
         private static readonly ModeDefinition[] FireControlModes =
         {
-            new("precision", "Точная настройка", "+5 точности, −1 урон"),
+            new("precision", "Точная настройка", "+5 точности, −10 урон"),
             new("neutral", "Норма", "без изменений"),
-            new("impact", "Форсированный выстрел", "−5 точности, +1 урон"),
+            new("impact", "Форсированный выстрел", "−5 точности, +10 урон"),
         };
 
         [SerializeField]

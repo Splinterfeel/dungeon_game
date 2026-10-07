@@ -149,7 +149,7 @@ class CombatResolver:
         if kind == AttackKind.REGULAR and weapon.type == WeaponType.MELEE:
             skill = self._try_proc_skill(attacker, Skills.HEAVY_STRIKE, outcome)
             if skill is not None:
-                damage_bonus += 3
+                damage_bonus += 30
         if kind == AttackKind.REGULAR:
             skill = self._try_proc_skill(attacker, Skills.COMBAT_IMPULSE, outcome)
             if skill is not None:

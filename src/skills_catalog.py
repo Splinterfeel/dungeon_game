@@ -33,7 +33,7 @@ class Skills:
         name="Усиленный удар",
         trigger=SkillTrigger.ATTACK,
         proc_chance=0.15,
-        description="Шанс на атаку: +3 к силе удара для текущей атаки ближнего боя.",
+        description="Шанс на атаку: +30 к силе удара для текущей атаки ближнего боя.",
     )
     COMBAT_IMPULSE = Skill(
         skill_key="combat_impulse",

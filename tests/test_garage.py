@@ -36,14 +36,14 @@ def test_explicit_zero_affix_does_not_roll(monkeypatch):
 def test_destroyed_part_survives_validation_and_fresh_copy_repairs():
     from src.mech.part import Part
 
-    part = Part(catalog_key="test", slot="arms", name="Тест", max_health=17)
-    assert part.current_health == 17
-    part.apply_damage(17)
+    part = Part(catalog_key="test", slot="arms", name="Тест", max_health=170)
+    assert part.current_health == 170
+    part.apply_damage(170)
     restored = Part.model_validate(part.model_dump())
     assert restored.destroyed
     assert Part.model_validate(restored).destroyed
     fresh = restored.fresh_copy()
-    assert fresh.current_health == 17
+    assert fresh.current_health == 170
     assert restored.current_health == 0
 
 
@@ -234,9 +234,9 @@ def test_garage_tuning_is_saved_and_reflected_in_garage_state():
     tuned_loadout = response.json()["loadouts"][0]
     assert tuned_loadout["reactor_mode"] == "fortified"
     assert tuned_loadout["fire_control_mode"] == "impact"
-    assert tuned_loadout["stats"]["health"] == 21
+    assert tuned_loadout["stats"]["health"] == 210
     assert tuned_loadout["stats"]["action_points"] == 9
-    assert tuned_loadout["weapons"][0]["damage"] == 7
+    assert tuned_loadout["weapons"][0]["damage"] == 70
 
     reloaded = asyncio.run(GarageManager().get_garage_state(player_id))
     assert reloaded.loadouts[0].reactor_mode == "fortified"
@@ -278,14 +278,14 @@ def test_garage_tuning_is_applied_when_match_starts():
     first_actor = lobby.players[actor_ids[0]]
     second_actor = lobby.players[actor_ids[1]]
 
-    assert first_actor.stats.health == 21
+    assert first_actor.stats.health == 210
     assert first_actor.stats.action_points == 9
-    assert first_actor.inventory.weapons[0].damage == 7
+    assert first_actor.inventory.weapons[0].damage == 70
 
-    assert second_actor.stats.health == 9
+    assert second_actor.stats.health == 90
     assert second_actor.stats.action_points == 11
     assert second_actor.stats.accuracy == 90
-    assert second_actor.inventory.weapons[0].damage == 4
+    assert second_actor.inventory.weapons[0].damage == 40
 
 
 def test_one_physical_part_cannot_be_equipped_on_two_loadouts():
@@ -332,12 +332,12 @@ def test_apply_random_affix_updates_part_stats_and_metadata():
 
     assert part.affix_tier == 2
     assert part.affix_stat in {"accuracy", "melee_power"}
-    assert part.affix_value in {2, 8}
+    assert part.affix_value in {20, 8}
     assert "+2 к " in part.name
     if part.affix_stat == "accuracy":
         assert part.accuracy == FIREWORKS_ARMS.accuracy + 8
     else:
-        assert part.melee_power == FIREWORKS_ARMS.melee_power + 2
+        assert part.melee_power == FIREWORKS_ARMS.melee_power + 20
 
 
 def test_match_reward_can_drop_affixed_copy_of_known_base_part(monkeypatch):
@@ -551,7 +551,7 @@ def test_loaded_profile_uses_current_database_catalogs():
             try:
                 part_row = await session.get(PartCatalogRecord, "steelman_torso")
                 skill_row = await session.get(SkillCatalogRecord, "accurate_shot")
-                part_row.health += 3
+                part_row.health += 30
                 skill_row.name = "Проверка каталога"
                 await session.flush()
 

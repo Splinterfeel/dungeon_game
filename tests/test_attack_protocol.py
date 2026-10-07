@@ -18,7 +18,7 @@ def attack_events(socket):
     ]
 
 
-def prepare_weapon(actor, monkeypatch, hit=True, damage=7):
+def prepare_weapon(actor, monkeypatch, hit=True, damage=70):
     weapon = actor.inventory.weapons[0]
     weapon.range = 20
     actor.stats.view_distance = 20
@@ -141,7 +141,7 @@ def test_regular_attack_publishes_one_structured_result_before_snapshot(
             assert event["weapon_type"] == "ranged"
             assert event["kind"] == "regular"
             assert event["hit"] is hit
-            assert event["damage"] == (7 if hit else 0)
+            assert event["damage"] == (70 if hit else 0)
             assert event["target_killed"] is False
             assert event["movement_action_id"] is None
             types = [message["type"] for message in socket.messages]
@@ -178,7 +178,7 @@ def test_hidden_shooter_stays_hidden_even_when_last_victim_is_killed(
         target = make_player(2, 5, 2)
         target.stats.view_distance = 1
         if lethal:
-            target.stats.health = 1
+            target.stats.health = 10
         weapon = prepare_weapon(attacker, monkeypatch)
         lobby = make_lobby(make_game([attacker, target]))
         await lobby.game.prepare_actor_turn(attacker)
@@ -197,7 +197,7 @@ def test_hidden_shooter_stays_hidden_even_when_last_victim_is_killed(
         assert event["from_cell"] is None
         assert event["target_id"] == str(target.id)
         assert event["to_cell"] == {"x": 5, "y": 2}
-        assert event["damage"] == 7
+        assert event["damage"] == 70
         assert event["target_killed"] is lethal
         assert target.is_dead() is lethal
         if lethal:
@@ -212,7 +212,7 @@ def test_unseen_target_has_no_identity_position_damage_or_kill_disclosure(monkey
         target = make_player(2, 5, 2)
         weapon = prepare_weapon(attacker, monkeypatch)
         attacker.stats.view_distance = 1
-        target.stats.health = 1
+        target.stats.health = 10
         lobby = make_lobby(make_game([attacker, target]))
 
         await lobby.game.resolve_and_publish_attack(
@@ -262,9 +262,9 @@ def test_overwatch_attack_records_actual_cell_and_correlates_completed_route(
     async def scenario():
         mover = make_player(1, 1, 1)
         watcher = make_player(2, 4, 3)
-        weapon = prepare_weapon(watcher, monkeypatch, damage=999)
+        weapon = prepare_weapon(watcher, monkeypatch, damage=9990)
         weapon.range = 2
-        mover.stats.health = 1
+        mover.stats.health = 10
         lobby = make_lobby(make_game([mover, watcher]))
         await lobby.game.prepare_actor_turn(mover)
         watcher.overwatch = OverwatchState(weapon_id=weapon.id)

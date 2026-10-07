@@ -54,7 +54,7 @@ def _build_game() -> tuple[Game, Arena, Player]:
                 Weapon(
                     type="melee",
                     name="Тестовый клинок",
-                    damage=3,
+                    damage=30,
                     cost_ap=5,
                     range=1,
                     accuracy=90,

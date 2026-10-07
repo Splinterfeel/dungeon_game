@@ -25,7 +25,7 @@ class Part(BaseModel):
     # локальная прочность детали (locational damage), отдельная от
     # CharacterStats.health - см. ROADMAP.md, Этап 2 п.2. Одна прочность
     # на все детали пока что, веса/числа не балансировались отдельно.
-    DEFAULT_MAX_HEALTH: ClassVar[int] = 10
+    DEFAULT_MAX_HEALTH: ClassVar[int] = 100
 
     id: UUIDStr = Field(default_factory=uuid.uuid4)
     # Идентификатор типа детали в каталоге. Экземплярный id отличает две

@@ -26,7 +26,7 @@ def _one_weapon() -> Weapon:
     return Weapon(
         type="melee",
         name="Тестовый клинок",
-        damage=3,
+        damage=30,
         cost_ap=5,
         range=1,
         accuracy=90,

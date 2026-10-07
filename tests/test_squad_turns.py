@@ -334,10 +334,10 @@ def test_move_into_overwatch_can_kill_actor_and_pass_turn_to_next_slot():
 
         ranged_weapon = watcher.inventory.weapons[0]
         ranged_weapon.accuracy = 100
-        ranged_weapon.damage = 999
+        ranged_weapon.damage = 9990
         watcher.skills = []
         moving_target.skills = []
-        moving_target.stats.health = 1
+        moving_target.stats.health = 10
 
         overwatch_result = await game.perform_actor_action(
             watcher,

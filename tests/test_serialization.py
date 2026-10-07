@@ -58,7 +58,7 @@ def create_test_players() -> list[Player]:
                 Weapon(
                     type="melee",
                     name="Ударный модуль",
-                    damage=3,
+                    damage=30,
                     cost_ap=5,
                     range=1,
                     accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
@@ -67,7 +67,7 @@ def create_test_players() -> list[Player]:
                 Weapon(
                     type="ranged",
                     name="Мех-винтовка",
-                    damage=5,
+                    damage=50,
                     cost_ap=8,
                     range=4,
                     accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,
@@ -90,7 +90,7 @@ def create_test_players() -> list[Player]:
                 Weapon(
                     type="melee",
                     name="Ударный модуль",
-                    damage=3,
+                    damage=30,
                     cost_ap=5,
                     range=1,
                     accuracy=Accuracy.DEFAULT_PLAYER_MELEE_WEAPON_ACCURACY,
@@ -99,7 +99,7 @@ def create_test_players() -> list[Player]:
                 Weapon(
                     type="ranged",
                     name="Мех-винтовка",
-                    damage=5,
+                    damage=50,
                     cost_ap=8,
                     range=4,
                     accuracy=Accuracy.DEFAULT_PLAYER_RANGED_WEAPON_ACCURACY,

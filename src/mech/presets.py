@@ -51,7 +51,7 @@ STEELMAN_PRESET = MechPreset(
         Weapon(
             type=WeaponType.MELEE,
             name="Кувалда «SteelMan»",
-            damage=6,
+            damage=60,
             cost_ap=6,
             range=1,
             accuracy=95,
@@ -61,7 +61,7 @@ STEELMAN_PRESET = MechPreset(
         Weapon(
             type=WeaponType.RANGED,
             name="Мех-пистолет",
-            damage=3,
+            damage=30,
             cost_ap=6,
             range=3,
             accuracy=75,
@@ -92,7 +92,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
         Weapon(
             type=WeaponType.RANGED,
             name="Штурмовая винтовка «Fireworks»",
-            damage=5,
+            damage=50,
             cost_ap=8,
             range=5,
             accuracy=90,
@@ -102,7 +102,7 @@ FIREWORKS_MK1_PRESET = MechPreset(
         Weapon(
             type=WeaponType.MELEE,
             name="Аварийный клинок",
-            damage=2,
+            damage=20,
             cost_ap=5,
             range=1,
             accuracy=90,
@@ -139,7 +139,7 @@ STRIKEFORCE_PRESET = MechPreset(
         Weapon(
             type=WeaponType.RANGED,
             name="Рейлган «StrikeForce»",
-            damage=10,
+            damage=100,
             cost_ap=8,
             range=6,
             accuracy=80,
@@ -154,7 +154,7 @@ STRIKEFORCE_PRESET = MechPreset(
         Weapon(
             type=WeaponType.MELEE,
             name="Коготь",
-            damage=2,
+            damage=20,
             cost_ap=4,
             range=1,
             accuracy=65,

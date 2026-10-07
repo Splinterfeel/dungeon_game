@@ -40,7 +40,7 @@ class PartCatalogRecord(SQLModel, table=True):
     accuracy: int = 0
     melee_power: int = 0
     view_distance: int = 0
-    max_health: int = 10
+    max_health: int = 100
     weight: int = 0
     carry_capacity: int = 0
 

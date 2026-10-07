@@ -32,7 +32,7 @@ def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
                 or Weapon(
                     type="ranged",
                     name="Тестовый карабин",
-                    damage=5,
+                    damage=50,
                     cost_ap=5,
                     range=5,
                     accuracy=90,
@@ -53,7 +53,7 @@ def build_players(skills_a=None, skills_b=None, weapon_a=None, weapon_b=None):
                 or Weapon(
                     type="ranged",
                     name="Тестовый карабин",
-                    damage=5,
+                    damage=50,
                     cost_ap=5,
                     range=5,
                     accuracy=90,
@@ -81,7 +81,7 @@ def test_accurate_shot_can_turn_miss_into_hit(monkeypatch):
             "src.entities.base.Weapon.check_hit",
             lambda self, actor_stats, distance: actor_stats.accuracy >= 100,
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -92,7 +92,7 @@ def test_accurate_shot_can_turn_miss_into_hit(monkeypatch):
         result = await game.perform_actor_action(attacker, action)
         assert result.performed
         assert "Точный выстрел" in result.detail
-        assert target.stats.health == target.stats.max_health - 5
+        assert target.stats.health == target.stats.max_health - 50
 
     asyncio.run(scenario())
 
@@ -102,7 +102,7 @@ def test_heavy_strike_adds_bonus_melee_damage(monkeypatch):
         weapon = Weapon(
             type="melee",
             name="Тестовый клинок",
-            damage=5,
+            damage=50,
             cost_ap=5,
             range=1,
             accuracy=90,
@@ -117,7 +117,7 @@ def test_heavy_strike_adds_bonus_melee_damage(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -128,7 +128,7 @@ def test_heavy_strike_adds_bonus_melee_damage(monkeypatch):
         result = await game.perform_actor_action(attacker, action)
         assert result.performed
         assert "Усиленный удар" in result.detail
-        assert target.stats.health == target.stats.max_health - 10
+        assert target.stats.health == target.stats.max_health - 100
 
     asyncio.run(scenario())
 
@@ -142,7 +142,7 @@ def test_combat_impulse_refunds_action_points(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -207,7 +207,7 @@ def test_melee_attack_reaches_diagonally_adjacent_cell(monkeypatch):
         weapon = Weapon(
             type="melee",
             name="Тестовый клинок",
-            damage=5,
+            damage=50,
             cost_ap=5,
             range=1,
             accuracy=90,
@@ -220,7 +220,7 @@ def test_melee_attack_reaches_diagonally_adjacent_cell(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         action = Action(
             actor_id=str(attacker.id),
             type=ActionType.ATTACK,
@@ -243,7 +243,7 @@ def test_dodge_avoids_regular_attack(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -266,7 +266,7 @@ def test_dodge_avoids_overwatch_shot(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         await game._fire_overwatch_shot(watcher, weapon, mover)
         assert mover.stats.health == mover.stats.max_health
@@ -289,12 +289,12 @@ def test_overwatch_hit_applies_locational_damage(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
 
         await game._fire_overwatch_shot(watcher, weapon, mover)
 
         part_health_after = sum(part.current_health for part in parts)
-        assert part_health_before - part_health_after == 5
+        assert part_health_before - part_health_after == 50
 
     asyncio.run(scenario())
 
@@ -312,7 +312,7 @@ def test_only_one_skill_procs_per_actor_during_regular_attack(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -340,7 +340,7 @@ def test_second_attack_same_turn_can_proc_again(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         action = Action(
             actor_id=str(attacker.id),
@@ -366,7 +366,7 @@ def test_only_one_skill_procs_per_actor_during_overwatch(monkeypatch):
         monkeypatch.setattr(
             "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: True
         )
-        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 5)
+        monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda self: 50)
         monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
         await game._fire_overwatch_shot(watcher, weapon, mover)
         assert mover.stats.health == mover.stats.max_health

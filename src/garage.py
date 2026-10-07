@@ -49,14 +49,14 @@ class FireControlMode(str, Enum):
 
 
 REACTOR_HP_AP_DELTAS: dict[ReactorMode, tuple[int, int]] = {
-    ReactorMode.FORTIFIED: (2, -1),
+    ReactorMode.FORTIFIED: (20, -1),
     ReactorMode.NEUTRAL: (0, 0),
-    ReactorMode.OVERDRIVE: (-2, 1),
+    ReactorMode.OVERDRIVE: (-20, 1),
 }
 FIRE_CONTROL_DELTAS: dict[FireControlMode, tuple[int, int]] = {
-    FireControlMode.PRECISION: (5, -1),
+    FireControlMode.PRECISION: (5, -10),
     FireControlMode.NEUTRAL: (0, 0),
-    FireControlMode.IMPACT: (-5, 1),
+    FireControlMode.IMPACT: (-5, 10),
 }
 
 
@@ -188,7 +188,7 @@ class GarageProfile(BaseModel):
                     weapon.model_copy(
                         update={
                             "id": uuid.uuid4(),
-                            "damage": max(1, weapon.damage + damage_delta),
+                            "damage": max(10, weapon.damage + damage_delta),
                         }
                     )
                     for weapon in loadout.weapons

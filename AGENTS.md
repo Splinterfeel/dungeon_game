@@ -244,6 +244,12 @@ WebSocket для игры**. `LobbyManager.lobbies` и текущий бой ж�
 
 ### Игровой цикл (пошагово)
 
+С 2026-10-07 HP, прочность деталей, урон оружия, `melee_power` и их плоские
+бонусы увеличены в 10 раз; сохранённые каталоги/аффиксы/оружие переведены
+миграцией `0003`. AP и цены действий, точность, дальности, скорость, вес,
+шансы и XP остались прежними. Разброс урона всё ещё ±12.5%, с округлением
+после броска в новых единицах HP (например, база 50 даёт 44..56).
+
 1. Игрок создаёт лобби (`POST /lobbies`), другие подключаются
    (`POST /connect_lobby`), затем хост стартует игру (`POST /start_game`).
 2. После старта вся коммуникация идёт через WS: клиент шлёт JSON-действие
@@ -423,7 +429,7 @@ async def main():
         mech=mech,
         stats=mech.build_character_stats(action_points=10),
         inventory=Inventory(weapons=[
-            Weapon(type="melee", name="Клинок", damage=5, cost_ap=5,
+            Weapon(type="melee", name="Клинок", damage=50, cost_ap=5,
                    range=1, accuracy=90, hand="right"),
         ]),
     )

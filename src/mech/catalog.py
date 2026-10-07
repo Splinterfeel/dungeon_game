@@ -14,7 +14,7 @@ DEFAULT_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Лёгкий корпус",
     rarity=PartRarity.COMMON,
-    health=15,
+    health=150,
     weight=6,
 )
 DEFAULT_LEGS = Part(
@@ -32,7 +32,7 @@ DEFAULT_ARMS = Part(
     name="Стандартные руки",
     rarity=PartRarity.COMMON,
     accuracy=Accuracy.DEFAULT_PLAYER_STATS_ACCURACY,
-    melee_power=2,
+    melee_power=20,
     weight=4,
 )
 DEFAULT_HEAD = Part(
@@ -60,7 +60,7 @@ STEELMAN_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Тяжёлый корпус «Голем»",
     rarity=PartRarity.RARE,
-    health=19,
+    health=190,
     weight=10,
 )
 STEELMAN_LEGS = Part(
@@ -78,7 +78,7 @@ STEELMAN_ARMS = Part(
     name="Ударный привод «Молот»",
     rarity=PartRarity.RARE,
     accuracy=85,
-    melee_power=4,
+    melee_power=40,
     weight=6,
 )
 STEELMAN_HEAD = Part(
@@ -98,7 +98,7 @@ FIREWORKS_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Лёгкий корпус «Стриж»",
     rarity=PartRarity.RARE,
-    health=11,
+    health=110,
     weight=4,
 )
 FIREWORKS_LEGS = Part(
@@ -139,7 +139,7 @@ STRIKEFORCE_TORSO = Part(
     slot=PartSlot.TORSO,
     name="Облегчённый каркас «Копьё»",
     rarity=PartRarity.RARE,
-    health=9,
+    health=90,
     weight=3,
 )
 STRIKEFORCE_LEGS = Part(

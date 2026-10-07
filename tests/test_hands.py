@@ -52,7 +52,7 @@ def _melee(hand):
     return Weapon(
         type="melee",
         name=f"Клинок-{hand}",
-        damage=4,
+        damage=40,
         cost_ap=5,
         range=1,
         accuracy=100,
@@ -64,7 +64,7 @@ def _ranged(hand):
     return Weapon(
         type="ranged",
         name=f"Винтовка-{hand}",
-        damage=4,
+        damage=40,
         cost_ap=5,
         range=6,
         accuracy=100,
@@ -77,7 +77,7 @@ def test_mech_builds_two_physical_arms_from_one_selected_part():
     assert mech.arms_left.id != mech.arms_right.id
     assert mech.arms_left.catalog_key == mech.arms_right.catalog_key
 
-    mech.arms_left.apply_damage(999)
+    mech.arms_left.apply_damage(9990)
     assert mech.arms_left.destroyed
     assert not mech.arms_right.destroyed
 
@@ -129,14 +129,14 @@ def check_3_stats():
     assert full_acc > 0 and full_melee > 0, "стартовые статы рук должны быть > 0"
 
     # уничтожаем правую руку
-    player.mech.arms_right.apply_damage(999)
+    player.mech.arms_right.apply_damage(9990)
     player.mech.recompute_live_stats(player.stats)
     assert player.mech.arms_right.destroyed and not player.mech.arms_left.destroyed
     assert player.stats.accuracy == full_acc, "одна рука жива - accuracy полная"
     assert player.stats.melee_power == full_melee, "одна рука жива - melee полная"
 
     # уничтожаем левую руку -> обе мертвы
-    player.mech.arms_left.apply_damage(999)
+    player.mech.arms_left.apply_damage(9990)
     player.mech.recompute_live_stats(player.stats)
     assert player.stats.accuracy == 0, "обе руки мертвы - accuracy 0"
     assert player.stats.melee_power == 0, "обе руки мертвы - melee 0"
@@ -167,7 +167,7 @@ async def check_1_and_2():
     left_weapon = next(w for w in attacker.inventory.weapons if w.hand == "left")
 
     # уничтожаем правую руку атакующего
-    attacker.mech.arms_right.apply_damage(999)
+    attacker.mech.arms_right.apply_damage(9990)
     assert attacker.mech.arms_right.destroyed
 
     # проверка 1a: атака оружием правой (уничтоженной) руки недоступна
@@ -202,7 +202,7 @@ async def check_1_and_2():
     tmech = target.mech
     # добиваем левую руку цели одним большим уроном по конкретной детали
     part = tmech.arms_left
-    part.apply_damage(999)
+    part.apply_damage(9990)
     side = tmech.hand_side_of(part)
     assert side == "left", side
     # сообщение локального урона строится CombatResolver; проверим маппинг метки
@@ -227,7 +227,7 @@ async def check_5_overwatch():
     ow_weapon = watcher.inventory.weapons[0]
     watcher.overwatch = OverwatchState(weapon_id=ow_weapon.id)
     # уничтожаем руку с оружием дозора
-    watcher.mech.arms_right.apply_damage(999)
+    watcher.mech.arms_right.apply_damage(9990)
     fired = await game.check_overwatch_triggers(mover)
     assert fired is False, "дозор из уничтоженной руки не должен стрелять"
     assert watcher.overwatch is None, "дозор должен сняться"

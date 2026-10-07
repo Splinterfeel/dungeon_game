@@ -138,11 +138,11 @@ def test_lethal_overwatch_truncates_route_and_charges_only_traversed_cells():
         game.set_observer(observer)
         await game.prepare_actor_turn(mover)
         initial_ap = mover.current_action_points
-        mover.stats.health = 1
+        mover.stats.health = 10
         weapon = watcher.inventory.weapons[0]
         weapon.range = 2
         weapon.accuracy = 100
-        weapon.damage = 999
+        weapon.damage = 9990
         watcher.stats.accuracy = 100
         watcher.stats.view_distance = 20
         watcher.overwatch = OverwatchState(weapon_id=weapon.id)
@@ -163,7 +163,7 @@ def test_lethal_overwatch_truncates_route_and_charges_only_traversed_cells():
         assert observer.state_changes == 0
         assert len(observer.movements) == 1
         movement = observer.movements[0][1]
-        assert movement.actor.stats.health == 1
+        assert movement.actor.stats.health == 10
         assert coordinates(movement.paths) == [[(1, 1), (2, 1), (3, 1)]]
         # Увидели стрелка на смертельной клетке, но не врага за непройденным путём.
         assert [sighting.id for sighting in movement.sightings] == [watcher.id]

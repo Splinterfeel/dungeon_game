@@ -17,8 +17,8 @@ def build_default_enemy(
 ) -> Enemy:
     return Enemy(
         stats=CharacterStats(
-            health=random.randint(8, 12),
-            melee_power=random.randint(0, 1),
+            health=random.randint(8, 12) * 10,
+            melee_power=random.randint(0, 1) * 10,
             speed=3,
             view_distance=5,
             accuracy=Accuracy.DEFAULT_ENEMY_STATS_ACCURACY,
@@ -29,7 +29,7 @@ def build_default_enemy(
                 Weapon(
                     type=WeaponType.MELEE,
                     name="Повреждённый ударный модуль",
-                    damage=3,
+                    damage=30,
                     cost_ap=5,
                     range=1,
                     accuracy=Accuracy.DEFAULT_ENEMY_MELEE_WEAPON_ACCURACY,
@@ -37,7 +37,7 @@ def build_default_enemy(
                 Weapon(
                     type=WeaponType.RANGED,
                     name="Ржавая мех-винтовка",
-                    damage=4,
+                    damage=40,
                     cost_ap=8,
                     range=4,
                     accuracy=Accuracy.DEFAULT_ENEMY_RANGED_WEAPON_ACCURACY,

@@ -37,10 +37,10 @@ AFFIX_STAT_POOLS: dict[PartSlot, tuple[str, ...]] = {
     PartSlot.HEAD: ("view_distance",),
 }
 AFFIX_VALUES_BY_STAT: dict[str, tuple[int, int, int]] = {
-    "health": (1, 1, 2),
+    "health": (10, 10, 20),
     "speed": (1, 2, 3),
     "accuracy": (4, 8, 12),
-    "melee_power": (1, 2, 3),
+    "melee_power": (10, 20, 30),
     "view_distance": (1, 2, 3),
 }
 AFFIX_STAT_LABELS: dict[str, str] = {

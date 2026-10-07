@@ -145,14 +145,14 @@ function render_garage() {
         const selected = value === loadout.reactor_mode ? " selected" : "";
         html += `<option value="${value}"${selected}>${label}</option>`;
     }
-    html += `</select> <span class="muted">(HP ↔ AP: +2 HP / -1 AP или наоборот)</span></div>`;
+    html += `</select> <span class="muted">(HP ↔ AP: +20 HP / -1 AP или наоборот)</span></div>`;
     html += `<div style="margin-bottom:10px"><b>Режим наведения</b> `;
     html += `<select onchange="update_garage_tuning('fire_control_mode', this.value)" style="background:#222;color:#eee;padding:6px">`;
     for (const [value, label] of Object.entries(FIRE_CONTROL_MODE_LABELS)) {
         const selected = value === loadout.fire_control_mode ? " selected" : "";
         html += `<option value="${value}"${selected}>${label}</option>`;
     }
-    html += `</select> <span class="muted">(точность ↔ урон: +5 Acc / -1 dmg или наоборот)</span></div>`;
+    html += `</select> <span class="muted">(точность ↔ урон: +5 Acc / -10 dmg или наоборот)</span></div>`;
     html += `<h3>Установленные детали — ${loadout.name}</h3>`;
     for (const slot of ["torso", "legs", "arms", "head"]) {
         const part = equipped[slot];

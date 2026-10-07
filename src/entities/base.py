@@ -70,6 +70,8 @@ class Weapon(BaseModel):
 
     def roll_damage(self) -> int:
         "Урон одного попадания с разбросом ±DAMAGE_VARIANCE, округление к целому, минимум 1"
+        # Округляем уже в текущих единицах HP: урон 50 может выпасть как 44..56,
+        # а не только десятками после умножения старого целочисленного броска.
         multiplier = random.uniform(1 - self.DAMAGE_VARIANCE, 1 + self.DAMAGE_VARIANCE)
         return max(1, round(self.damage * multiplier))
 
