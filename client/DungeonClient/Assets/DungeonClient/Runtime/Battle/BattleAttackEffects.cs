@@ -12,12 +12,13 @@ namespace DungeonClient.Battle
     {
         public event Action<BattleAttackState> AttackPlayed;
         public event Action Cleared;
-        private readonly List<(BattleAttackState attack, float received)> pending = new();
+        private readonly List<BattleAttackState> pending = new();
         private readonly List<BattleAttackState> active = new();
         private readonly HashSet<string> movementIds = new();
         private BattleArenaView arena;
         private Transform effects;
         private Material tracerMaterial, sparkMaterial, missMaterial;
+        public bool IsPlaying => pending.Count > 0 || active.Count > 0;
 
         public void Initialize(BattleArenaView view, Material source, Transform world)
         {
@@ -32,7 +33,7 @@ namespace DungeonClient.Battle
         public void Enqueue(BattleAttackState attack)
         {
             if (attack == null || (attack.FromCell == null && attack.ToCell == null)) return;
-            pending.Add((attack, Time.unscaledTime));
+            pending.Add(attack);
             TryPlayReady();
         }
 
@@ -42,11 +43,11 @@ namespace DungeonClient.Battle
         }
 
         public bool ReferencesActor(string id) => id != null &&
-            (pending.Any(item => Uses(item.attack, id)) || active.Any(attack => Uses(attack, id)));
+            (pending.Any(attack => Uses(attack, id)) || active.Any(attack => Uses(attack, id)));
 
         public bool PausesActor(string id) => active.Any(attack => Uses(attack, id)) ||
-            pending.Any(item => Uses(item.attack, id) &&
-                AtCell(id, item.attack.AttackerId == id ? item.attack.FromCell : item.attack.ToCell));
+            (pending.Count > 0 && Uses(pending[0], id) &&
+                AtCell(id, pending[0].AttackerId == id ? pending[0].FromCell : pending[0].ToCell));
 
         private static bool Uses(BattleAttackState attack, string id) => attack.AttackerId == id || attack.TargetId == id;
 
@@ -56,20 +57,16 @@ namespace DungeonClient.Battle
 
         public void TryPlayReady()
         {
-            for (var index = 0; index < pending.Count;)
-            {
-                var item = pending[index];
-                var attack = item.attack;
-                var routeReady = attack.MovementActionId == null || attack.ToCell == null || movementIds.Contains(attack.MovementActionId);
-                if ((routeReady && AtCell(attack.AttackerId, attack.FromCell) && AtCell(attack.TargetId, attack.ToCell)) ||
-                    Time.unscaledTime - item.received > 5f)
-                {
-                    pending.RemoveAt(index);
-                    active.Add(attack);
-                    StartCoroutine(Play(attack));
-                }
-                else index++;
-            }
+            if (active.Count > 0 || pending.Count == 0) return;
+            var attack = pending[0];
+            var routeReady = attack.MovementActionId == null || attack.ToCell == null || movementIds.Contains(attack.MovementActionId);
+            // Обычная атака уже дождалась предыдущего действия в общей очереди.
+            // Overwatch ждёт точную клетку своего маршрута, без таймера пропуска.
+            if (!routeReady || (attack.MovementActionId != null && attack.ToCell != null &&
+                (!AtCell(attack.AttackerId, attack.FromCell) || !AtCell(attack.TargetId, attack.ToCell)))) return;
+            pending.RemoveAt(0);
+            active.Add(attack);
+            StartCoroutine(Play(attack));
         }
 
         private void Update()

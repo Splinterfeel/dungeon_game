@@ -52,6 +52,8 @@ class ActorAttack(BaseModel):
 
 
 class AttackOutcome(BaseModel):
+    """Результат атаки; damage — фактически снятые HP, без избыточного урона."""
+
     hit: bool
     action_cost: int = 0
     damage: int = 0
@@ -171,9 +173,11 @@ class CombatResolver:
         if weapon.type == WeaponType.MELEE:
             damage += attacker.stats.melee_power
         damage += damage_bonus
+        health_before = target.stats.health
         target.apply_damage(damage)
-        outcome.damage = damage
+        outcome.damage = health_before - target.stats.health
         if isinstance(target, Player):
+            # Локальная прочность отдельна от общего HP: используем полный удар.
             self._apply_locational_damage(target, damage, outcome)
         if target.is_dead():
             outcome.target_killed = True

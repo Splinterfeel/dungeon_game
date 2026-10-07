@@ -34,6 +34,8 @@ namespace DungeonClient.Battle
         private bool tilting;
         public Camera Camera => arenaCamera;
         public BattleAttackEffects AttackEffects => attackEffects;
+        public bool IsAnimating => movement.Values.Any(path => path.Count > 0) ||
+            (attackEffects != null && attackEffects.IsPlaying);
         public IEnumerable<KeyValuePair<string, GameObject>> Figures => figures;
 
         public void Configure(Material surface, Material marker)

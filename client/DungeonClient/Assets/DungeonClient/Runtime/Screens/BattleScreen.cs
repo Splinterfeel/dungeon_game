@@ -21,6 +21,11 @@ namespace DungeonClient.Screens
         private Button overwatch, endTurn, reconnect, resultGarage, resultLobby, rematch, resultReconnect;
         private BattleArenaView arena;
         private BattleState state;
+        private readonly BattlePlaybackQueue playback = new();
+        private BattleActorState playbackActor;
+        private MatchResultState presentedResult;
+        private bool awaitingSnapshot = true;
+        private bool playbackWasPlaying;
         private readonly List<string> events = new();
         private readonly Dictionary<string, (VisualElement root, Label name, ProgressBar health, ProgressBar ap)> actorLabels = new();
         private readonly List<(Label label, Vector3 position, float started, float offset, float duration)> combatTexts = new();
@@ -35,8 +40,10 @@ namespace DungeonClient.Screens
         private BattleActorState Inspected => Find(inspectedId);
         private BattleActorState InfoActor => Inspected ?? OwnCurrent;
         private WeaponState SelectedWeapon => OwnCurrent?.Inventory?.Weapons.FirstOrDefault(weapon => weapon.Id == weaponId);
-        private MatchResultState Result => App.Lobby.Outcome;
+        private MatchResultState Result => presentedResult;
+        private bool Playing => playback.Pending || arena.IsAnimating;
         private bool CanAct => state != null && !state.Ended && Result == null && Active?.OwnerId == App.Session.Pilot?.Id &&
+            !Playing && ReferenceEquals(state, App.Lobby.State) &&
             App.Lobby.Connected && App.Lobby.SnapshotReady && App.Lobby.PendingActionId == null && !App.Lobby.ActionUncertain;
 
         public void SetStyleSheet(StyleSheet value) => styleSheet = value;
@@ -94,16 +101,19 @@ namespace DungeonClient.Screens
 
         private void OnScreen(ScreenId screen)
         {
+            var wasVisible = visible;
             visible = screen == ScreenId.Battle || screen == ScreenId.MatchResult;
             shell.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
             arena.SetVisible(visible);
             if (visible)
             {
+                if (!wasVisible) awaitingSnapshot = true;
                 if (state == null)
                     foreach (var message in App.Lobby.RecentMessages.Where(message => (string)message["type"] == "game_event"))
                         AddEvent((string)message["message"]);
                 OnConnection();
             }
+            else ClearPlayback();
         }
 
         private BattleActorState Find(string id) => id == null || state == null ? null :
@@ -112,27 +122,46 @@ namespace DungeonClient.Screens
         private void OnConnection()
         {
             if (!visible) return;
-            if (!App.Lobby.SnapshotReady) arena.StopMovement();
-            var next = App.Lobby.State;
-            if (next != null && !ReferenceEquals(next, state))
+            if (!App.Lobby.SnapshotReady)
             {
-                var wasEnded = state?.Ended == true || loadedResultId != null;
-                var startingMatch = state == null || (wasEnded && !next.Ended && App.Lobby.MatchResult == null);
-                state = next;
-                if (wasEnded && !state.Ended && App.Lobby.MatchResult == null)
-                {
-                    inspectedId = null; weaponId = null; weaponActorId = null; loadedResultId = null;
-                    resultBusy = false; events.Clear();
-                }
-                var own = state.Players.FirstOrDefault(actor => actor.OwnerId == App.Session.Pilot?.Id);
-                if (own != null) ownTeam = own.Team;
-                if (Active?.OwnerId == App.Session.Pilot?.Id) lastOwnId = Active.Id;
-                if (Find(inspectedId) == null) inspectedId = null;
-                if (startingMatch) arena.StopMovement();
-                arena.Apply(state, ownTeam);
-                if (startingMatch) arena.StartCamera(OwnCurrent?.Position);
-                SyncLabels();
+                ClearPlayback();
+                awaitingSnapshot = true;
             }
+            else if (awaitingSnapshot && App.Lobby.State != null)
+            {
+                ClearPlayback();
+                ApplyState(App.Lobby.State);
+                presentedResult = App.Lobby.Outcome;
+                awaitingSnapshot = false;
+            }
+            SelectDefaultWeapon();
+            Render();
+        }
+
+        private void ClearPlayback()
+        {
+            playback.Clear(); playbackActor = null; playbackWasPlaying = false;
+            arena.StopMovement();
+        }
+
+        private void ApplyState(BattleState next)
+        {
+            var wasEnded = state?.Ended == true || loadedResultId != null;
+            var startingMatch = state == null || (wasEnded && !next.Ended);
+            state = next;
+            if (wasEnded && !state.Ended)
+            {
+                inspectedId = null; lastOwnId = null; weaponId = null; weaponActorId = null; loadedResultId = null;
+                presentedResult = null; resultBusy = false; events.Clear(); journal.text = "";
+            }
+            var own = state.Players.FirstOrDefault(actor => actor.OwnerId == App.Session.Pilot?.Id);
+            if (own != null) ownTeam = own.Team;
+            if (Active?.OwnerId == App.Session.Pilot?.Id) lastOwnId = Active.Id;
+            if (Find(inspectedId) == null) inspectedId = null;
+            if (startingMatch) arena.StopMovement();
+            arena.Apply(state, ownTeam);
+            if (startingMatch) arena.StartCamera(OwnCurrent?.Position);
+            SyncLabels();
             SelectDefaultWeapon();
             Render();
         }
@@ -151,18 +180,54 @@ namespace DungeonClient.Screens
         private void OnMessage(JObject message)
         {
             if (!visible) return;
-            if ((string)message["type"] == "actor_attacked")
-                arena.ShowAttack(message.ToObject<BattleAttackState>());
-            if ((string)message["type"] == "actor_moved")
+            var type = (string)message["type"];
+            if (type == "state_update" && awaitingSnapshot) return;
+            if (type == "actor_attacked" || type == "actor_moved" || type == "state_update" ||
+                type == "game_event" || type == "action_result" || type == "match_result")
+                playback.Enqueue(message);
+        }
+
+        private void AdvancePlayback()
+        {
+            if (!App.Lobby.SnapshotReady) return;
+            while (!arena.IsAnimating && playback.TryDequeue(out var message, out var interruptions))
             {
-                var route = message.ToObject<BattleMovementState>();
-                arena.AnimateMovement(route);
-                if (route.Actor != null) SetActorLabel(route.Actor);
-                foreach (var sighting in route.Sightings) SetActorLabel(sighting);
+                playbackActor = null;
+                switch ((string)message["type"])
+                {
+                    case "actor_attacked":
+                        var attack = message.ToObject<BattleAttackState>();
+                        playbackActor = Find(attack.AttackerId);
+                        arena.ShowAttack(attack);
+                        break;
+                    case "actor_moved":
+                        var route = message.ToObject<BattleMovementState>();
+                        playbackActor = route.Actor;
+                        // Реакции известны заранее: маршрут останавливается на клетках выстрелов.
+                        foreach (var reaction in interruptions) arena.ShowAttack(reaction);
+                        arena.AnimateMovement(route);
+                        if (route.Actor != null) SetActorLabel(route.Actor);
+                        foreach (var sighting in route.Sightings) SetActorLabel(sighting);
+                        break;
+                    case "state_update":
+                        // Используем именно этот снимок, а не последнее уже полученное состояние.
+                        var next = App.Lobby.Battle == message ? App.Lobby.State : message["payload"].ToObject<BattleState>();
+                        ApplyState(next);
+                        break;
+                    case "game_event": AddEvent((string)message["message"]); break;
+                    case "action_result":
+                        if ((bool?)message["performed"] == false) ReportActionFailure((string)message["detail"]);
+                        break;
+                    case "match_result": presentedResult = message.ToObject<MatchResultState>(); break;
+                }
+                Render();
             }
-            if ((string)message["type"] == "game_event") AddEvent((string)message["message"]);
-            if ((string)message["type"] == "action_result" && (bool?)message["performed"] == false)
-                ReportActionFailure((string)message["detail"]);
+            if (playbackWasPlaying != Playing)
+            {
+                playbackWasPlaying = Playing;
+                if (!Playing) playbackActor = null;
+                SelectDefaultWeapon(); Render();
+            }
         }
 
         private void AddEvent(string message)
@@ -176,9 +241,11 @@ namespace DungeonClient.Screens
         private void Render()
         {
             if (state == null) { status.text = "Ждём состояние боя…"; return; }
-            phase.text = $"Раунд {state.Turn.Number} · " + (state.Ended ? "Матч завершён" : state.Turn.Phase == 2 ? "Ход нейтральных врагов" :
+            phase.text = $"Раунд {state.Turn.Number} · " + (arena.IsAnimating && playbackActor != null ? $"Ход: {playbackActor.Name}" :
+                state.Ended ? "Матч завершён" : state.Turn.Phase == 2 ? "Ход нейтральных врагов" :
                 Active == null ? "Ход противника" : $"Ход: {Active.Name} · ОД {Active.CurrentAp}/{Active.Stats.ActionPoints}");
-            status.text = App.Lobby.Error ?? App.Lobby.ActionNotice ?? (App.Lobby.Connecting ? "Восстанавливаем соединение…" : "ЛКМ — осмотр · ПКМ — действие · WASD/стрелки — камера · Q/E — поворот · СКМ + мышь — наклон · Колесо — зум");
+            status.text = App.Lobby.Error ?? (App.Lobby.Connecting ? "Восстанавливаем соединение…" :
+                Playing ? "Проигрываем действия по порядку…" : App.Lobby.ActionNotice ?? "ЛКМ — осмотр · ПКМ — действие · WASD/стрелки — камера · Q/E — поворот · СКМ + мышь — наклон · Колесо — зум");
             reconnect.style.display = !App.Lobby.Connected || App.Lobby.ActionUncertain ? DisplayStyle.Flex : DisplayStyle.None;
             reconnect.SetEnabled(!App.Lobby.Connecting && App.Lobby.Lobby != null);
             RenderInfo(); RenderWeapons();
@@ -279,6 +346,7 @@ namespace DungeonClient.Screens
         private void Exit(ScreenId destination)
         {
             App.Lobby.Clear();
+            ClearPlayback(); presentedResult = null; awaitingSnapshot = true;
             App.Session.InvalidateGarage();
             state = null; inspectedId = lastOwnId = weaponId = weaponActorId = loadedResultId = null;
             events.Clear(); journal.text = "";
@@ -295,6 +363,7 @@ namespace DungeonClient.Screens
                     App.Lobby.ActionUncertain ? "Подключитесь повторно для обновления состояния" :
                     !App.Lobby.Connected ? "Нет соединения с сервером" :
                     !App.Lobby.SnapshotReady ? "Ждём актуальное состояние боя" :
+                    Playing ? "Дождитесь проигрывания действий" :
                     App.Lobby.PendingActionId != null ? "Дождитесь завершения действия" : "Сейчас ход противника");
                 return;
             }
@@ -316,6 +385,7 @@ namespace DungeonClient.Screens
 
         private void Update()
         {
+            if (visible) AdvancePlayback();
             if (!visible || state == null || !Application.isFocused) return;
             var mouse = Mouse.current;
             if (mouse == null) return;
@@ -341,7 +411,8 @@ namespace DungeonClient.Screens
                 ActOnCell(hovered, Find(actorId));
             if (Keyboard.current?.escapeKey.wasPressedThisFrame == true)
                 detailsPanel.style.display = DisplayStyle.None;
-            arena.Mark(hovered, Find(Active?.Id), Inspected, CanAct ? state.Turn.AvailableMoves : Array.Empty<BattleCell>());
+            arena.Mark(hovered, arena.IsAnimating ? playbackActor : Find(Active?.Id), Inspected,
+                CanAct ? state.Turn.AvailableMoves : Array.Empty<BattleCell>());
             PositionLabels();
         }
 

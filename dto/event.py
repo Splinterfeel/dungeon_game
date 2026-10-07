@@ -43,7 +43,7 @@ class ActorAttackedEvent(BaseModel):
     weapon_type: WeaponType
     kind: AttackKind
     hit: bool
-    damage: int
+    damage: int = Field(description="Фактически снятые HP цели, без избыточного урона")
     target_killed: bool
     movement_action_id: str | None = None
     skill_procs: list[SkillProcState] = Field(default_factory=list)

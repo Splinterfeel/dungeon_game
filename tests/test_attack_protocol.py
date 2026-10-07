@@ -197,7 +197,8 @@ def test_hidden_shooter_stays_hidden_even_when_last_victim_is_killed(
         assert event["from_cell"] is None
         assert event["target_id"] == str(target.id)
         assert event["to_cell"] == {"x": 5, "y": 2}
-        assert event["damage"] == 70
+        assert event["damage"] == (10 if lethal else 70)
+        assert f"{event['damage']} урона" in result.detail
         assert event["target_killed"] is lethal
         assert target.is_dead() is lethal
         if lethal:
@@ -285,7 +286,80 @@ def test_overwatch_attack_records_actual_cell_and_correlates_completed_route(
         assert route["paths"][0][-1] == event["to_cell"]
         assert route["paths"][0][0] == {"x": 1, "y": 1}
         assert event["target_killed"]
+        assert event["damage"] == 10
+        assert any(
+            message["type"] == "game_event" and "(10 урона)" in message["message"]
+            for message in socket.messages
+        )
         assert watcher.overwatch is None
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("neutral", [False, True])
+@pytest.mark.parametrize("kind", [AttackKind.REGULAR, AttackKind.OVERWATCH])
+@pytest.mark.parametrize("health", [10, 70, 100])
+def test_reported_damage_equals_health_lost_for_players_and_neutrals(
+    monkeypatch, neutral, kind, health
+):
+    async def scenario():
+        attacker = make_player(1, 2, 2)
+        target = build_default_enemy(10, 10) if neutral else make_player(2, 3, 2)
+        target.position = Point(x=3, y=2)
+        target.stats.health = health
+        weapon = prepare_weapon(attacker, monkeypatch, damage=70)
+        players = [attacker] if neutral else [attacker, target]
+        lobby = make_lobby(make_game(players, [target] if neutral else []))
+
+        outcome = await lobby.game.resolve_and_publish_attack(
+            attacker, target, weapon, 1, kind
+        )
+
+        assert outcome.hit
+        assert outcome.damage == health - target.stats.health == min(health, 70)
+        assert outcome.target_killed is (health <= 70)
+        assert outcome.action_cost == (
+            weapon.cost_ap if kind == AttackKind.REGULAR else 0
+        )
+        event = attack_events(lobby.connections[str(attacker.owner_player_id)])[0]
+        assert event["damage"] == outcome.damage
+        assert event["target_killed"] == outcome.target_killed
+
+    asyncio.run(scenario())
+
+
+def test_lethal_melee_skill_reports_health_lost_but_keeps_full_locational_hit(
+    monkeypatch,
+):
+    async def scenario():
+        attacker = make_player(1, 2, 2)
+        target = make_player(2, 3, 2)
+        attacker.skills = [Skills.HEAVY_STRIKE.model_copy()]
+        target.stats.health = 10
+        weapon = prepare_weapon(attacker, monkeypatch, damage=70)
+        weapon.type = WeaponType.MELEE
+        monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
+        monkeypatch.setattr(
+            "src.mech.mech.random.choices", lambda *args, **kwargs: ["arms_left"]
+        )
+        lobby = make_lobby(make_game([attacker, target]))
+
+        outcome = await lobby.game.resolve_and_publish_attack(
+            attacker, target, weapon, 1, AttackKind.REGULAR
+        )
+
+        assert outcome.damage == 10
+        assert target.stats.health == 0
+        assert target.mech.arms_left.destroyed
+        assert outcome.part_destroyed
+        assert [proc.skill_key for proc in outcome.skill_procs] == [
+            Skills.HEAVY_STRIKE.skill_key
+        ]
+        assert outcome.action_cost == weapon.cost_ap
+        assert (
+            attack_events(lobby.connections[str(attacker.owner_player_id)])[0]["damage"]
+            == 10
+        )
 
     asyncio.run(scenario())
 
