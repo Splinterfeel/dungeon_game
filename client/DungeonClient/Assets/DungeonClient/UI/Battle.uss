@@ -5,10 +5,21 @@
 .battle-top { position: absolute; top: 8px; left: 12px; right: 12px; flex-direction: row; align-items: center; padding: 6px; background-color: rgba(10, 16, 24, 0.9); }
 .phase-label { flex-grow: 1; color: #71d6ff; }
 .battle-labels { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
-.actor-label { position: absolute; width: 180px; -unity-text-align: middle-center; font-size: 12px; color: #ffffff; background-color: rgba(10, 16, 24, 0.7); }
-.battle-shell .combat-text { position: absolute; width: 180px; -unity-text-align: middle-center; -unity-font-style: bold; font-size: 26px; white-space: nowrap; -unity-text-outline-width: 2px; -unity-text-outline-color: #0a1018; }
-.combat-damage { color: #ffaf70; }
-.combat-miss { color: #e2edf7; }
+.actor-label { position: absolute; width: 144px; height: 50px; padding: 2px 4px; font-size: 10px; color: #ffffff; background-color: rgba(10, 16, 24, 0.85); }
+.battle-shell .actor-label-name { height: 14px; -unity-text-align: middle-center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actor-label ProgressBar { height: 14px; min-height: 14px; margin: 1px 0; }
+.actor-label .unity-progress-bar__container { flex-grow: 1; }
+.actor-label .unity-progress-bar__background { height: 100%; background-color: #17212b; border-width: 0; border-radius: 2px; }
+.actor-label .unity-progress-bar__progress { height: 100%; border-width: 0; border-radius: 2px; }
+.actor-label .unity-progress-bar__title-container { margin: 0; }
+.battle-shell .actor-label .unity-progress-bar__title { margin: 0; font-size: 9px; -unity-font-style: bold; color: #ffffff; -unity-text-align: middle-center; white-space: nowrap; -unity-text-outline-width: 1px; -unity-text-outline-color: #0a1018; }
+.actor-health .unity-progress-bar__progress { background-color: #29c969; }
+.actor-ap .unity-progress-bar__progress { background-color: #268dff; }
+.battle-shell .combat-text { position: absolute; width: 360px; -unity-text-align: middle-center; -unity-font-style: bold; font-size: 32px; white-space: nowrap; -unity-text-outline-width: 3px; -unity-text-outline-color: #0a1018; }
+.combat-damage { color: #ffd256; }
+.combat-miss { color: #ffffff; }
+.battle-shell .combat-error { color: #ffad79; font-size: 20px; white-space: normal; -unity-text-outline-width: 2px; }
+.battle-shell .combat-skill { color: #ff7900; font-size: 24px; white-space: normal; -unity-text-outline-width: 2px; }
 .battle-journal { position: absolute; top: 62px; right: 12px; width: 320px; padding: 8px; background-color: rgba(10, 16, 24, 0.85); }
 .battle-journal ScrollView { max-height: 220px; }
 .battle-journal Label { font-size: 13px; }

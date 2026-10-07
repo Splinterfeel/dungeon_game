@@ -132,6 +132,12 @@ class Game:
         )
         for attack in attacks.values():
             attack.hit = outcome.hit
+            # Прок скрытого меха не раскрывает его имя/навыки другой команде.
+            attack.skill_procs = [
+                proc
+                for proc in outcome.skill_procs
+                if proc.actor_id in (attack.attacker_id, attack.target_id)
+            ]
             if attack.to_cell is not None:
                 attack.damage = outcome.damage
                 attack.target_killed = outcome.target_killed

@@ -26,6 +26,13 @@ class ActorMovedEvent(BaseModel):
     sightings: list[PlayerState | ActorState] = Field(default_factory=list)
 
 
+class SkillProcState(BaseModel):
+    actor_id: str
+    actor_name: str
+    skill_key: str
+    skill_name: str
+
+
 class ActorAttackedEvent(BaseModel):
     type: str = "actor_attacked"
     attack_id: str
@@ -39,6 +46,7 @@ class ActorAttackedEvent(BaseModel):
     damage: int
     target_killed: bool
     movement_action_id: str | None = None
+    skill_procs: list[SkillProcState] = Field(default_factory=list)
 
 
 class MatchResultEvent(BaseModel):

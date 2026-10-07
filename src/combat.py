@@ -25,6 +25,15 @@ class AttackKind(str, Enum):
     OVERWATCH = "overwatch"
 
 
+class SkillProc(BaseModel):
+    """Навык, фактически сработавший у конкретного меха в этой атаке."""
+
+    actor_id: str
+    actor_name: str
+    skill_key: str
+    skill_name: str
+
+
 class ActorAttack(BaseModel):
     """Наблюдаемые одной командой участники и исход отдельной атаки."""
 
@@ -39,6 +48,7 @@ class ActorAttack(BaseModel):
     damage: int = 0
     target_killed: bool = False
     movement_action_id: UUID | None = None
+    skill_procs: list[SkillProc] = Field(default_factory=list)
 
 
 class AttackOutcome(BaseModel):
@@ -46,14 +56,18 @@ class AttackOutcome(BaseModel):
     action_cost: int = 0
     damage: int = 0
     target_killed: bool = False
-    skill_messages: list[str] = Field(default_factory=list)
+    skill_procs: list[SkillProc] = Field(default_factory=list)
     damaged_part_name: str | None = None
     part_destroyed: bool = False
     destroyed_part_location: str | None = None
 
     @property
     def skill_prefix(self) -> str:
-        return f"{', '.join(self.skill_messages)}; " if self.skill_messages else ""
+        messages = [
+            f"срабатывает навык «{proc.skill_name}» у {proc.actor_name}"
+            for proc in self.skill_procs
+        ]
+        return f"{', '.join(messages)}; " if messages else ""
 
     @property
     def part_detail(self) -> str:
@@ -71,9 +85,11 @@ class CombatResolver:
 
     @staticmethod
     def _try_proc_skill(
-        actor: Actor, skill_definition: Skill, procced_actor_ids: set[str]
+        actor: Actor, skill_definition: Skill, outcome: AttackOutcome
     ) -> Skill | None:
-        if str(actor.id) in procced_actor_ids or not isinstance(actor, Player):
+        if not isinstance(actor, Player) or any(
+            proc.actor_id == str(actor.id) for proc in outcome.skill_procs
+        ):
             return None
         skill = next(
             (
@@ -85,7 +101,14 @@ class CombatResolver:
         )
         if skill is None or random.random() >= skill.proc_chance:
             return None
-        procced_actor_ids.add(str(actor.id))
+        outcome.skill_procs.append(
+            SkillProc(
+                actor_id=str(actor.id),
+                actor_name=actor.name,
+                skill_key=skill.skill_key,
+                skill_name=skill.name,
+            )
+        )
         return skill
 
     @staticmethod
@@ -112,7 +135,6 @@ class CombatResolver:
         distance: float,
         kind: AttackKind,
     ) -> AttackOutcome:
-        procced_actor_ids: set[str] = set()
         accuracy_bonus = 0
         damage_bonus = 0
         outcome = AttackOutcome(
@@ -121,38 +143,26 @@ class CombatResolver:
         )
 
         if weapon.type == WeaponType.RANGED:
-            skill = self._try_proc_skill(
-                attacker, Skills.ACCURATE_SHOT, procced_actor_ids
-            )
+            skill = self._try_proc_skill(attacker, Skills.ACCURATE_SHOT, outcome)
             if skill is not None:
                 accuracy_bonus += 15
-                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
         if kind == AttackKind.REGULAR and weapon.type == WeaponType.MELEE:
-            skill = self._try_proc_skill(
-                attacker, Skills.HEAVY_STRIKE, procced_actor_ids
-            )
+            skill = self._try_proc_skill(attacker, Skills.HEAVY_STRIKE, outcome)
             if skill is not None:
                 damage_bonus += 3
-                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
         if kind == AttackKind.REGULAR:
-            skill = self._try_proc_skill(
-                attacker, Skills.COMBAT_IMPULSE, procced_actor_ids
-            )
+            skill = self._try_proc_skill(attacker, Skills.COMBAT_IMPULSE, outcome)
             if skill is not None:
                 outcome.action_cost = 0
-                outcome.skill_messages.append(f"срабатывает навык «{skill.name}»")
 
         attack_stats = attacker.stats.model_copy(
             update={"accuracy": attacker.stats.accuracy + accuracy_bonus}
         )
         outcome.hit = weapon.check_hit(actor_stats=attack_stats, distance=distance)
         if outcome.hit:
-            skill = self._try_proc_skill(target, Skills.DODGE, procced_actor_ids)
+            skill = self._try_proc_skill(target, Skills.DODGE, outcome)
             if skill is not None:
                 outcome.hit = False
-                outcome.skill_messages.append(
-                    f"срабатывает навык «{skill.name}» у {target.name}"
-                )
 
         if not outcome.hit:
             return outcome

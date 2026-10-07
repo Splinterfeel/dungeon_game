@@ -22,8 +22,8 @@ namespace DungeonClient.Screens
         private BattleArenaView arena;
         private BattleState state;
         private readonly List<string> events = new();
-        private readonly Dictionary<string, Label> actorLabels = new();
-        private readonly List<(Label label, Vector3 position, float started, float offset)> combatTexts = new();
+        private readonly Dictionary<string, (VisualElement root, Label name, ProgressBar health, ProgressBar ap)> actorLabels = new();
+        private readonly List<(Label label, Vector3 position, float started, float offset, float duration)> combatTexts = new();
         private string inspectedId, lastOwnId, weaponId, weaponActorId, loadedResultId;
         private BattleCell hovered;
         private bool visible, resultBusy, recoveringGarage;
@@ -162,7 +162,7 @@ namespace DungeonClient.Screens
             }
             if ((string)message["type"] == "game_event") AddEvent((string)message["message"]);
             if ((string)message["type"] == "action_result" && (bool?)message["performed"] == false)
-                AddEvent((string)message["detail"]);
+                ReportActionFailure((string)message["detail"]);
         }
 
         private void AddEvent(string message)
@@ -182,9 +182,10 @@ namespace DungeonClient.Screens
             reconnect.style.display = !App.Lobby.Connected || App.Lobby.ActionUncertain ? DisplayStyle.Flex : DisplayStyle.None;
             reconnect.SetEnabled(!App.Lobby.Connecting && App.Lobby.Lobby != null);
             RenderInfo(); RenderWeapons();
-            var actor = OwnCurrent; var weapon = SelectedWeapon;
+            var actor = OwnCurrent;
             actionsTitle.text = actor == null ? "Нет живых мехов" : "Действия: " + actor.Name;
-            overwatch.SetEnabled(CanAct && weapon?.Type == "ranged" && actor.WeaponUsable(weapon) && actor.CurrentAp >= weapon.CostAp && actor.Overwatch == null);
+            // Неподходящее оружие/AP объясняем по клику, а не только серой кнопкой.
+            overwatch.SetEnabled(CanAct);
             endTurn.SetEnabled(CanAct);
             RenderResult();
         }
@@ -287,10 +288,27 @@ namespace DungeonClient.Screens
 
         private void Send(BattleActionType type, BattleCell cell)
         {
-            if (!CanAct || cell == null) return;
+            if (!CanAct)
+            {
+                ReportActionFailure(state == null ? "Ждём состояние боя" :
+                    state.Ended || Result != null ? "Матч завершён" :
+                    App.Lobby.ActionUncertain ? "Подключитесь повторно для обновления состояния" :
+                    !App.Lobby.Connected ? "Нет соединения с сервером" :
+                    !App.Lobby.SnapshotReady ? "Ждём актуальное состояние боя" :
+                    App.Lobby.PendingActionId != null ? "Дождитесь завершения действия" : "Сейчас ход противника");
+                return;
+            }
+            if (cell == null) return;
             var weapon = SelectedWeapon;
-            if ((type == BattleActionType.ATTACK || type == BattleActionType.OVERWATCH) &&
-                (weapon == null || !Active.WeaponUsable(weapon) || Active.CurrentAp < weapon.CostAp)) return;
+            if (type == BattleActionType.ATTACK || type == BattleActionType.OVERWATCH)
+            {
+                var reason = weapon == null ? "Нет доступного оружия" :
+                    !Active.WeaponUsable(weapon) ? "Рука уничтожена — оружие недоступно" :
+                    Active.CurrentAp < weapon.CostAp ? $"Недостаточно AP: нужно {weapon.CostAp}, осталось {Active.CurrentAp}" :
+                    type == BattleActionType.OVERWATCH && weapon.Type != "ranged" ? "Для Overwatch нужно дальнобойное оружие" :
+                    type == BattleActionType.OVERWATCH && Active.Overwatch != null ? "Мех уже в режиме Overwatch" : null;
+                if (reason != null) { ReportActionFailure(reason); return; }
+            }
             var action = new BattleActionRequest { Id = Guid.NewGuid().ToString(), ActorId = Active.Id, Type = type, Cell = cell };
             if (type == BattleActionType.ATTACK || type == BattleActionType.OVERWATCH) action.Params = new BattleWeaponParams { WeaponId = weapon.Id };
             App.Lobby.SendAction(action);
@@ -329,11 +347,17 @@ namespace DungeonClient.Screens
 
         private void ActOnCell(BattleCell cell, BattleActorState target)
         {
-            if (!CanAct || cell == null) return;
+            if (cell == null) return;
+            if (!CanAct) { Send(BattleActionType.MOVE, cell); return; }
             if (target != null && (target.Team == 0 || target.Team != Active.Team))
                 Send(BattleActionType.ATTACK, target.Position);
-            else if (target == null && state.Turn.AvailableMoves.Any(move => move.X == cell.X && move.Y == cell.Y))
+            else if (target != null)
+                ReportActionFailure(target.Id == Active.Id ? "Мех уже в этой клетке" : "Клетка занята союзником");
+            else if (state.Turn.AvailableMoves.Any(move => move.X == cell.X && move.Y == cell.Y))
                 Send(BattleActionType.MOVE, cell);
+            else
+                ReportActionFailure(Active.CurrentAp <= 0 ? "Недостаточно AP для движения" :
+                    Active.SpeedSpent >= Active.Stats.Speed ? "Запас движения исчерпан" : "Клетка недоступна для движения");
         }
 
         private void SyncLabels()
@@ -344,27 +368,85 @@ namespace DungeonClient.Screens
 
         private void SetActorLabel(BattleActorState actor)
         {
-            if (!actorLabels.TryGetValue(actor.Id, out var label))
+            if (!actorLabels.TryGetValue(actor.Id, out var header))
             {
-                label = new Label { pickingMode = PickingMode.Ignore };
-                label.AddToClassList("actor-label"); labels.Add(label); actorLabels.Add(actor.Id, label);
+                var container = new VisualElement { pickingMode = PickingMode.Ignore };
+                container.AddToClassList("actor-label");
+                var name = new Label { pickingMode = PickingMode.Ignore };
+                name.AddToClassList("actor-label-name");
+                var health = new ProgressBar { pickingMode = PickingMode.Ignore, focusable = false };
+                health.AddToClassList("actor-health");
+                var ap = new ProgressBar { pickingMode = PickingMode.Ignore, focusable = false };
+                ap.AddToClassList("actor-ap");
+                container.Add(name); container.Add(health); container.Add(ap);
+                labels.Add(container);
+                header = (container, name, health, ap);
+                actorLabels.Add(actor.Id, header);
             }
-            label.text = actor.Name + "\n" + actor.Stats.Health + "/" + actor.Stats.MaxHealth;
-            if (actor.Id == Active?.Id) label.text += $" · ОД {actor.CurrentAp}/{actor.Stats.ActionPoints}";
+            header.name.text = actor.Name;
+            SetActorBar(header.health, "HP", actor.Stats.Health, actor.Stats.MaxHealth);
+            SetActorBar(header.ap, "AP", actor.CurrentAp, actor.Stats.ActionPoints);
+        }
+
+        private static void SetActorBar(ProgressBar bar, string caption, int current, int maximum)
+        {
+            bar.lowValue = 0;
+            bar.highValue = Math.Max(1, maximum);
+            bar.value = Mathf.Clamp(current, 0, Math.Max(0, maximum));
+            bar.title = $"{caption} {current}/{maximum}";
         }
 
         private void ShowCombatText(BattleAttackState attack)
         {
             // Не показываем исход для скрытой цели; используем только серверную клетку.
-            if (attack.ToCell == null) return;
-            var position = BattleArenaView.Position(attack.ToCell) + Vector3.up * 1.1f;
-            var label = new Label(attack.Hit ? $"−{attack.Damage}" : "Промах") { pickingMode = PickingMode.Ignore };
-            label.AddToClassList("combat-text");
-            label.AddToClassList(attack.Hit ? "combat-damage" : "combat-miss");
-            labels.Add(label);
-            var offset = combatTexts.Count(item => (item.position - position).sqrMagnitude < .1f) * 28f;
-            combatTexts.Add((label, position, Time.unscaledTime, offset));
+            if (attack.ToCell != null)
+            {
+                var position = BattleArenaView.Position(attack.ToCell) + Vector3.up * 1.1f;
+                ShowFloatingText(attack.Hit ? $"−{attack.Damage}" : "Промах", position, attack.Hit ? "combat-damage" : "combat-miss");
+            }
+            foreach (var proc in attack.SkillProcs)
+            {
+                var cell = proc.ActorId == attack.AttackerId ? attack.FromCell :
+                    proc.ActorId == attack.TargetId ? attack.ToCell : null;
+                if (cell == null) continue;
+                ShowFloatingText($"{proc.ActorName}\n{proc.SkillName}", BattleArenaView.Position(cell) + Vector3.up * 1.1f,
+                    "combat-skill", 3.2f);
+            }
         }
+
+        private void ReportActionFailure(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)) message = "Действие недоступно";
+            AddEvent(message);
+            var actor = OwnCurrent;
+            if (actor?.Position == null) return;
+            var position = arena.TryGetActorPosition(actor.Id, out var visualPosition) ?
+                visualPosition + Vector3.up * .65f : BattleArenaView.Position(actor.Position) + Vector3.up * 1.1f;
+            // Повторные клики продлевают одну и ту же подсказку, не забивая экран.
+            var existing = combatTexts.FindIndex(item => item.label.ClassListContains("combat-error") &&
+                item.label.text == message && (item.position - position).sqrMagnitude < .1f);
+            if (existing >= 0)
+            {
+                var item = combatTexts[existing];
+                item.started = Time.unscaledTime;
+                combatTexts[existing] = item;
+                return;
+            }
+            ShowFloatingText(message, position, "combat-error", 3.2f);
+        }
+
+        private void ShowFloatingText(string text, Vector3 position, string className, float duration = 2.4f)
+        {
+            var label = new Label(text) { pickingMode = PickingMode.Ignore };
+            label.AddToClassList("combat-text");
+            label.AddToClassList(className);
+            labels.Add(label);
+            var offset = combatTexts.Where(item => (item.position - position).sqrMagnitude < .1f)
+                .Sum(item => FloatingTextHeight(item.label) + 6f);
+            combatTexts.Add((label, position, Time.unscaledTime, offset, duration));
+        }
+
+        private static float FloatingTextHeight(Label label) => float.IsNaN(label.resolvedStyle.height) ? 36f : Mathf.Max(36f, label.resolvedStyle.height);
 
         private void ClearCombatTexts()
         {
@@ -377,23 +459,23 @@ namespace DungeonClient.Screens
             var visibleIds = arena.Figures.Select(figure => figure.Key).ToHashSet();
             foreach (var id in actorLabels.Keys.Where(id => !visibleIds.Contains(id)).ToList())
             {
-                actorLabels[id].RemoveFromHierarchy();
+                actorLabels[id].root.RemoveFromHierarchy();
                 actorLabels.Remove(id);
             }
             foreach (var figure in arena.Figures)
             {
-                if (!actorLabels.TryGetValue(figure.Key, out var label)) continue;
+                if (!actorLabels.TryGetValue(figure.Key, out var header)) continue;
+                var label = header.root;
                 var screen = arena.Camera.WorldToScreenPoint(figure.Value.transform.position + Vector3.up * .65f);
                 label.style.display = figure.Value.activeSelf && screen.z > 0 && arena.Camera.pixelRect.Contains(new Vector2(screen.x, screen.y)) ? DisplayStyle.Flex : DisplayStyle.None;
                 var point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
-                label.style.left = point.x - 90; label.style.top = point.y - 30;
+                label.style.left = point.x - 72; label.style.top = point.y - 52;
             }
             for (var index = combatTexts.Count - 1; index >= 0; index--)
             {
                 var item = combatTexts[index];
                 var age = Time.unscaledTime - item.started;
-                const float duration = 1.2f;
-                if (age >= duration)
+                if (age >= item.duration)
                 {
                     item.label.RemoveFromHierarchy(); combatTexts.RemoveAt(index);
                     continue;
@@ -401,9 +483,9 @@ namespace DungeonClient.Screens
                 var screen = arena.Camera.WorldToScreenPoint(item.position);
                 item.label.style.display = screen.z > 0 && arena.Camera.pixelRect.Contains(new Vector2(screen.x, screen.y)) ? DisplayStyle.Flex : DisplayStyle.None;
                 var point = RuntimePanelUtils.ScreenToPanel(root.panel, new Vector2(screen.x, Screen.height - screen.y));
-                item.label.style.left = point.x - 90;
-                item.label.style.top = point.y - 45 - age * 38f - item.offset;
-                item.label.style.opacity = Mathf.Clamp01((duration - age) / .4f);
+                item.label.style.left = point.x - 180;
+                item.label.style.top = point.y - 54 - FloatingTextHeight(item.label) - age * 24f - item.offset;
+                item.label.style.opacity = Mathf.Clamp01((item.duration - age) / .6f);
             }
         }
 

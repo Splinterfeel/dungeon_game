@@ -339,8 +339,8 @@ namespace DungeonClient.Battle
                 var right = arenaCamera.transform.right; right.y = 0; right.Normalize();
                 var forward = arenaCamera.transform.forward; forward.y = 0; forward.Normalize();
                 desiredVelocity = (right * x + forward * y).normalized * Mathf.Max(5, viewSize) * 1.56f;
-                if (keyboard.qKey.wasPressedThisFrame) targetYaw -= 45;
-                if (keyboard.eKey.wasPressedThisFrame) targetYaw += 45;
+                if (keyboard.qKey.wasPressedThisFrame) targetYaw += 45;
+                if (keyboard.eKey.wasPressedThisFrame) targetYaw -= 45;
             }
             if (!allowKeyboard || keyboard == null) cameraVelocity = Vector3.zero;
             else
@@ -363,7 +363,7 @@ namespace DungeonClient.Battle
             if (tilting)
                 targetPitch = Mathf.Clamp(targetPitch + mouse.delta.ReadValue().y * .15f, 25f, 75f);
             if (allowPointer && mouse != null && mouse.scroll.ReadValue().y != 0)
-                viewSize = Mathf.Clamp(viewSize - mouse.scroll.ReadValue().y / 120f * 12f,
+                viewSize = Mathf.Clamp(viewSize - mouse.scroll.ReadValue().y / 120f * 36f,
                     3f, Mathf.Max(map.Width, map.Height) * 1.3f);
             var smoothing = 1 - Mathf.Exp(-12 * Time.unscaledDeltaTime);
             yaw = Mathf.LerpAngle(yaw, targetYaw, smoothing);
@@ -456,7 +456,7 @@ namespace DungeonClient.Battle
             {
                 if (attackEffects.PausesActor(figure.Key)) continue;
                 var path = movement[figure.Key];
-                var remaining = Time.unscaledDeltaTime * 8f;
+                var remaining = Time.unscaledDeltaTime * 6.4f;
                 // Маршрут приходит целиком; проигрываем его без промежуточных снимков.
                 while (path.Count > 0 && remaining > 0)
                 {

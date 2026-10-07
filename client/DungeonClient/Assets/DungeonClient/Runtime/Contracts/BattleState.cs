@@ -123,6 +123,15 @@ namespace DungeonClient.Contracts
         [JsonProperty("damage")] public int Damage;
         [JsonProperty("target_killed")] public bool TargetKilled;
         [JsonProperty("movement_action_id")] public string MovementActionId;
+        [JsonProperty("skill_procs")] public List<BattleSkillProcState> SkillProcs = new();
+    }
+
+    public sealed class BattleSkillProcState
+    {
+        [JsonProperty("actor_id")] public string ActorId;
+        [JsonProperty("actor_name")] public string ActorName;
+        [JsonProperty("skill_key")] public string SkillKey;
+        [JsonProperty("skill_name")] public string SkillName;
     }
 
     public sealed class MatchResultState

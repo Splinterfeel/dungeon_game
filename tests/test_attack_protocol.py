@@ -8,6 +8,7 @@ from src.base import Point
 from src.combat import AttackKind
 from src.entities.base import OverwatchState, WeaponType
 from src.entities.enemy import build_default_enemy
+from src.skills_catalog import Skills
 from tests.test_movement_protocol import make_game, make_lobby, make_player, move_action
 
 
@@ -26,6 +27,82 @@ def prepare_weapon(actor, monkeypatch, hit=True, damage=7):
     )
     monkeypatch.setattr("src.entities.base.Weapon.roll_damage", lambda *args: damage)
     return weapon
+
+
+@pytest.mark.parametrize(
+    "skill,kind,weapon_type",
+    [
+        (Skills.ACCURATE_SHOT, AttackKind.REGULAR, WeaponType.RANGED),
+        (Skills.ACCURATE_SHOT, AttackKind.OVERWATCH, WeaponType.RANGED),
+        (Skills.HEAVY_STRIKE, AttackKind.REGULAR, WeaponType.MELEE),
+        (Skills.COMBAT_IMPULSE, AttackKind.REGULAR, WeaponType.RANGED),
+    ],
+)
+def test_attack_reports_actual_skill_and_its_mech(
+    monkeypatch, skill, kind, weapon_type
+):
+    async def scenario():
+        attacker = make_player(1, 2, 2)
+        target = make_player(2, 3, 2)
+        attacker.name = "Мех атаки"
+        target.name = "Мех защиты"
+        attacker.skills = [skill.model_copy()]
+        target.skills = [Skills.DODGE.model_copy()]
+        target.stats.view_distance = 20
+        weapon = prepare_weapon(attacker, monkeypatch)
+        weapon.type = weapon_type
+        monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
+        lobby = make_lobby(make_game([attacker, target]))
+
+        outcome = await lobby.game.resolve_and_publish_attack(
+            attacker, target, weapon, 1, kind
+        )
+
+        assert not outcome.hit
+        for socket in lobby.connections.values():
+            assert attack_events(socket)[0]["skill_procs"] == [
+                {
+                    "actor_id": str(attacker.id),
+                    "actor_name": attacker.name,
+                    "skill_key": skill.skill_key,
+                    "skill_name": skill.name,
+                },
+                {
+                    "actor_id": str(target.id),
+                    "actor_name": target.name,
+                    "skill_key": Skills.DODGE.skill_key,
+                    "skill_name": Skills.DODGE.name,
+                },
+            ]
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("hidden_role", ["attacker", "target"])
+def test_skill_proc_of_hidden_mech_is_not_disclosed(monkeypatch, hidden_role):
+    async def scenario():
+        attacker = make_player(1, 2, 2)
+        target = make_player(2, 5, 2)
+        attacker.skills = [Skills.ACCURATE_SHOT.model_copy()]
+        target.skills = [Skills.DODGE.model_copy()]
+        weapon = prepare_weapon(attacker, monkeypatch)
+        target.stats.view_distance = 20
+        observer = target if hidden_role == "attacker" else attacker
+        observer.stats.view_distance = 1
+        monkeypatch.setattr("src.combat.random.random", lambda: 0.0)
+        lobby = make_lobby(make_game([attacker, target]))
+
+        await lobby.game.resolve_and_publish_attack(
+            attacker, target, weapon, 3, AttackKind.REGULAR
+        )
+
+        event = attack_events(lobby.connections[str(observer.owner_player_id)])[0]
+        assert event[f"{hidden_role}_id"] is None
+        assert len(event["skill_procs"]) == 1
+        assert event["skill_procs"][0]["actor_id"] == str(observer.id)
+        assert event["skill_procs"][0]["skill_key"] == observer.skills[0].skill_key
+
+    asyncio.run(scenario())
 
 
 @pytest.mark.parametrize("hit", [True, False])
