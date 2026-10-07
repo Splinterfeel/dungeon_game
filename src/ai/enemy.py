@@ -12,7 +12,6 @@ class SimpleEnemyAI(AI):
 
     def __init__(self, actor, game):
         super().__init__(actor, game)
-        self.tried_to_walk_on_turn = False
         self.attacked_on_turn = False
 
     def decide(self) -> Action:
@@ -44,34 +43,23 @@ class SimpleEnemyAI(AI):
                                 params=attack_params,
                             )
 
-        # фаза движения
-        players_distances = []
-        for player in self.game.players:
-            path = self.game.arena.map.bfs_path(self.actor.position, player.position)
-            if not path:
-                continue
-            players_distances.append(
-                [
-                    len(path),
-                    path,
-                ]
-            )
-        if not players_distances:
-            print("ENEMY AI - can't find any player path")
-            return self.end_turn()
-        else:
-            if self.actor.stats.speed - self.actor.current_speed_spent > 0:
-                nearest_player_data = min(players_distances, key=lambda _list: _list[0])
-                distance, path = nearest_player_data
+        # Единственное движение за ход выполняем до дальнейшей атаки/дозора.
+        if self.actor.current_speed_spent == 0 and self.game.turn.available_moves:
+            players_distances = []
+            for player in self.game.players:
+                path = self.game.arena.map.bfs_path(
+                    self.actor.position, player.position
+                )
+                if path:
+                    players_distances.append((len(path), path))
+            if players_distances:
+                distance, path = min(players_distances, key=lambda item: item[0])
                 if distance > self.WAKE_DISTANCE:
                     print(f"         ENEMY {self.actor.name} - SLEEP")
-                elif len(path) < 1:
-                    print(f"ENEMY AI - player {player} already near. no need to walk")
                 else:
-                    rev_path = path[::-1][:-1]
-                    if not self.game.turn.available_moves:
-                        print(" ===== no available moves!")
-                    for step in rev_path:
+                    # Ищем дальнюю доступную клетку, чтобы не тратить MOVE
+                    # на короткий шаг при доступном полном маршруте.
+                    for step in path[::-1][:-1]:
                         if step in self.game.turn.available_moves:
                             print(f"         ENEMY {self.actor.name} - MOVING")
                             return Action(

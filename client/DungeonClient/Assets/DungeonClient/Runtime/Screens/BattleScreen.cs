@@ -16,7 +16,7 @@ namespace DungeonClient.Screens
     public sealed class BattleScreen : MonoBehaviour
     {
         [SerializeField] private StyleSheet styleSheet;
-        private VisualElement root, shell, hud, weapons, labels, detailsPanel, resultPanel;
+        private VisualElement root, shell, hud, weapons, labels, detailsPanel, detailParts, resultPanel;
         private Label phase, infoName, infoStats, infoParts, status, actionsTitle, details, journal, resultTitle, resultInfo;
         private Button overwatch, endTurn, reconnect, resultGarage, resultLobby, rematch, resultReconnect;
         private BattleArenaView arena;
@@ -26,6 +26,9 @@ namespace DungeonClient.Screens
         private MatchResultState presentedResult;
         private bool awaitingSnapshot = true;
         private bool playbackWasPlaying;
+        private const float ActorChangePause = .35f;
+        private float playbackResumeAt;
+        private string lastPlaybackActorId;
         private readonly List<string> events = new();
         private readonly Dictionary<string, (VisualElement root, Label name, ProgressBar health, ProgressBar ap)> actorLabels = new();
         private readonly List<(Label label, Vector3 position, float started, float offset, float duration)> combatTexts = new();
@@ -41,7 +44,7 @@ namespace DungeonClient.Screens
         private BattleActorState InfoActor => Inspected ?? OwnCurrent;
         private WeaponState SelectedWeapon => OwnCurrent?.Inventory?.Weapons.FirstOrDefault(weapon => weapon.Id == weaponId);
         private MatchResultState Result => presentedResult;
-        private bool Playing => playback.Pending || arena.IsAnimating;
+        private bool Playing => playback.Pending || arena.IsAnimating || Time.unscaledTime < playbackResumeAt;
         private bool CanAct => state != null && !state.Ended && Result == null && Active?.OwnerId == App.Session.Pilot?.Id &&
             !Playing && ReferenceEquals(state, App.Lobby.State) &&
             App.Lobby.Connected && App.Lobby.SnapshotReady && App.Lobby.PendingActionId == null && !App.Lobby.ActionUncertain;
@@ -56,6 +59,7 @@ namespace DungeonClient.Screens
             hud = root.Q("BattleHud"); weapons = root.Q("BattleWeapons");
             labels = root.Q("BattleLabels"); labels.pickingMode = PickingMode.Ignore;
             detailsPanel = root.Q("BattleDetailsPanel"); resultPanel = root.Q("BattleResultPanel");
+            detailParts = root.Q("BattleDetailParts");
             phase = root.Q<Label>("BattlePhase"); infoName = root.Q<Label>("BattleActorName");
             infoStats = root.Q<Label>("BattleStats"); infoParts = root.Q<Label>("BattleParts");
             status = root.Q<Label>("BattleStatus"); actionsTitle = root.Q<Label>("BattleActionsTitle");
@@ -141,6 +145,7 @@ namespace DungeonClient.Screens
         private void ClearPlayback()
         {
             playback.Clear(); playbackActor = null; playbackWasPlaying = false;
+            playbackResumeAt = 0; lastPlaybackActorId = null;
             arena.StopMovement();
         }
 
@@ -158,7 +163,11 @@ namespace DungeonClient.Screens
             if (own != null) ownTeam = own.Team;
             if (Active?.OwnerId == App.Session.Pilot?.Id) lastOwnId = Active.Id;
             if (Find(inspectedId) == null) inspectedId = null;
-            if (startingMatch) arena.StopMovement();
+            if (startingMatch)
+            {
+                arena.StopMovement();
+                lastPlaybackActorId = Active?.Id;
+            }
             arena.Apply(state, ownTeam);
             if (startingMatch) arena.StartCamera(OwnCurrent?.Position);
             SyncLabels();
@@ -189,20 +198,30 @@ namespace DungeonClient.Screens
 
         private void AdvancePlayback()
         {
-            if (!App.Lobby.SnapshotReady) return;
-            while (!arena.IsAnimating && playback.TryDequeue(out var message, out var interruptions))
+            if (!App.Lobby.SnapshotReady || Time.unscaledTime < playbackResumeAt) return;
+            while (!arena.IsAnimating && Time.unscaledTime >= playbackResumeAt)
             {
+                var nextActorId = playback.NextActorId;
+                if (nextActorId != null && lastPlaybackActorId != null && nextActorId != lastPlaybackActorId)
+                {
+                    lastPlaybackActorId = nextActorId;
+                    playbackResumeAt = Time.unscaledTime + ActorChangePause;
+                    break;
+                }
+                if (!playback.TryDequeue(out var message, out var interruptions)) break;
                 playbackActor = null;
                 switch ((string)message["type"])
                 {
                     case "actor_attacked":
                         var attack = message.ToObject<BattleAttackState>();
                         playbackActor = Find(attack.AttackerId);
+                        if (attack.Kind != "overwatch" && attack.AttackerId != null) lastPlaybackActorId = attack.AttackerId;
                         arena.ShowAttack(attack);
                         break;
                     case "actor_moved":
                         var route = message.ToObject<BattleMovementState>();
                         playbackActor = route.Actor;
+                        if (route.Actor != null) lastPlaybackActorId = route.Actor.Id;
                         // Реакции известны заранее: маршрут останавливается на клетках выстрелов.
                         foreach (var reaction in interruptions) arena.ShowAttack(reaction);
                         arena.AnimateMovement(route);
@@ -212,7 +231,14 @@ namespace DungeonClient.Screens
                     case "state_update":
                         // Используем именно этот снимок, а не последнее уже полученное состояние.
                         var next = App.Lobby.Battle == message ? App.Lobby.State : message["payload"].ToObject<BattleState>();
+                        var previousActorId = Active?.Id;
                         ApplyState(next);
+                        if (!next.Ended && Active != null && previousActorId != Active.Id)
+                        {
+                            if (lastPlaybackActorId != null && lastPlaybackActorId != Active.Id)
+                                playbackResumeAt = Time.unscaledTime + ActorChangePause;
+                            lastPlaybackActorId = Active.Id;
+                        }
                         break;
                     case "game_event": AddEvent((string)message["message"]); break;
                     case "action_result":
@@ -260,19 +286,55 @@ namespace DungeonClient.Screens
         private void RenderInfo()
         {
             var actor = InfoActor;
-            if (actor == null) { infoName.text = "Нет живых мехов"; infoStats.text = infoParts.text = details.text = ""; return; }
+            if (actor == null) { infoName.text = "Нет живых мехов"; infoStats.text = infoParts.text = details.text = ""; detailParts.Clear(); return; }
             infoName.text = actor.Name + (actor.Team == 0 ? " · Нейтрал" : " · Команда " + actor.Team) + (Inspected != null ? " · Осмотр" : "");
             var stats = actor.Stats;
-            infoStats.text = $"HP {stats.Health}/{stats.MaxHealth} · AP {actor.CurrentAp}/{stats.ActionPoints} · Движение {Math.Max(0, stats.Speed - actor.SpeedSpent)}/{stats.Speed}\n"
+            var movement = actor.SpeedSpent > 0 ? "Движение: использовано" :
+                $"Движение: до {Math.Max(0, Math.Min(stats.Speed, actor.CurrentAp))} кл.";
+            infoStats.text = $"HP {stats.Health}/{stats.MaxHealth} · AP {actor.CurrentAp}/{stats.ActionPoints} · {movement}\n"
                 + $"Точность {stats.Accuracy} · Ближний бой {stats.MeleePower} · Обзор {stats.ViewDistance}" + (actor.Overwatch != null ? " · OVERWATCH" : "");
+            infoStats.tooltip = "Одно перемещение за ход; каждая пройденная клетка стоит 1 AP. Атака не расходует возможность перемещения.";
             var mech = actor.Mech;
             infoParts.text = mech == null ? "" : string.Join(" · ", new[] { PartHp("Корпус", mech.Torso), PartHp("Ноги", mech.Legs), PartHp("Голова", mech.Head), PartHp("Л. рука", mech.ArmsLeft), PartHp("П. рука", mech.ArmsRight) });
-            details.text = actor.Name + "\n\n" + string.Join("\n", actor.Inventory.Weapons.Select(item =>
+            RenderDetailParts(actor);
+            details.text = "Оружие\n" + string.Join("\n", actor.Inventory.Weapons.Select(item =>
                 $"{Hand(item.Hand)}: {item.Name} · урон {item.Damage} · AP {item.CostAp} · дальность {item.Range} · точность {item.Accuracy}%" + (!actor.WeaponUsable(item) ? " · рука уничтожена" : "")))
-                + "\n\n" + string.Join("\n", actor.Skills.Select(skill => $"{skill.Name}: {skill.Description} · шанс {Mathf.RoundToInt(skill.ProcChance * 100)}%"));
-            if (mech != null)
-                details.text += "\n\n" + string.Join("\n", new[] { mech.Torso, mech.Legs, mech.Head, mech.ArmsLeft, mech.ArmsRight }.Where(part => part != null).Select(part =>
-                    $"{part.Name}: {part.CurrentHealth}/{part.MaxHealth} · вес {part.Weight} · HP {part.Health} · скорость {part.Speed} · точность {part.Accuracy} · ближний бой {part.MeleePower} · обзор {part.ViewDistance}"));
+                + "\n\nНавыки\n" + (actor.Skills.Count == 0 ? "Нет навыков" :
+                    string.Join("\n", actor.Skills.Select(skill => $"{skill.Name}: {skill.Description} · шанс {Mathf.RoundToInt(skill.ProcChance * 100)}%")));
+        }
+
+        private void RenderDetailParts(BattleActorState actor)
+        {
+            detailParts.Clear();
+            var title = new Label(actor.Name + $" · HP {actor.Stats.Health}/{actor.Stats.MaxHealth}");
+            title.AddToClassList("actor-name");
+            detailParts.Add(title);
+            var mech = actor.Mech;
+            if (mech == null)
+            {
+                detailParts.Add(new Label("У нейтрала нет отдельных частей тела."));
+                return;
+            }
+            foreach (var (slot, part) in new[] { ("Корпус", mech.Torso), ("Ноги", mech.Legs),
+                ("Голова", mech.Head), ("Левая рука", mech.ArmsLeft), ("Правая рука", mech.ArmsRight) })
+            {
+                if (part == null) continue;
+                var row = new VisualElement();
+                row.AddToClassList("detail-part");
+                var heading = new VisualElement();
+                heading.AddToClassList("detail-part-heading");
+                var name = new Label(slot + " · " + part.Name + (part.Destroyed ? " · Уничтожена" : ""));
+                name.AddToClassList("detail-part-name");
+                var health = new ProgressBar { pickingMode = PickingMode.Ignore, focusable = false };
+                health.AddToClassList("part-health");
+                SetActorBar(health, "HP", part.CurrentHealth, part.MaxHealth);
+                heading.Add(name); heading.Add(health);
+                row.Add(heading);
+                var stats = new Label($"Вес {part.Weight} · HP меха +{part.Health} · Скорость {part.Speed} · Точность {part.Accuracy} · Ближний бой {part.MeleePower} · Обзор {part.ViewDistance}");
+                stats.AddToClassList("detail-part-stats");
+                row.Add(stats);
+                detailParts.Add(row);
+            }
         }
 
         private void RenderWeapons()
@@ -368,6 +430,11 @@ namespace DungeonClient.Screens
                 return;
             }
             if (cell == null) return;
+            if (type == BattleActionType.MOVE && Active.SpeedSpent > 0)
+            {
+                ReportActionFailure("Перемещение уже использовано");
+                return;
+            }
             var weapon = SelectedWeapon;
             if (type == BattleActionType.ATTACK || type == BattleActionType.OVERWATCH)
             {
@@ -412,7 +479,7 @@ namespace DungeonClient.Screens
             if (Keyboard.current?.escapeKey.wasPressedThisFrame == true)
                 detailsPanel.style.display = DisplayStyle.None;
             arena.Mark(hovered, arena.IsAnimating ? playbackActor : Find(Active?.Id), Inspected,
-                CanAct ? state.Turn.AvailableMoves : Array.Empty<BattleCell>());
+                CanAct && Active.SpeedSpent == 0 ? state.Turn.AvailableMoves : Array.Empty<BattleCell>());
             PositionLabels();
         }
 
@@ -424,6 +491,8 @@ namespace DungeonClient.Screens
                 Send(BattleActionType.ATTACK, target.Position);
             else if (target != null)
                 ReportActionFailure(target.Id == Active.Id ? "Мех уже в этой клетке" : "Клетка занята союзником");
+            else if (Active.SpeedSpent > 0)
+                ReportActionFailure("Перемещение уже использовано");
             else if (state.Turn.AvailableMoves.Any(move => move.X == cell.X && move.Y == cell.Y))
                 Send(BattleActionType.MOVE, cell);
             else

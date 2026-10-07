@@ -3,6 +3,8 @@ import copy
 import random
 from uuid import uuid4
 
+import pytest
+
 from dto.base import CreateLobbyRequest, PlayerDTO
 from dto.state import GameState
 from src.garage_manager import GarageManager
@@ -10,6 +12,7 @@ from src.lobby.manager import LobbyManager
 from src.action import Action, ActionType
 from src.base import Point
 from src.ai.player import PlayerBotAI
+from src.ai.enemy import SimpleEnemyAI
 from src.arena import Arena
 from src.constants import CELL_TYPE
 from src.entities.base import Inventory
@@ -159,6 +162,93 @@ def test_player_bot_actively_hunts_opposing_team():
 
         assert action.type in {ActionType.MOVE, ActionType.ATTACK}
         assert action.type != ActionType.END_TURN
+
+    asyncio.run(scenario())
+
+
+def build_ai_approach_game(ai_class):
+    game, players = build_overwatch_kill_game()
+    target = players[1]
+    target.position = Point(x=6, y=1)
+    opponent = players[2]
+    opponent.position = Point(x=6, y=3)
+    game.players = [target, opponent]
+    if ai_class is PlayerBotAI:
+        actor = opponent
+    else:
+        actor = build_default_enemy(10, 10)
+        actor.stats.speed = 4
+        game.enemies = [actor]
+    actor.position = Point(x=1, y=1)
+    game.arena.map.clear_start_points(clear_players_points=True)
+    for player in game.players:
+        game.arena.map.set(player.position, CELL_TYPE.PLAYER.value)
+    if ai_class is SimpleEnemyAI:
+        game.arena.map.set(actor.position, CELL_TYPE.ENEMY.value)
+        game.turn.phase = GamePhase.AI_ENEMY_PHASE
+    game.turn.player_actor_order = game._build_player_actor_order()
+    if ai_class is PlayerBotAI:
+        game.turn.player_order_index = game.turn.player_actor_order.index(str(actor.id))
+    return game, actor
+
+
+@pytest.mark.parametrize("ai_class", [PlayerBotAI, SimpleEnemyAI])
+def test_ai_uses_one_full_move_then_attacks_and_ends_turn(ai_class, monkeypatch):
+    monkeypatch.setattr("src.ai.enemy.time.sleep", lambda _: None)
+    monkeypatch.setattr("src.ai.enemy.random.random", lambda: 1.0)
+
+    async def scenario():
+        game, actor = build_ai_approach_game(ai_class)
+        await game.prepare_actor_turn(actor)
+        ai = ai_class(actor, game)
+        initial_ap = actor.current_action_points
+
+        move = ai.decide()
+        assert move.type == ActionType.MOVE
+        assert move.cell == Point(x=5, y=1)
+        move_result = await game.perform_actor_action(actor, move)
+        assert move_result.performed, move_result.detail
+        assert move_result.action_cost == move_result.speed_spent == 4
+
+        attack = ai.decide()
+        assert attack.type == ActionType.ATTACK
+        attack_result = await game.perform_actor_action(actor, attack)
+        assert attack_result.performed, attack_result.detail
+        weapon = actor.get_weapon(attack.params.weapon_id)
+        assert attack_result.action_cost == weapon.cost_ap
+        assert actor.current_action_points == initial_ap - 4 - weapon.cost_ap
+        assert ai.decide().type == ActionType.END_TURN
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("ai_class", [PlayerBotAI, SimpleEnemyAI])
+def test_ai_after_short_move_chooses_overwatch_instead_of_moving_again(
+    ai_class, monkeypatch
+):
+    monkeypatch.setattr("src.ai.enemy.time.sleep", lambda _: None)
+    monkeypatch.setattr("src.ai.enemy.random.random", lambda: 1.0)
+
+    async def scenario():
+        game, actor = build_ai_approach_game(ai_class)
+        await game.prepare_actor_turn(actor)
+        ai = ai_class(actor, game)
+        move_result = await game.perform_actor_action(
+            actor,
+            Action(
+                actor_id=str(actor.id),
+                type=ActionType.MOVE,
+                cell=Point(x=2, y=1),
+            ),
+        )
+        assert move_result.performed, move_result.detail
+        assert actor.current_speed_spent == 1 < actor.stats.speed
+
+        action = ai.decide()
+        assert action.type == ActionType.OVERWATCH
+        result = await game.perform_actor_action(actor, action)
+        assert result.performed, result.detail
+        assert actor.overwatch is not None
 
     asyncio.run(scenario())
 

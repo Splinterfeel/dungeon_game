@@ -5,11 +5,13 @@ In-process через TestClient — внешний сервер на localhost:
 восстановление (регрессия на src.debug.game_state_utils.restore_player_from_data).
 """
 
+import asyncio
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from main import app
+from src.action import Action, ActionType
 
 client = TestClient(app)
 
@@ -39,6 +41,15 @@ def _start_two_player_game() -> str:
 
 def test_dump_restore_workflow():
     lobby_id = _start_two_player_game()
+    game = app.state.lobby_manager.lobbies[lobby_id].game
+    mover = game.turn.current_actor
+    initial_moves = [cell.model_dump() for cell in game.turn.available_moves]
+    move = Action(
+        actor_id=str(mover.id),
+        type=ActionType.MOVE,
+        cell=game.turn.available_moves[0],
+    )
+    assert asyncio.run(game.perform_actor_action(mover, move)).performed
 
     # dump
     dump = client.post("/debug/dump_game_state", json={"lobby_id": lobby_id})
@@ -50,6 +61,10 @@ def test_dump_restore_workflow():
     assert "enemies" not in game_state["arena"]
     assert len({p["owner_player_id"] for p in game_state["players"]}) == 2
     assert "mech" in game_state["players"][0], "mech должен попадать в дамп"
+    assert game_state["turn"]["current_actor"]["current_speed_spent"] == 1
+    assert game_state["turn"]["available_moves"] == []
+    # Старые дампы могли содержать доступные клетки даже после первого MOVE.
+    game_state["turn"]["available_moves"] = initial_moves
 
     # restore обратно в то же лобби
     restore = client.post(
@@ -70,3 +85,18 @@ def test_dump_restore_workflow():
         == game_state["turn"]["player_actor_order"]
     )
     assert "mech" in game_state2["players"][0]
+    assert game_state2["turn"]["current_actor"]["current_speed_spent"] == 1
+    assert game_state2["turn"]["available_moves"] == []
+    restored_game = app.state.lobby_manager.lobbies[lobby_id].game
+    repeated = asyncio.run(
+        restored_game.perform_actor_action(
+            restored_game.turn.current_actor,
+            Action(
+                actor_id=str(mover.id),
+                type=ActionType.MOVE,
+                cell=move.cell,
+            ),
+        )
+    )
+    assert not repeated.performed
+    assert "перемещение уже использовано" in repeated.detail

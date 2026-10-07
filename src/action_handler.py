@@ -177,6 +177,11 @@ class ActionHandler:
         )
 
     async def __perform_action_move(self, actor: Actor, action: Action) -> ActionResult:
+        if actor.current_speed_spent > 0:
+            return self._reject(
+                action,
+                f"{actor.name}, перемещение уже использовано в этом ходу",
+            )
         if action.cell not in self.game.turn.available_moves:
             return self._reject(
                 action,

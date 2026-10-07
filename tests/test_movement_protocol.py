@@ -2,7 +2,7 @@ import asyncio
 import random
 from uuid import uuid4
 
-from src.action import Action, ActionType
+from src.action import Action, ActionType, AttackActionParams
 from src.ai.player import PlayerBotAI
 from src.arena import Arena
 from src.base import Point
@@ -14,6 +14,7 @@ from src.game import Game
 from src.lobby.lobby import Lobby, LobbyParticipant
 from src.map import ArenaMap
 from src.mech.presets import get_mech_preset_by_name
+from src.skills_catalog import Skills
 
 
 class MovementObserver:
@@ -122,6 +123,147 @@ def test_move_publishes_one_actual_route_without_step_snapshots():
         assert movement.action_id == action.id
         assert movement.actor.position == Point(x=1, y=1)
         assert coordinates(movement.paths) == [[(x, 1) for x in range(1, 6)]]
+
+    asyncio.run(scenario())
+
+
+def test_one_cell_move_uses_movement_and_rejects_second_route_even_with_stale_moves():
+    async def scenario():
+        mover = make_player(1, 1, 1)
+        game = make_game([mover, make_player(2, 9, 6)])
+        observer = MovementObserver()
+        game.set_observer(observer)
+        await game.prepare_actor_turn(mover)
+        initial_moves = list(game.turn.available_moves)
+        initial_ap = mover.current_action_points
+
+        first = await game.perform_actor_action(mover, move_action(mover, 2))
+
+        assert first.performed
+        assert mover.current_speed_spent == 1
+        assert mover.current_action_points == initial_ap - 1
+        assert game.turn.available_moves == []
+        assert game.arena.map.get_available_moves(mover) == []
+        # Даже устаревший список клеток не должен обходить правило на сервере.
+        game.turn.available_moves = initial_moves
+        second = await game.perform_actor_action(mover, move_action(mover, 3))
+
+        assert not second.performed
+        assert "перемещение уже использовано" in second.detail
+        assert second.action_cost == second.speed_spent == 0
+        assert mover.position == Point(x=2, y=1)
+        assert mover.current_action_points == initial_ap - 1
+        assert mover.current_speed_spent == 1
+        assert game.turn.available_moves == []
+        assert len(observer.movements) == 1
+
+    asyncio.run(scenario())
+
+
+def test_movement_is_independent_per_actor_and_resets_on_next_turn():
+    async def scenario():
+        mover = make_player(1, 1, 1)
+        opponent = make_player(2, 9, 6)
+        game = make_game([mover, opponent])
+        await game.prepare_actor_turn(mover)
+        game.turn.player_order_index = 0
+        assert (await game.perform_actor_action(mover, move_action(mover, 2))).performed
+
+        await game.perform_actor_action(
+            mover,
+            Action(
+                actor_id=str(mover.id), type=ActionType.END_TURN, cell=mover.position
+            ),
+        )
+        assert game.turn.current_actor == opponent
+        assert opponent.current_speed_spent == 0
+        assert game.turn.available_moves
+        assert (
+            await game.perform_actor_action(opponent, move_action(opponent, 8, 6))
+        ).performed
+
+        await game.perform_actor_action(
+            opponent,
+            Action(
+                actor_id=str(opponent.id),
+                type=ActionType.END_TURN,
+                cell=opponent.position,
+            ),
+        )
+        assert game.turn.current_actor == mover
+        assert mover.current_speed_spent == 0
+        assert mover.current_action_points == mover.stats.action_points
+        assert game.turn.available_moves
+        assert (await game.perform_actor_action(mover, move_action(mover, 3))).performed
+
+    asyncio.run(scenario())
+
+
+def test_attacks_before_and_after_movement_keep_their_ap_costs(monkeypatch):
+    monkeypatch.setattr(
+        "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: False
+    )
+
+    async def scenario():
+        mover = make_player(1, 1, 1)
+        opponent = make_player(2, 5, 1)
+        game = make_game([mover, opponent])
+        await game.prepare_actor_turn(mover)
+        weapon = mover.inventory.weapons[0]
+        attack = Action(
+            actor_id=str(mover.id),
+            type=ActionType.ATTACK,
+            cell=opponent.position,
+            params=AttackActionParams(weapon_id=weapon.id),
+        )
+
+        assert (await game.perform_actor_action(mover, attack)).performed
+        assert mover.current_speed_spent == 0
+        assert game.turn.available_moves
+        move = await game.perform_actor_action(mover, move_action(mover, 3))
+        assert move.performed
+        assert (await game.perform_actor_action(mover, attack)).performed
+        assert mover.current_action_points == 20 - 2 * weapon.cost_ap - 2
+        assert mover.current_speed_spent == 2
+        assert game.turn.current_actor == mover
+        assert game.turn.available_moves == []
+        assert not (
+            await game.perform_actor_action(mover, move_action(mover, 2))
+        ).performed
+
+    asyncio.run(scenario())
+
+
+def test_free_attack_skill_does_not_restore_used_movement(monkeypatch):
+    monkeypatch.setattr(
+        "src.entities.base.Weapon.check_hit", lambda *args, **kwargs: False
+    )
+
+    async def scenario():
+        mover = make_player(1, 1, 1)
+        mover.stats.action_points = 10
+        mover.skills = [Skills.COMBAT_IMPULSE.model_copy(update={"proc_chance": 1.0})]
+        opponent = make_player(2, 5, 1)
+        game = make_game([mover, opponent])
+        await game.prepare_actor_turn(mover)
+        assert (await game.perform_actor_action(mover, move_action(mover, 3))).performed
+        attack = Action(
+            actor_id=str(mover.id),
+            type=ActionType.ATTACK,
+            cell=opponent.position,
+            params=AttackActionParams(weapon_id=mover.inventory.weapons[0].id),
+        )
+
+        result = await game.perform_actor_action(mover, attack)
+
+        assert result.performed and result.action_cost == 0
+        assert "Боевой импульс" in result.detail
+        assert mover.current_action_points == 8
+        assert mover.current_speed_spent == 2
+        assert game.turn.available_moves == []
+        assert not (
+            await game.perform_actor_action(mover, move_action(mover, 2))
+        ).performed
 
     asyncio.run(scenario())
 
@@ -306,6 +448,11 @@ def test_neutral_actor_uses_the_same_filtered_route_protocol():
         assert coordinates(observer.movements[0][1].paths) == [
             [(x, 1) for x in range(1, 6)]
         ]
+        assert game.turn.available_moves == []
+        second = await game.perform_actor_action(enemy, move_action(enemy, 6))
+        assert not second.performed
+        assert "перемещение уже использовано" in second.detail
+        assert len(observer.movements) == 1
 
     asyncio.run(scenario())
 
@@ -327,6 +474,10 @@ def test_rejected_move_does_not_publish_route_or_change_costs():
         assert mover.current_action_points == initial_ap
         assert mover.current_speed_spent == 0
         assert mover.position == Point(x=1, y=1)
+        # Отклонённый маршрут не расходует возможность двигаться.
+        valid = await game.perform_actor_action(mover, move_action(mover, 2))
+        assert valid.performed
+        assert mover.current_speed_spent == 1
 
     asyncio.run(scenario())
 
@@ -383,6 +534,8 @@ def test_human_move_publication_sends_one_route_one_result_and_one_final_snapsho
         actor = socket.messages[-1]["payload"]["players"][0]
         assert actor["position"] == {"x": 5, "y": 1}
         assert actor["current_action_points"] == 16
+        assert actor["current_speed_spent"] == 4
+        assert socket.messages[-1]["payload"]["turn"]["available_moves"] == []
 
     asyncio.run(scenario())
 

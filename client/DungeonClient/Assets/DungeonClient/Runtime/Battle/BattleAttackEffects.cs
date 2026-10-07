@@ -25,8 +25,8 @@ namespace DungeonClient.Battle
             arena = view;
             effects = new GameObject("AttackEffects").transform;
             effects.SetParent(world, false);
-            tracerMaterial = new Material(source) { color = new Color(1f, .85f, .35f) };
-            sparkMaterial = new Material(source) { color = new Color(1f, .45f, .1f) };
+            tracerMaterial = new Material(source) { color = new Color(1f, .96f, .7f) };
+            sparkMaterial = new Material(source) { color = new Color(1f, .7f, .16f) };
             missMaterial = new Material(source) { color = new Color(.6f, .65f, .7f) };
         }
 
@@ -129,21 +129,40 @@ namespace DungeonClient.Battle
                 renderer.sharedMaterial = tracerMaterial;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
-            var sparks = new List<(LineRenderer line, Vector3 velocity)>();
+            const float actionDuration = .45f;
+            const float sparkDuration = .8f;
+            const float trailDuration = .75f;
+            var impact = target;
+            if (attack.FromCell != null && attack.ToCell != null)
+                impact -= (target - source).normalized * .32f;
+            var sparks = new List<(LineRenderer line, TrailRenderer trail, Vector3 velocity)>();
             if (attack.Hit && attack.ToCell != null)
-                for (var index = 0; index < 12; index++)
+                for (var index = 0; index < 24; index++)
                 {
                     var direction = UnityEngine.Random.onUnitSphere;
                     direction.y = Mathf.Abs(direction.y) + .25f;
-                    var velocity = direction.normalized * UnityEngine.Random.Range(1.5f, 3f);
-                    sparks.Add((Stroke(root.transform, index % 2 == 0 ? sparkMaterial : tracerMaterial,
-                        target, target + velocity.normalized * .15f, .035f), velocity));
+                    var velocity = direction.normalized * UnityEngine.Random.Range(1.8f, 3.2f);
+                    var line = Stroke(root.transform, index % 2 == 0 ? sparkMaterial : tracerMaterial,
+                        impact, impact + velocity.normalized * .3f, .075f);
+                    line.transform.position = impact;
+                    var trail = line.gameObject.AddComponent<TrailRenderer>();
+                    trail.sharedMaterial = sparkMaterial;
+                    trail.time = trailDuration;
+                    trail.minVertexDistance = .035f;
+                    trail.widthMultiplier = .09f;
+                    trail.widthCurve = AnimationCurve.Linear(0, 1, 1, 0);
+                    trail.startColor = Color.white;
+                    trail.endColor = new Color(1f, .5f, .12f);
+                    trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    trail.receiveShadows = false;
+                    sparks.Add((line, trail, velocity));
                 }
-            const float duration = .4f;
+            var duration = sparks.Count > 0 ? sparkDuration + trailDuration : actionDuration;
             var elapsed = 0f;
+            var released = false;
             while (elapsed < duration)
             {
-                if (beam != null) beam.enabled = elapsed < .13f;
+                if (beam != null) beam.enabled = elapsed < .18f;
                 if (flash != null)
                 {
                     flash.SetActive(elapsed < .12f);
@@ -151,10 +170,22 @@ namespace DungeonClient.Battle
                 }
                 foreach (var spark in sparks)
                 {
-                    var point = target + spark.velocity * elapsed + Vector3.down * (2f * elapsed * elapsed);
+                    var flight = Mathf.Min(elapsed, sparkDuration);
+                    var point = impact + spark.velocity * flight + Vector3.down * (2.5f * flight * flight);
+                    point.y = Mathf.Max(.04f, point.y);
+                    spark.line.transform.position = point;
                     spark.line.SetPosition(0, point);
-                    spark.line.SetPosition(1, point + spark.velocity.normalized * .15f * (1 - elapsed / duration));
-                    spark.line.widthMultiplier = .035f * (1 - elapsed / duration);
+                    spark.line.SetPosition(1, point + spark.velocity.normalized * .3f * (1 - flight / sparkDuration));
+                    spark.line.widthMultiplier = .075f * (1 - flight / sparkDuration);
+                    spark.trail.emitting = elapsed < sparkDuration;
+                    // После полёта след сужается и исчезает, без новых текстур/материалов.
+                    spark.trail.widthMultiplier = .09f * Mathf.Clamp01((duration - elapsed) / trailDuration);
+                }
+                // Долгий след не держит очередь действий и не останавливает overwatch-маршрут.
+                if (!released && elapsed >= actionDuration)
+                {
+                    active.Remove(attack);
+                    released = true;
                 }
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;

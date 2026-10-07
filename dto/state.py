@@ -1,5 +1,5 @@
 from typing import List, Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dto.base import LobbyParticipantState, PointState
 from src.entities.base import HandSide, WeaponType
@@ -103,7 +103,9 @@ class ActorState(BaseModel):
     stats: CharacherStatsState
     name: str
     current_action_points: int
-    current_speed_spent: int
+    current_speed_spent: int = Field(
+        description="Клетки единственного перемещения в текущем ходу; больше нуля — перемещение использовано"
+    )
     inventory: InventoryState
     overwatch: Optional[OverwatchStateDTO] = None
     trophies: list[str] = []

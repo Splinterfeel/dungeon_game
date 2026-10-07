@@ -32,7 +32,10 @@
     <ui:VisualElement name="BattleDetailsPanel" class="battle-overlay battle-ui" style="display: none;">
       <ui:VisualElement class="overlay-card">
         <ui:Label text="Информация о выбранной фигуре" class="actor-name" />
-        <ui:ScrollView class="details-scroll"><ui:Label name="BattleDetails" /></ui:ScrollView>
+        <ui:ScrollView class="details-scroll">
+          <ui:VisualElement name="BattleDetailParts" />
+          <ui:Label name="BattleDetails" class="detail-description" />
+        </ui:ScrollView>
         <ui:Button name="BattleCloseDetails" text="Закрыть" />
       </ui:VisualElement>
     </ui:VisualElement>

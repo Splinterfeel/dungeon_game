@@ -52,7 +52,7 @@ class PlayerBotAI(AI):
                         params=AttackActionParams(weapon_id=ranged_weapon.id),
                     )
 
-        if self.actor.stats.speed - self.actor.current_speed_spent > 0:
+        if self.actor.current_speed_spent == 0 and self.game.turn.available_moves:
             paths = []
             for player in hostiles:
                 path = self.game.arena.map.bfs_path(
@@ -62,6 +62,8 @@ class PlayerBotAI(AI):
                     paths.append((len(path), path))
             if paths:
                 _, path = min(paths, key=lambda item: item[0])
+                # Единственный MOVE выбирает самую дальнюю доступную клетку
+                # на пути к цели, а не расходуется на первый микрошаг.
                 for step in path[::-1][:-1]:
                     if step in self.game.turn.available_moves:
                         return Action(

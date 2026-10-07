@@ -234,6 +234,13 @@ async def restore_game_state(
     else:
         lobby.game.turn.current_actor = None
 
+    # Старый дамп мог разрешать повторное перемещение после уже пройденных клеток.
+    lobby.game.turn.available_moves = (
+        arena.map.get_available_moves(lobby.game.turn.current_actor)
+        if lobby.game.turn.current_actor is not None
+        else []
+    )
+
     return lobby
 
 

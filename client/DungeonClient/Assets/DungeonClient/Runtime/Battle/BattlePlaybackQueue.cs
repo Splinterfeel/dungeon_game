@@ -11,6 +11,25 @@ namespace DungeonClient.Battle
         private readonly Queue<JObject> messages = new();
         private readonly List<BattleAttackState> reactions = new();
         public bool Pending => messages.Count > 0 || reactions.Count > 0;
+        public string NextActorId
+        {
+            get
+            {
+                foreach (var next in messages)
+                {
+                    var type = (string)next["type"];
+                    if (type == "actor_attacked")
+                    {
+                        if ((string)next["movement_action_id"] != null && next["to_cell"] is JObject)
+                            continue;
+                        // Реакционный выстрел не является новым ходом своего стрелка.
+                        return (string)next["kind"] == "overwatch" ? null : (string)next["attacker_id"];
+                    }
+                    return type == "actor_moved" ? (string)next["actor"]?["id"] : null;
+                }
+                return null;
+            }
+        }
 
         public void Enqueue(JObject message) => messages.Enqueue(message);
 

@@ -59,7 +59,9 @@ class ArenaMap(BaseModel):
                     self.set(p, CELL_TYPE.EMPTY.value)
 
     def get_available_moves(self, actor: Actor) -> list[Point]:
-        "Возвращает список всех достижимых клеток за указанную скорость (BFS)"
+        "Возвращает достижимые клетки для единственного перемещения за ход (BFS)"
+        if actor.current_speed_spent > 0:
+            return []
         visited = {actor.position}
         available = []
         queue = deque([(actor.position, 0)])
@@ -69,10 +71,8 @@ class ArenaMap(BaseModel):
             PointOffset.TOP,
             PointOffset.BOTTOM,
         ]
-        # сколько клеток может пройти
-        _speed = min(
-            actor.stats.speed - actor.current_speed_spent, actor.current_action_points
-        )
+        # До первого перемещения дальность ограничена скоростью и оставшимися AP.
+        _speed = min(actor.stats.speed, actor.current_action_points)
         assert _speed >= 0
         while queue:
             point, distance = queue.popleft()

@@ -109,5 +109,33 @@ namespace DungeonClient.Tests.Editor
             Assert.That(queue.TryDequeue(out _, out var reactions), Is.True);
             Assert.That(reactions, Is.Empty);
         }
+
+        [Test]
+        public void NextActorKeepsMessagesAndGroupsOverwatchWithItsMovingActor()
+        {
+            var queue = new BattlePlaybackQueue();
+            var reaction = Reaction("move-1", "shot-1");
+            reaction["attacker_id"] = "watcher";
+            var route = Message("actor_moved", "move-1");
+            route["actor"] = new JObject { ["id"] = "mover" };
+            var attack = Message("actor_attacked");
+            attack["attacker_id"] = "next-mech";
+            queue.Enqueue(reaction);
+            queue.Enqueue(route);
+            queue.Enqueue(Message("state_update"));
+            queue.Enqueue(attack);
+
+            Assert.That(queue.NextActorId, Is.EqualTo("mover"));
+            Assert.That(queue.NextActorId, Is.EqualTo("mover"));
+            Assert.That(queue.TryDequeue(out var actual, out var reactions), Is.True);
+            Assert.That(actual, Is.SameAs(route));
+            Assert.That(reactions.Count, Is.EqualTo(1));
+            Assert.That(queue.NextActorId, Is.Null);
+            Assert.That(queue.TryDequeue(out actual, out _), Is.True);
+            Assert.That((string)actual["type"], Is.EqualTo("state_update"));
+            Assert.That(queue.NextActorId, Is.EqualTo("next-mech"));
+            queue.Clear();
+            Assert.That(queue.NextActorId, Is.Null);
+        }
     }
 }

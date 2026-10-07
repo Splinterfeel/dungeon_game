@@ -107,7 +107,8 @@ class Actor(Entity):
     stats: CharacterStats
     inventory: Inventory
     current_action_points: int = 0
-    current_speed_spent: int = 0  # сколько клеток прошел за ход
+    # Клетки единственного перемещения за ход; >0 — перемещение использовано.
+    current_speed_spent: int = 0
     name: str = Field(default_factory=names.get_full_name)
     overwatch: Optional[OverwatchState] = None
     trophies: list[str] = Field(default_factory=list)
